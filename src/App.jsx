@@ -6,6 +6,7 @@ const REQUISITES_POOL = [
   { label:"ВТБ",       sbp:"+7 (900) 000-00-02", card:"2200 0000 0000 0003", holder:"Иван И." },
 ];
 const ADMIN_PASSWORD = "payflow2026";
+const TELEGRAM_LINK = "https://t.me/wladislaw_le"; // замени на свой Telegram
 const MARGIN = 0.10;
 const getReq = () => REQUISITES_POOL[Math.floor(Math.random()*REQUISITES_POOL.length)];
 const calc = (usd, rate) => Math.round(usd * rate * (1 + MARGIN));
@@ -144,7 +145,7 @@ function SCard({ s, rate, onSelect, t }) {
 }
 
 // ─── ORDER MODAL ──────────────────────────────────────────────
-function OrderModal({ s, rate, onClose, onSave, t }) {
+function OrderModal({ s, rate, onClose, onSave, t, onGoStatus }) {
   const [tier, setTier] = useState(s.tiers[0]);
   const [method, setMethod] = useState(s.gift?"gift":s.newAcc?"newAcc":"login");
   const [login, setLogin] = useState(""); const [pass, setPass] = useState(""); const [email, setEmail] = useState("");
@@ -161,7 +162,7 @@ function OrderModal({ s, rate, onClose, onSave, t }) {
   if(s.family) methods.push({id:"family", icon:"👨‍👩‍👧", label:"Family/Team план",  desc:"Добавим по email — в своём аккаунте"});
   if(s.newAcc) methods.push({id:"newAcc", icon:"✨", label:"Новый аккаунт",      desc:"Создадим и передадим готовые данные"});
   const inp = {width:"100%",background:t.inp,border:`1px solid ${t.border}`,borderRadius:10,padding:"12px 14px",color:t.text,fontSize:14,outline:"none",marginBottom:8,boxSizing:"border-box"};
-  const handleCreate = () => { onSave({id:orderId,service:s.name,tier:tier.n,priceUsd:tier.p,priceRub:total,method,login,email,status:"new",createdAt:new Date().toISOString()}); setStep(2); };
+  const handleCreate = () => { onSave({id:orderId,service:s.name,tier:tier.n,priceUsd:tier.p,priceRub:total,method,login,email,status:"new",operatorNote:"",receipt:false,createdAt:new Date().toISOString()}); setStep(2); };
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(16px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{ background:t.dark?"#0c0c1a":"#ffffff", border:`1px solid ${t.goldB}`, borderRadius:22, width:"100%", maxWidth:490, padding:28, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,0.5)" }}>
@@ -187,7 +188,12 @@ function OrderModal({ s, rate, onClose, onSave, t }) {
             <div style={{ marginBottom:18 }}>
               <div style={{ color:t.muted,fontSize:11,marginBottom:8,textTransform:"uppercase",letterSpacing:1 }}>Ваши данные</div>
               {(method==="gift"||method==="family")&&<input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email от аккаунта" style={inp}/>}
-              {method==="login"&&<><input value={login} onChange={e=>setLogin(e.target.value)} placeholder="Логин / Email" style={inp}/><input value={pass} onChange={e=>setPass(e.target.value)} placeholder="Пароль" type="password" style={inp}/><div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:8,padding:"8px 12px",fontSize:11,color:t.sub }}>⚠️ Если включена 2FA — будьте онлайн. Запросим код сразу после оплаты.</div></>}
+              {method==="login"&&<><input value={login} onChange={e=>setLogin(e.target.value)} placeholder="Логин / Email" style={inp}/><input value={pass} onChange={e=>setPass(e.target.value)} placeholder="Пароль" type="password" style={inp}/><div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:10,padding:"12px 14px",fontSize:12,color:t.sub,lineHeight:1.6 }}>
+                    ⚠️ Если включена 2FA — после оплаты напишите нам в Telegram, мы запросим код и введём вместе с вами.
+                    <a href={TELEGRAM_LINK} target="_blank" rel="noopener" style={{ display:"block",marginTop:8,padding:"8px 14px",borderRadius:8,background:"rgba(0,136,204,0.15)",border:"1px solid rgba(0,136,204,0.3)",color:"#29b6f6",fontWeight:600,fontSize:12,textDecoration:"none",textAlign:"center" }}>
+                      ✈️ Написать в Telegram →
+                    </a>
+                  </div></>}
               {method==="newAcc"&&<div style={{ background:t.inp,border:`1px solid ${t.border}`,borderRadius:10,padding:14,fontSize:12,color:t.sub,lineHeight:1.6 }}>✨ Создадим аккаунт и пришлём логин/пароль после оплаты. Ничего вводить не нужно.</div>}
             </div>
             <div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:14,padding:16,marginBottom:18 }}>
@@ -199,25 +205,178 @@ function OrderModal({ s, rate, onClose, onSave, t }) {
           </>
         ) : (
           <div style={{ textAlign:"center" }}>
-            <div style={{ fontSize:52,marginBottom:14 }}>✅</div>
-            <div style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:22,color:t.text,marginBottom:10 }}>Заявка создана!</div>
-            <div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:12,padding:"10px 24px",display:"inline-block",color:t.gold,fontWeight:800,fontSize:28,marginBottom:18 }}>{orderId}</div>
-            <div style={{ color:t.sub,fontSize:13,marginBottom:20,lineHeight:1.7 }}>Переведите <strong style={{ color:t.text }}>{total.toLocaleString("ru-RU")} ₽</strong><br/>укажи номер заявки в комментарии</div>
-            <div style={{ background:t.card,border:`1px dashed ${t.border}`,borderRadius:14,padding:18,marginBottom:16,textAlign:"left" }}>
-              <div style={{ color:t.muted,fontSize:10,marginBottom:10,textTransform:"uppercase",letterSpacing:1 }}>Реквизиты · {req.label}</div>
-              <div style={{ marginBottom:10 }}><div style={{ color:t.muted,fontSize:11,marginBottom:3 }}>По СБП</div><div style={{ color:t.text,fontWeight:700,fontSize:16 }}>{req.sbp}</div><div style={{ color:t.muted,fontSize:11 }}>{req.holder}</div></div>
-              <div style={{ marginBottom:10 }}><div style={{ color:t.muted,fontSize:11,marginBottom:3 }}>По номеру карты</div><div style={{ color:t.text,fontWeight:700,fontSize:16 }}>{req.card}</div><div style={{ color:t.muted,fontSize:11 }}>{req.label} · {req.holder}</div></div>
-              <div style={{ paddingTop:10,borderTop:`1px solid ${t.border}`,color:t.muted,fontSize:11 }}>Комментарий: <strong style={{ color:t.gold,fontSize:15 }}>{orderId}</strong></div>
+            {/* Заявка создана */}
+            <div style={{ textAlign:"center",marginBottom:20 }}>
+              <div style={{ fontSize:52,marginBottom:12 }}>✅</div>
+              <div style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:22,color:t.text,marginBottom:8 }}>Заявка создана!</div>
+              <div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:12,padding:"10px 24px",display:"inline-block",color:t.gold,fontWeight:800,fontSize:28 }}>{orderId}</div>
             </div>
-            <div style={{ marginBottom:16 }}>
-              <div style={{ color:t.sub,fontSize:12,marginBottom:8 }}>📎 Загрузите чек — ускорит обработку и защитит при споре с банком</div>
-              <input ref={fileRef} type="file" accept="image/*,.pdf" onChange={e=>setFile(e.target.files[0])} style={{ display:"none" }}/>
-              <button onClick={()=>fileRef.current.click()} style={{ width:"100%",padding:12,borderRadius:10,cursor:"pointer",background:file?"rgba(52,211,153,0.1)":t.inp,border:`1px dashed ${file?"rgba(52,211,153,0.4)":t.border}`,color:file?"#6ee7b7":t.sub,fontSize:13 }}>
-                {file?`✅ ${file.name}`:"📤 Нажмите чтобы загрузить чек"}
+            <div style={{ color:t.sub,fontSize:14,marginBottom:20,lineHeight:1.7,textAlign:"center" }}>
+              Переведите <strong style={{ color:t.text,fontSize:16 }}>{total.toLocaleString("ru-RU")} ₽</strong><br/>
+              и укажи номер заявки в комментарии к переводу
+            </div>
+
+            {/* Реквизиты */}
+            <div style={{ background:t.card,border:`1px solid ${t.border}`,borderRadius:16,padding:20,marginBottom:16 }}>
+              <div style={{ color:t.muted,fontSize:10,marginBottom:12,textTransform:"uppercase",letterSpacing:1,fontWeight:600 }}>💳 Реквизиты · {req.label}</div>
+              <div style={{ marginBottom:12 }}>
+                <div style={{ color:t.muted,fontSize:11,marginBottom:4 }}>По СБП</div>
+                <div style={{ color:t.text,fontWeight:700,fontSize:17 }}>{req.sbp}</div>
+                <div style={{ color:t.muted,fontSize:12 }}>{req.holder}</div>
+              </div>
+              <div style={{ marginBottom:12,paddingTop:12,borderTop:`1px solid ${t.border}` }}>
+                <div style={{ color:t.muted,fontSize:11,marginBottom:4 }}>По номеру карты</div>
+                <div style={{ color:t.text,fontWeight:700,fontSize:17 }}>{req.card}</div>
+                <div style={{ color:t.muted,fontSize:12 }}>{req.label} · {req.holder}</div>
+              </div>
+              <div style={{ paddingTop:12,borderTop:`1px solid ${t.border}`,display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+                <span style={{ color:t.muted,fontSize:12 }}>Комментарий к переводу:</span>
+                <strong style={{ color:t.gold,fontSize:18 }}>{orderId}</strong>
+              </div>
+            </div>
+
+            {/* Telegram для чека и коммуникации */}
+            <div style={{ background:"rgba(0,136,204,0.08)",border:"1px solid rgba(0,136,204,0.25)",borderRadius:14,padding:16,marginBottom:16 }}>
+              <div style={{ fontWeight:600,fontSize:13,color:"#29b6f6",marginBottom:6 }}>✈️ После оплаты напишите нам в Telegram</div>
+              <div style={{ color:t.sub,fontSize:12,marginBottom:12,lineHeight:1.6 }}>
+                • Пришлите скриншот чека об оплате<br/>
+                • Если нужна 2FA — введём код вместе<br/>
+                • Туда же отправим данные аккаунта
+              </div>
+              <a href={TELEGRAM_LINK} target="_blank" rel="noopener" style={{ display:"block",padding:"11px 16px",borderRadius:10,background:"rgba(0,136,204,0.2)",border:"1px solid rgba(0,136,204,0.4)",color:"#29b6f6",fontWeight:700,fontSize:14,textDecoration:"none",textAlign:"center" }}>
+                Написать в Telegram →
+              </a>
+            </div>
+
+            {/* Статус заявки */}
+            <div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+              <span style={{ color:t.sub,fontSize:13 }}>Статус заявки {orderId}</span>
+              <button onClick={()=>onGoStatus&&onGoStatus()} style={{ padding:"6px 14px",borderRadius:8,background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,cursor:"pointer",fontSize:12,fontWeight:600 }}>
+                Следить за статусом →
               </button>
             </div>
-            <div style={{ color:t.muted,fontSize:11,marginBottom:18,lineHeight:1.7 }}>⏱ Обрабатываем до 1 часа в рабочее время.<br/>В редких случаях до 24 ч — напишем если задержимся.</div>
-            <button onClick={onClose} style={{ width:"100%",padding:12,borderRadius:10,background:t.inp,border:`1px solid ${t.border}`,color:t.sub,cursor:"pointer",fontSize:13 }}>Закрыть</button>
+
+            <div style={{ color:t.muted,fontSize:12,marginBottom:16,textAlign:"center",lineHeight:1.7 }}>
+              ⏱ Обрабатываем до 1 часа в рабочее время.<br/>В редких случаях до 24 ч — предупредим в Telegram.
+            </div>
+            <button onClick={onClose} style={{ width:"100%",padding:12,borderRadius:10,background:t.inp,border:`1px solid ${t.border}`,color:t.sub,cursor:"pointer",fontSize:14 }}>Закрыть</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ORDER STATUS PAGE ───────────────────────────────────────
+function OrderStatus({ orders, t, onBack }) {
+  const [query, setQuery] = useState("");
+  const [found, setFound] = useState(null);
+  const [searched, setSearched] = useState(false);
+
+  const handleSearch = () => {
+    const q = query.trim().toUpperCase().replace("#","");
+    const order = orders.find(o => o.id.replace("#","") === q);
+    setFound(order || null);
+    setSearched(true);
+  };
+
+  const statusEmoji = { new:"⏳", paid:"💰", processing:"🔧", done:"✅", cancelled:"❌" };
+
+  return (
+    <div style={{ minHeight:"100vh", background:t.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"80px 20px" }}>
+      <div style={{ width:"100%", maxWidth:500 }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", color:t.sub, cursor:"pointer", fontSize:14, marginBottom:24, display:"flex", alignItems:"center", gap:6 }}>← Назад</button>
+        <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:28, color:t.text, marginBottom:6 }}>🔍 Статус заявки</div>
+        <div style={{ color:t.sub, fontSize:14, marginBottom:28 }}>Введите номер заявки чтобы узнать статус</div>
+
+        <div style={{ display:"flex", gap:10, marginBottom:24 }}>
+          <input
+            value={query}
+            onChange={e=>setQuery(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&handleSearch()}
+            placeholder="Например: #12345"
+            style={{ flex:1, background:t.card2, border:`1px solid ${t.border}`, borderRadius:12, padding:"13px 16px", color:t.text, fontSize:16, outline:"none", fontWeight:600 }}
+          />
+          <button onClick={handleSearch} style={{ padding:"13px 22px", borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#fbbf24)", border:"none", color:"#0a0a14", fontWeight:800, fontSize:15, cursor:"pointer" }}>
+            Найти
+          </button>
+        </div>
+
+        {searched && !found && (
+          <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, padding:24, textAlign:"center" }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>😕</div>
+            <div style={{ color:t.text, fontWeight:600, fontSize:15 }}>Заявка не найдена</div>
+            <div style={{ color:t.sub, fontSize:13, marginTop:6 }}>Проверьте номер и попробуйте снова</div>
+          </div>
+        )}
+
+        {found && (
+          <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:24, boxShadow:t.shadow }}>
+            {/* Header */}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+              <div>
+                <div style={{ color:t.gold, fontWeight:800, fontSize:22, fontFamily:"'Syne',sans-serif" }}>{found.id}</div>
+                <div style={{ color:t.sub, fontSize:13, marginTop:2 }}>{new Date(found.createdAt).toLocaleString("ru-RU")}</div>
+              </div>
+              <div style={{ background:SC[found.status]+"22", border:`1px solid ${SC[found.status]}55`, color:SC[found.status], fontSize:14, padding:"6px 14px", borderRadius:100, fontWeight:700 }}>
+                {statusEmoji[found.status]} {SL[found.status]}
+              </div>
+            </div>
+
+            {/* Order details */}
+            <div style={{ background:t.goldDim, border:`1px solid ${t.goldB}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
+              <div style={{ color:t.sub, fontSize:12, marginBottom:4 }}>Сервис</div>
+              <div style={{ color:t.text, fontWeight:700, fontSize:15 }}>{found.service} · {found.tier}</div>
+              <div style={{ color:t.gold, fontWeight:800, fontSize:20, marginTop:4 }}>{found.priceRub.toLocaleString("ru-RU")} ₽</div>
+            </div>
+
+            {/* Status timeline */}
+            <div style={{ marginBottom:16 }}>
+              {[
+                {key:"new",       label:"Заявка создана"},
+                {key:"paid",      label:"Оплата получена"},
+                {key:"processing",label:"В обработке"},
+                {key:"done",      label:"Выполнена"},
+              ].map((step, i) => {
+                const statuses = ["new","paid","processing","done"];
+                const currentIdx = statuses.indexOf(found.status);
+                const stepIdx = statuses.indexOf(step.key);
+                const isActive = stepIdx <= currentIdx && found.status !== "cancelled";
+                const isCurrent = step.key === found.status;
+                return (
+                  <div key={step.key} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:8 }}>
+                    <div style={{ width:28, height:28, borderRadius:"50%", background:isActive?(isCurrent?t.gold:"rgba(52,211,153,0.8)"):t.inp, border:`2px solid ${isActive?(isCurrent?t.gold:"#34d399"):t.border}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, flexShrink:0 }}>
+                      {isActive ? (isCurrent ? "●" : "✓") : "○"}
+                    </div>
+                    <div style={{ color:isActive?t.text:t.muted, fontWeight:isCurrent?700:400, fontSize:14 }}>{step.label}</div>
+                    {isCurrent && found.status !== "done" && <span style={{ fontSize:11, color:t.muted }}>← сейчас</span>}
+                  </div>
+                );
+              })}
+              {found.status === "cancelled" && (
+                <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ width:28, height:28, borderRadius:"50%", background:"rgba(248,113,113,0.2)", border:"2px solid #f87171", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, flexShrink:0 }}>✕</div>
+                  <div style={{ color:"#f87171", fontWeight:700, fontSize:14 }}>Отменена</div>
+                </div>
+              )}
+            </div>
+
+            {/* Operator message - account credentials */}
+            {found.operatorNote && (
+              <div style={{ background:"rgba(52,211,153,0.08)", border:"1px solid rgba(52,211,153,0.3)", borderRadius:14, padding:16, marginBottom:16 }}>
+                <div style={{ color:"#6ee7b7", fontWeight:700, fontSize:13, marginBottom:8 }}>📩 Сообщение от оператора:</div>
+                <div style={{ color:t.text, fontSize:14, lineHeight:1.7, whiteSpace:"pre-wrap", fontFamily:"monospace", background:t.inp, borderRadius:8, padding:"10px 12px" }}>{found.operatorNote}</div>
+              </div>
+            )}
+
+            {!found.operatorNote && found.status !== "done" && (
+              <div style={{ color:t.sub, fontSize:13, textAlign:"center", padding:"8px 0", marginBottom:8 }}>Данные аккаунта появятся здесь после выполнения заявки</div>
+            )}
+
+            {/* Telegram */}
+            <a href={TELEGRAM_LINK} target="_blank" rel="noopener" style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"11px 16px", borderRadius:12, background:"rgba(0,136,204,0.1)", border:"1px solid rgba(0,136,204,0.3)", color:"#29b6f6", fontWeight:600, fontSize:14, textDecoration:"none" }}>
+              ✈️ Написать оператору в Telegram
+            </a>
           </div>
         )}
       </div>
@@ -226,7 +385,7 @@ function OrderModal({ s, rate, onClose, onSave, t }) {
 }
 
 // ─── ADMIN ────────────────────────────────────────────────────
-function Admin({ orders, onStatus, onBack, t }) {
+function Admin({ orders, onStatus, onNote, onBack, t }) {
   const [pw,setPw]=useState(""); const [auth,setAuth]=useState(false);
   const [fil,setFil]=useState("all"); const [q,setQ]=useState(""); const [exp,setExp]=useState(null);
   const exportCSV=()=>{ const h=["ID","Сервис","Тариф","$","₽","Метод","Статус","Дата"]; const rows=orders.map(o=>[o.id,o.service,o.tier,o.priceUsd,o.priceRub,o.method,SL[o.status],new Date(o.createdAt).toLocaleString("ru-RU")]); const csv=[h,...rows].map(r=>r.join(";")).join("\n"); const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"}));a.download=`payflow_${Date.now()}.csv`;a.click(); };
@@ -293,8 +452,20 @@ function Admin({ orders, onStatus, onBack, t }) {
                   {exp===o.id&&(
                     <div style={{ marginTop:14,paddingTop:12,borderTop:`1px solid ${t.border}` }}>
                       <div style={{ color:t.sub,fontSize:11,marginBottom:8 }}>Изменить статус:</div>
-                      <div style={{ display:"flex",gap:7,flexWrap:"wrap" }}>
+                      <div style={{ display:"flex",gap:7,flexWrap:"wrap",marginBottom:16 }}>
                         {Object.entries(SL).map(([k,l])=><button key={k} onClick={()=>onStatus(o.id,k)} style={{ padding:"7px 16px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:o.status===k?SC[k]+"22":t.inp,border:`1px solid ${o.status===k?SC[k]+"66":t.border}`,color:o.status===k?SC[k]:t.sub,transition:"all .15s" }}>{o.status===k?"✓ ":""}{l}</button>)}
+                      </div>
+                      {/* Сообщение клиенту — данные аккаунта, инфо */}
+                      <div>
+                        <div style={{ color:t.sub,fontSize:11,marginBottom:6,fontWeight:600 }}>📩 Сообщение клиенту (данные аккаунта, Gift-код и т.д.):</div>
+                        <textarea
+                          defaultValue={o.operatorNote||""}
+                          onBlur={e=>onNote(o.id, e.target.value)}
+                          placeholder="Напр: логин: test@mail.com / пароль: Abc12345"
+                          rows={3}
+                          style={{ width:"100%",background:t.inp,border:`1px solid ${t.border}`,borderRadius:10,padding:"10px 12px",color:t.text,fontSize:13,outline:"none",resize:"vertical",fontFamily:"monospace",lineHeight:1.5 }}
+                        />
+                        <div style={{ color:t.muted,fontSize:11,marginTop:4 }}>Клиент увидит это сообщение на странице статуса заявки</div>
                       </div>
                     </div>
                   )}
@@ -311,7 +482,7 @@ function Admin({ orders, onStatus, onBack, t }) {
 // ─── MAIN ─────────────────────────────────────────────────────
 export default function App() {
   const { t, toggle } = useTheme();
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState("home"); // home | catalog | admin | status
   const [cat, setCat] = useState("Все");
   const [search, setSearch] = useState("");
   const [sel, setSel] = useState(null);
@@ -343,6 +514,7 @@ export default function App() {
 
   const saveOrder=async(order)=>{ const u=[...orders,order]; setOrders(u); try{await window.storage.set("orders",JSON.stringify(u));}catch{} };
   const updateStatus=async(id,status)=>{ const u=orders.map(o=>o.id===id?{...o,status}:o); setOrders(u); try{await window.storage.set("orders",JSON.stringify(u));}catch{} };
+  const updateNote=async(id,note)=>{ const u=orders.map(o=>o.id===id?{...o,operatorNote:note}:o); setOrders(u); try{await window.storage.set("orders",JSON.stringify(u));}catch{} };
 
   const filtered=SVC.filter(s=>(cat==="Все"||s.cat===cat)&&s.name.toLowerCase().includes(search.toLowerCase()));
   const base=rate?Math.round(usd*rate):0;
@@ -350,7 +522,8 @@ export default function App() {
   const total=base+comm;
   const POPULAR=SVC.filter(s=>POPULAR_NAMES.includes(s.name));
 
-  if(page==="admin") return <Admin orders={orders} onStatus={updateStatus} onBack={()=>setPage("home")} t={t}/>;
+  if(page==="admin") return <Admin orders={orders} onStatus={updateStatus} onNote={updateNote} onBack={()=>setPage("home")} t={t}/>;
+  if(page==="status") return <OrderStatus orders={orders} t={t} onBack={()=>setPage("home")}/>;
 
   const navBtn=(p,l)=><button onClick={()=>setPage(p)} style={{ padding:"7px 18px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===p?t.goldDim:"transparent",border:`1px solid ${page===p?t.goldB:"transparent"}`,color:page===p?t.gold:t.sub,transition:"all .2s" }}>{l}</button>;
 
@@ -381,7 +554,7 @@ export default function App() {
       <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 28px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .3s" }}>
         <div onClick={()=>{setPage("home");window.scrollTo({top:0,behavior:"smooth"})}} style={{ fontFamily:"'Syne',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
         <div style={{ display:"flex",gap:6,alignItems:"center" }}>
-          {navBtn("home","Главная")}{navBtn("catalog","Каталог")}
+          {navBtn("home","Главная")}{navBtn("catalog","Каталог")}{navBtn("status","Мои заявки")}
           <button onClick={toggle} style={{ width:38,height:38,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark?"☀️":"🌙"}</button>
           <button onClick={()=>setPage("admin")} style={{ width:38,height:38,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",color:t.muted }}>⚙️</button>
         </div>
@@ -438,7 +611,7 @@ export default function App() {
                 <div key={l} style={{ textAlign:"center",background:t.card,border:`1px solid ${t.border}`,borderRadius:18,padding:"16px 22px",backdropFilter:"blur(10px)" }}>
                   <div style={{ fontSize:22,marginBottom:6 }}>{ic}</div>
                   <div style={{ fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,color:t.gold }}>{v}</div>
-                  <div style={{ color:t.muted,fontSize:12,marginTop:2 }}>{l}</div>
+                  <div style={{ color:t.muted,fontSize:13,marginTop:2 }}>{l}</div>
                 </div>
               ))}
             </div>}
@@ -505,7 +678,7 @@ export default function App() {
                   <div style={{ position:"absolute",top:14,right:16,fontFamily:"'Syne',sans-serif",color:t.dark?"rgba(251,191,36,0.1)":"rgba(217,119,6,0.1)",fontSize:48,fontWeight:900,lineHeight:1 }}>{s.n}</div>
                   <div style={{ fontSize:34,marginBottom:14 }}>{s.icon}</div>
                   <div style={{ fontWeight:700,fontSize:15,marginBottom:8,color:t.text }}>{s.title}</div>
-                  <div style={{ color:t.sub,fontSize:13,lineHeight:1.6 }}>{s.desc}</div>
+                  <div style={{ color:t.sub,fontSize:14,lineHeight:1.6 }}>{s.desc}</div>
                 </div>
               ))}
             </div>
@@ -533,7 +706,7 @@ export default function App() {
         </div>
       )}
 
-      {sel&&<OrderModal s={sel} rate={rate} onClose={()=>setSel(null)} onSave={saveOrder} t={t}/>}
+      {sel&&<OrderModal s={sel} rate={rate} onClose={()=>setSel(null)} onSave={saveOrder} t={t} onGoStatus={()=>{setSel(null);setPage("status");}}/>}
 
       <div style={{ borderTop:`1px solid ${t.border}`,padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8 }}>
         <div style={{ fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:15,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
