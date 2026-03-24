@@ -1,664 +1,511 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
-// ─── РЕКВИЗИТЫ ────────────────────────────────────────────────
 const REQUISITES_POOL = [
-  { label: "Тинькофф",  sbp: "+7 (900) 000-00-00", card: "2200 0000 0000 0001", holder: "Иван И." },
-  { label: "Сбербанк",  sbp: "+7 (900) 000-00-01", card: "2202 0000 0000 0002", holder: "Иван И." },
-  { label: "ВТБ",       sbp: "+7 (900) 000-00-02", card: "2200 0000 0000 0003", holder: "Иван И." },
+  { label:"Тинькофф", sbp:"+7 (900) 000-00-00", card:"2200 0000 0000 0001", holder:"Иван И." },
+  { label:"Сбербанк",  sbp:"+7 (900) 000-00-01", card:"2202 0000 0000 0002", holder:"Иван И." },
+  { label:"ВТБ",       sbp:"+7 (900) 000-00-02", card:"2200 0000 0000 0003", holder:"Иван И." },
 ];
-function getRandomRequisites() {
-  return REQUISITES_POOL[Math.floor(Math.random() * REQUISITES_POOL.length)];
-}
 const ADMIN_PASSWORD = "payflow2026";
-const MARGIN = 0.10; // 10% комиссия
-// ──────────────────────────────────────────────────────────────
+const MARGIN = 0.10;
+const getReq = () => REQUISITES_POOL[Math.floor(Math.random()*REQUISITES_POOL.length)];
+const calc = (usd, rate) => Math.round(usd * rate * (1 + MARGIN));
+const mosDate = () => new Date().toLocaleDateString("ru-RU", { timeZone:"Europe/Moscow", day:"2-digit", month:"2-digit", year:"numeric" });
 
-const SERVICES = [
-  { id: 1,  name: "ChatGPT Plus",         category: "AI",            icon: "🤖", tiers: [{ name: "Plus", price: 20 }, { name: "Team", price: 25 }, { name: "Pro", price: 200 }], login: true,  gift: false, family: true,  newAcc: true  },
-  { id: 2,  name: "Claude Pro",           category: "AI",            icon: "🧠", tiers: [{ name: "Pro", price: 20 }, { name: "Team", price: 30 }], login: true, gift: false, family: true, newAcc: true },
-  { id: 3,  name: "Perplexity Pro",       category: "AI",            icon: "🔍", tiers: [{ name: "Pro", price: 20 }], login: true, gift: false, family: false, newAcc: true },
-  { id: 4,  name: "Grok Premium",         category: "AI",            icon: "🐦", tiers: [{ name: "Premium", price: 8 }, { name: "Premium+", price: 16 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 5,  name: "Gemini Advanced",      category: "AI",            icon: "💎", tiers: [{ name: "Google One AI", price: 19.99 }], login: true, gift: true, family: true, newAcc: false },
-  { id: 6,  name: "Midjourney",           category: "AI",            icon: "🎨", tiers: [{ name: "Basic", price: 10 }, { name: "Standard", price: 30 }, { name: "Pro", price: 60 }, { name: "Mega", price: 120 }], login: true, gift: false, family: false, newAcc: true },
-  { id: 7,  name: "Leonardo AI",          category: "AI",            icon: "🖼️", tiers: [{ name: "Apprentice", price: 10 }, { name: "Artisan", price: 24 }, { name: "Maestro", price: 48 }], login: true, gift: false, family: false, newAcc: true },
-  { id: 8,  name: "Runway ML",            category: "AI",            icon: "🎬", tiers: [{ name: "Standard", price: 15 }, { name: "Pro", price: 35 }, { name: "Unlimited", price: 95 }], login: true, gift: false, family: false, newAcc: true },
-  { id: 9,  name: "Kling AI",             category: "AI",            icon: "🎥", tiers: [{ name: "Starter", price: 8 }, { name: "Pro", price: 35 }, { name: "Premier", price: 88 }], login: true, gift: false, family: false, newAcc: true },
-  { id: 10, name: "ElevenLabs",           category: "AI",            icon: "🎙️", tiers: [{ name: "Starter", price: 5 }, { name: "Creator", price: 22 }, { name: "Pro", price: 99 }], login: true, gift: false, family: false, newAcc: true },
-  { id: 11, name: "Murf AI",              category: "AI",            icon: "🔊", tiers: [{ name: "Creator", price: 29 }, { name: "Business", price: 99 }], login: true, gift: false, family: false, newAcc: true },
-  { id: 12, name: "Adobe Firefly",        category: "Дизайн",        icon: "🔥", tiers: [{ name: "Firefly", price: 9.99 }, { name: "All Apps", price: 54.99 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 13, name: "Cursor Pro",           category: "Разработка",    icon: "💻", tiers: [{ name: "Pro", price: 20 }, { name: "Ultra", price: 200 }], login: true, gift: false, family: false, newAcc: true },
-  { id: 14, name: "GitHub Copilot",       category: "Разработка",    icon: "⚡", tiers: [{ name: "Pro", price: 10 }, { name: "Pro+", price: 39 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 15, name: "Windsurf",             category: "Разработка",    icon: "🏄", tiers: [{ name: "Pro", price: 15 }, { name: "Teams", price: 30 }], login: true, gift: false, family: false, newAcc: true },
-  { id: 16, name: "Replit Core",          category: "Разработка",    icon: "🔧", tiers: [{ name: "Core", price: 20 }], login: true, gift: false, family: false, newAcc: true },
-  { id: 17, name: "Vercel Pro",           category: "Разработка",    icon: "▲",  tiers: [{ name: "Pro", price: 20 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 18, name: "Linear",              category: "Разработка",    icon: "📐", tiers: [{ name: "Plus", price: 8 }, { name: "Business", price: 14 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 19, name: "Figma",               category: "Дизайн",        icon: "✏️", tiers: [{ name: "Professional", price: 15 }, { name: "Organization", price: 45 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 20, name: "Canva Pro",            category: "Дизайн",        icon: "🖌️", tiers: [{ name: "Pro", price: 14.99 }, { name: "Teams", price: 29.99 }], login: true, gift: true, family: true, newAcc: false },
-  { id: 21, name: "Adobe Creative Cloud", category: "Дизайн",       icon: "🅰️", tiers: [{ name: "Photography", price: 19.99 }, { name: "Single App", price: 34.99 }, { name: "All Apps", price: 54.99 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 22, name: "Notion",              category: "Продуктивность", icon: "📝", tiers: [{ name: "Plus", price: 10 }, { name: "Business", price: 15 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 23, name: "Grammarly",           category: "Продуктивность", icon: "📖", tiers: [{ name: "Premium", price: 30 }, { name: "Business", price: 25 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 24, name: "Dropbox Plus",        category: "Продуктивность", icon: "📦", tiers: [{ name: "Plus", price: 11.99 }, { name: "Professional", price: 19.99 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 25, name: "Loom",               category: "Продуктивность", icon: "📹", tiers: [{ name: "Starter", price: 12.5 }, { name: "Business+", price: 16 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 26, name: "Netflix",            category: "Стриминг",       icon: "🎬", tiers: [{ name: "Standard", price: 15.49 }, { name: "Premium", price: 22.99 }], login: true, gift: true, family: true, newAcc: false },
-  { id: 27, name: "YouTube Premium",    category: "Стриминг",       icon: "▶️", tiers: [{ name: "Individual", price: 13.99 }, { name: "Family", price: 22.99 }], login: true, gift: true, family: true, newAcc: false },
-  { id: 28, name: "Disney+",            category: "Стриминг",       icon: "🏰", tiers: [{ name: "Basic", price: 7.99 }, { name: "Premium", price: 13.99 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 29, name: "Apple TV+",          category: "Стриминг",       icon: "🍎", tiers: [{ name: "Individual", price: 9.99 }], login: true, gift: true, family: true, newAcc: false },
-  { id: 30, name: "HBO Max",            category: "Стриминг",       icon: "📺", tiers: [{ name: "With Ads", price: 9.99 }, { name: "Ad-Free", price: 15.99 }, { name: "Ultimate", price: 19.99 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 31, name: "Crunchyroll",        category: "Стриминг",       icon: "⛩️", tiers: [{ name: "Fan", price: 7.99 }, { name: "Mega Fan", price: 9.99 }, { name: "Ultimate Fan", price: 14.99 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 32, name: "Spotify Premium",   category: "Музыка",          icon: "🎵", tiers: [{ name: "Individual", price: 11.99 }, { name: "Duo", price: 16.99 }, { name: "Family", price: 19.99 }], login: true, gift: true, family: true, newAcc: false },
-  { id: 33, name: "Apple Music",       category: "Музыка",          icon: "🎶", tiers: [{ name: "Individual", price: 10.99 }, { name: "Family", price: 16.99 }], login: true, gift: true, family: true, newAcc: false },
-  { id: 34, name: "Tidal",             category: "Музыка",          icon: "🌊", tiers: [{ name: "Individual", price: 10.99 }, { name: "Family", price: 17.99 }], login: true, gift: false, family: true, newAcc: false },
-  { id: 35, name: "Duolingo Super",    category: "Обучение",         icon: "🦉", tiers: [{ name: "Super", price: 12.99 }, { name: "Family", price: 119.99 }], login: true, gift: true, family: true, newAcc: false },
-  { id: 36, name: "Coursera Plus",     category: "Обучение",         icon: "🎓", tiers: [{ name: "Monthly", price: 59 }, { name: "Annual", price: 399 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 37, name: "MasterClass",       category: "Обучение",         icon: "🏆", tiers: [{ name: "Individual", price: 10 }, { name: "Duo", price: 15 }, { name: "Family", price: 20 }], login: true, gift: true, family: true, newAcc: false },
-  { id: 38, name: "Discord Nitro",     category: "Инструменты",      icon: "💬", tiers: [{ name: "Basic", price: 2.99 }, { name: "Nitro", price: 9.99 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 39, name: "Telegram Premium",  category: "Инструменты",      icon: "✈️", tiers: [{ name: "Premium", price: 4.99 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 40, name: "NordVPN",           category: "Инструменты",      icon: "🔒", tiers: [{ name: "Basic 1м", price: 12.99 }, { name: "Basic 1г", price: 53.88 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 41, name: "1Password",         category: "Инструменты",      icon: "🔑", tiers: [{ name: "Individual", price: 2.99 }, { name: "Families", price: 4.99 }], login: true, gift: false, family: true, newAcc: false },
-  { id: 42, name: "Setapp",            category: "Инструменты",      icon: "📱", tiers: [{ name: "Individual", price: 9.99 }, { name: "Family", price: 14.99 }], login: true, gift: false, family: true, newAcc: false },
-  { id: 43, name: "Zoom Pro",          category: "Инструменты",      icon: "📞", tiers: [{ name: "Pro", price: 15.99 }, { name: "Business", price: 19.99 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 44, name: "Xbox Game Pass",    category: "Игры",             icon: "🎮", tiers: [{ name: "Ultimate", price: 19.99 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 45, name: "PlayStation Plus",  category: "Игры",             icon: "🕹️", tiers: [{ name: "Essential", price: 9.99 }, { name: "Extra", price: 14.99 }, { name: "Premium", price: 17.99 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 46, name: "Steam (пополнение)",category: "Игры",             icon: "🚂", tiers: [{ name: "$20", price: 20 }, { name: "$50", price: 50 }, { name: "$100", price: 100 }], login: false, gift: true, family: false, newAcc: false },
-  { id: 47, name: "Notion AI",         category: "Продуктивность",   icon: "🤖", tiers: [{ name: "AI Add-on", price: 10 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 48, name: "Obsidian Sync",     category: "Продуктивность",   icon: "🔮", tiers: [{ name: "Sync", price: 10 }, { name: "Sync+Publish", price: 20 }], login: true, gift: false, family: false, newAcc: false },
-  { id: 49, name: "Skillshare",        category: "Обучение",         icon: "🎒", tiers: [{ name: "Individual", price: 32 }], login: true, gift: true, family: false, newAcc: false },
-  { id: 50, name: "Otter.ai",          category: "Продуктивность",   icon: "🦦", tiers: [{ name: "Pro", price: 16.99 }, { name: "Business", price: 30 }], login: true, gift: false, family: false, newAcc: true },
+const SVC = [
+  {id:1,  name:"ChatGPT Plus",          cat:"AI",             icon:"🤖", tiers:[{n:"Plus",p:20},{n:"Team",p:25},{n:"Pro",p:200}],        login:true, gift:false,family:true, newAcc:true},
+  {id:2,  name:"Claude Pro",            cat:"AI",             icon:"🧠", tiers:[{n:"Pro",p:20},{n:"Team",p:30}],                         login:true, gift:false,family:true, newAcc:true},
+  {id:3,  name:"Perplexity Pro",        cat:"AI",             icon:"🔍", tiers:[{n:"Pro",p:20}],                                         login:true, gift:false,family:false,newAcc:true},
+  {id:4,  name:"Grok Premium",          cat:"AI",             icon:"🐦", tiers:[{n:"Premium",p:8},{n:"Premium+",p:16}],                  login:true, gift:false,family:false,newAcc:false},
+  {id:5,  name:"Gemini Advanced",       cat:"AI",             icon:"💎", tiers:[{n:"Google One",p:19.99}],                              login:true, gift:true, family:true, newAcc:false},
+  {id:6,  name:"Midjourney",            cat:"AI",             icon:"🎨", tiers:[{n:"Basic",p:10},{n:"Standard",p:30},{n:"Pro",p:60},{n:"Mega",p:120}], login:true,gift:false,family:false,newAcc:true},
+  {id:7,  name:"Leonardo AI",           cat:"AI",             icon:"🖼️", tiers:[{n:"Apprentice",p:10},{n:"Artisan",p:24},{n:"Maestro",p:48}],login:true,gift:false,family:false,newAcc:true},
+  {id:8,  name:"Runway ML",             cat:"AI",             icon:"🎬", tiers:[{n:"Standard",p:15},{n:"Pro",p:35},{n:"Unlimited",p:95}], login:true,gift:false,family:false,newAcc:true},
+  {id:9,  name:"ElevenLabs",            cat:"AI",             icon:"🎙️", tiers:[{n:"Starter",p:5},{n:"Creator",p:22},{n:"Pro",p:99}],    login:true,gift:false,family:false,newAcc:true},
+  {id:10, name:"Kling AI",              cat:"AI",             icon:"🎥", tiers:[{n:"Starter",p:8},{n:"Pro",p:35},{n:"Premier",p:88}],   login:true,gift:false,family:false,newAcc:true},
+  {id:11, name:"Murf AI",               cat:"AI",             icon:"🔊", tiers:[{n:"Creator",p:29},{n:"Business",p:99}],                login:true,gift:false,family:false,newAcc:true},
+  {id:12, name:"Cursor Pro",            cat:"Разработка",     icon:"💻", tiers:[{n:"Pro",p:20},{n:"Ultra",p:200}],                       login:true,gift:false,family:false,newAcc:true},
+  {id:13, name:"GitHub Copilot",        cat:"Разработка",     icon:"⚡", tiers:[{n:"Pro",p:10},{n:"Pro+",p:39}],                         login:true,gift:false,family:false,newAcc:false},
+  {id:14, name:"Windsurf",              cat:"Разработка",     icon:"🏄", tiers:[{n:"Pro",p:15},{n:"Teams",p:30}],                        login:true,gift:false,family:false,newAcc:true},
+  {id:15, name:"Replit Core",           cat:"Разработка",     icon:"🔧", tiers:[{n:"Core",p:20}],                                        login:true,gift:false,family:false,newAcc:true},
+  {id:16, name:"Vercel Pro",            cat:"Разработка",     icon:"▲",  tiers:[{n:"Pro",p:20}],                                         login:true,gift:false,family:false,newAcc:false},
+  {id:17, name:"Linear",               cat:"Разработка",     icon:"📐", tiers:[{n:"Plus",p:8},{n:"Business",p:14}],                    login:true,gift:false,family:false,newAcc:false},
+  {id:18, name:"Figma",                cat:"Дизайн",          icon:"✏️", tiers:[{n:"Professional",p:15},{n:"Organization",p:45}],        login:true,gift:false,family:false,newAcc:false},
+  {id:19, name:"Canva Pro",            cat:"Дизайн",          icon:"🖌️", tiers:[{n:"Pro",p:14.99},{n:"Teams",p:29.99}],                  login:true,gift:true, family:true, newAcc:false},
+  {id:20, name:"Adobe Creative Cloud", cat:"Дизайн",          icon:"🅰️", tiers:[{n:"Photography",p:19.99},{n:"All Apps",p:54.99}],      login:true,gift:true, family:false,newAcc:false},
+  {id:21, name:"Adobe Firefly",        cat:"Дизайн",          icon:"🔥", tiers:[{n:"Firefly",p:9.99},{n:"All Apps",p:54.99}],           login:true,gift:true, family:false,newAcc:false},
+  {id:22, name:"Notion",               cat:"Продуктивность",  icon:"📝", tiers:[{n:"Plus",p:10},{n:"Business",p:15}],                  login:true,gift:false,family:false,newAcc:false},
+  {id:23, name:"Notion AI",            cat:"Продуктивность",  icon:"🤖", tiers:[{n:"AI Add-on",p:10}],                                 login:true,gift:false,family:false,newAcc:false},
+  {id:24, name:"Grammarly",            cat:"Продуктивность",  icon:"📖", tiers:[{n:"Premium",p:30},{n:"Business",p:25}],               login:true,gift:true, family:false,newAcc:false},
+  {id:25, name:"Dropbox Plus",         cat:"Продуктивность",  icon:"📦", tiers:[{n:"Plus",p:11.99},{n:"Professional",p:19.99}],        login:true,gift:false,family:false,newAcc:false},
+  {id:26, name:"Obsidian Sync",        cat:"Продуктивность",  icon:"🔮", tiers:[{n:"Sync",p:10},{n:"Sync+Publish",p:20}],              login:true,gift:false,family:false,newAcc:false},
+  {id:27, name:"Loom",                 cat:"Продуктивность",  icon:"📹", tiers:[{n:"Starter",p:12.5},{n:"Business+",p:16}],            login:true,gift:false,family:false,newAcc:false},
+  {id:28, name:"Otter.ai",             cat:"Продуктивность",  icon:"🦦", tiers:[{n:"Pro",p:16.99},{n:"Business",p:30}],                login:true,gift:false,family:false,newAcc:true},
+  {id:29, name:"Netflix",              cat:"Стриминг",        icon:"🎬", tiers:[{n:"Standard",p:15.49},{n:"Premium",p:22.99}],          login:true,gift:true, family:true, newAcc:false},
+  {id:30, name:"YouTube Premium",      cat:"Стриминг",        icon:"▶️", tiers:[{n:"Individual",p:13.99},{n:"Family",p:22.99}],         login:true,gift:true, family:true, newAcc:false},
+  {id:31, name:"Disney+",              cat:"Стриминг",        icon:"🏰", tiers:[{n:"Basic",p:7.99},{n:"Premium",p:13.99}],              login:true,gift:true, family:false,newAcc:false},
+  {id:32, name:"Apple TV+",            cat:"Стриминг",        icon:"🍎", tiers:[{n:"Individual",p:9.99}],                               login:true,gift:true, family:true, newAcc:false},
+  {id:33, name:"HBO Max",              cat:"Стриминг",        icon:"📺", tiers:[{n:"With Ads",p:9.99},{n:"Ad-Free",p:15.99},{n:"Ultimate",p:19.99}], login:true,gift:true,family:false,newAcc:false},
+  {id:34, name:"Crunchyroll",          cat:"Стриминг",        icon:"⛩️", tiers:[{n:"Fan",p:7.99},{n:"Mega Fan",p:9.99},{n:"Ultimate Fan",p:14.99}],  login:true,gift:true,family:false,newAcc:false},
+  {id:35, name:"Spotify Premium",      cat:"Музыка",          icon:"🎵", tiers:[{n:"Individual",p:11.99},{n:"Duo",p:16.99},{n:"Family",p:19.99}], login:true,gift:true,family:true,newAcc:false},
+  {id:36, name:"Apple Music",          cat:"Музыка",          icon:"🎶", tiers:[{n:"Individual",p:10.99},{n:"Family",p:16.99}],         login:true,gift:true, family:true, newAcc:false},
+  {id:37, name:"Tidal",               cat:"Музыка",          icon:"🌊", tiers:[{n:"Individual",p:10.99},{n:"Family",p:17.99}],         login:true,gift:false,family:true, newAcc:false},
+  {id:38, name:"Duolingo Super",       cat:"Обучение",        icon:"🦉", tiers:[{n:"Super",p:12.99},{n:"Family",p:119.99}],             login:true,gift:true, family:true, newAcc:false},
+  {id:39, name:"Coursera Plus",        cat:"Обучение",        icon:"🎓", tiers:[{n:"Monthly",p:59},{n:"Annual",p:399}],                 login:true,gift:false,family:false,newAcc:false},
+  {id:40, name:"MasterClass",          cat:"Обучение",        icon:"🏆", tiers:[{n:"Individual",p:10},{n:"Duo",p:15},{n:"Family",p:20}],login:true,gift:true, family:true, newAcc:false},
+  {id:41, name:"Skillshare",           cat:"Обучение",        icon:"🎒", tiers:[{n:"Individual",p:32}],                                 login:true,gift:true, family:false,newAcc:false},
+  {id:42, name:"Discord Nitro",        cat:"Инструменты",     icon:"💬", tiers:[{n:"Basic",p:2.99},{n:"Nitro",p:9.99}],                login:true,gift:true, family:false,newAcc:false},
+  {id:43, name:"Telegram Premium",     cat:"Инструменты",     icon:"✈️", tiers:[{n:"Premium",p:4.99}],                                  login:true,gift:true, family:false,newAcc:false},
+  {id:44, name:"NordVPN",              cat:"Инструменты",     icon:"🔒", tiers:[{n:"Basic 1м",p:12.99},{n:"Basic 1г",p:53.88}],         login:true,gift:false,family:false,newAcc:false},
+  {id:45, name:"1Password",            cat:"Инструменты",     icon:"🔑", tiers:[{n:"Individual",p:2.99},{n:"Families",p:4.99}],         login:true,gift:false,family:true, newAcc:false},
+  {id:46, name:"Setapp",               cat:"Инструменты",     icon:"📱", tiers:[{n:"Individual",p:9.99},{n:"Family",p:14.99}],          login:true,gift:false,family:true, newAcc:false},
+  {id:47, name:"Zoom Pro",             cat:"Инструменты",     icon:"📞", tiers:[{n:"Pro",p:15.99},{n:"Business",p:19.99}],              login:true,gift:false,family:false,newAcc:false},
+  {id:48, name:"Xbox Game Pass",       cat:"Игры",            icon:"🎮", tiers:[{n:"Ultimate",p:19.99}],                                login:true,gift:true, family:false,newAcc:false},
+  {id:49, name:"PlayStation Plus",     cat:"Игры",            icon:"🕹️", tiers:[{n:"Essential",p:9.99},{n:"Extra",p:14.99},{n:"Premium",p:17.99}], login:true,gift:true,family:false,newAcc:false},
+  {id:50, name:"Steam (пополнение)",   cat:"Игры",            icon:"🚂", tiers:[{n:"$20",p:20},{n:"$50",p:50},{n:"$100",p:100}],       login:false,gift:true, family:false,newAcc:false},
 ];
 
-const CATEGORIES = ["Все", "AI", "Разработка", "Дизайн", "Стриминг", "Музыка", "Продуктивность", "Инструменты", "Обучение", "Игры"];
-const STATUS_LABELS = { new: "Новая", paid: "Оплачена", processing: "В обработке", done: "Выполнена", cancelled: "Отменена" };
-const STATUS_COLORS = { new: "#fbbf24", paid: "#60a5fa", processing: "#a78bfa", done: "#34d399", cancelled: "#f87171" };
+const CATS = ["Все","AI","Разработка","Дизайн","Стриминг","Музыка","Продуктивность","Инструменты","Обучение","Игры"];
+const SL = {new:"Новая",paid:"Оплачена",processing:"В обработке",done:"Выполнена",cancelled:"Отменена"};
+const SC = {new:"#fbbf24",paid:"#60a5fa",processing:"#a78bfa",done:"#34d399",cancelled:"#f87171"};
+const POPULAR_NAMES = ["ChatGPT Plus","Midjourney","Netflix","Spotify Premium","Cursor Pro","Claude Pro"];
 
-function calcPrice(usd, rate) {
-  return Math.round(usd * rate * (1 + MARGIN));
-}
-
-function getMoscowDateStr() {
-  return new Date().toLocaleDateString("ru-RU", { timeZone: "Europe/Moscow", day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-// ─── THEME CONTEXT ────────────────────────────────────────────
+// ─── THEME ────────────────────────────────────────────────────
 function useTheme() {
-  const [dark, setDark] = useState(() => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true);
+  const [dark, setDark] = useState(() => { try { return window.matchMedia("(prefers-color-scheme: dark)").matches; } catch { return true; } });
   const toggle = () => setDark(d => !d);
   const t = {
     dark,
-    bg:        dark ? "#080810" : "#f5f5f7",
-    surface:   dark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.04)",
-    surface2:  dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)",
+    bg:        dark ? "#07070f"               : "#eeeef3",
+    card:      dark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.9)",
+    card2:     dark ? "rgba(255,255,255,0.08)" : "#ffffff",
     border:    dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)",
-    borderHov: dark ? "rgba(251,191,36,0.4)"  : "rgba(217,119,6,0.5)",
-    text:      dark ? "#ffffff"               : "#0f0f14",
-    textSub:   dark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.5)",
-    textMuted: dark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.3)",
-    nav:       dark ? "rgba(8,8,16,0.96)"     : "rgba(245,245,247,0.96)",
-    input:     dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+    borderH:   dark ? "rgba(251,191,36,0.5)"  : "rgba(217,119,6,0.6)",
+    text:      dark ? "#ffffff"               : "#111118",
+    sub:       dark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.55)",
+    muted:     dark ? "rgba(255,255,255,0.25)": "rgba(0,0,0,0.35)",
+    nav:       dark ? "rgba(7,7,15,0.92)"     : "rgba(238,238,243,0.92)",
+    inp:       dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.06)",
     gold:      "#fbbf24",
-    goldDim:   dark ? "rgba(251,191,36,0.12)" : "rgba(217,119,6,0.12)",
-    goldBorder:dark ? "rgba(251,191,36,0.3)"  : "rgba(217,119,6,0.4)",
+    goldD:     "#f59e0b",
+    goldDim:   dark ? "rgba(251,191,36,0.1)"  : "rgba(217,119,6,0.1)",
+    goldB:     dark ? "rgba(251,191,36,0.35)" : "rgba(217,119,6,0.4)",
+    shadow:    dark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 4px 24px rgba(0,0,0,0.1)",
+    shadowG:   "0 6px 28px rgba(251,191,36,0.3)",
   };
   return { t, toggle };
 }
 
 // ─── BADGE ────────────────────────────────────────────────────
 function Badge({ active, color, children }) {
-  const palettes = {
-    blue:   ["rgba(96,165,250,0.15)",  "rgba(96,165,250,0.4)",  "#93c5fd"],
-    green:  ["rgba(52,211,153,0.15)",  "rgba(52,211,153,0.4)",  "#6ee7b7"],
-    purple: ["rgba(167,139,250,0.15)", "rgba(167,139,250,0.4)", "#c4b5fd"],
-    yellow: ["rgba(251,191,36,0.15)",  "rgba(251,191,36,0.4)",  "#fde68a"],
-  };
-  const c = palettes[color];
-  return (
-    <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 100, fontWeight: 600, background: active ? c[0] : "rgba(128,128,128,0.1)", border: `1px solid ${active ? c[1] : "rgba(128,128,128,0.2)"}`, color: active ? c[2] : "rgba(128,128,128,0.4)" }}>
-      {children}
-    </span>
-  );
+  const p = {
+    blue:   ["rgba(96,165,250,0.15)","rgba(96,165,250,0.4)","#93c5fd"],
+    green:  ["rgba(52,211,153,0.15)","rgba(52,211,153,0.4)","#6ee7b7"],
+    purple: ["rgba(167,139,250,0.15)","rgba(167,139,250,0.4)","#c4b5fd"],
+    yellow: ["rgba(251,191,36,0.15)","rgba(251,191,36,0.4)","#fde68a"],
+  }[color];
+  return <span style={{ fontSize:10, padding:"2px 8px", borderRadius:100, fontWeight:600, whiteSpace:"nowrap", background:active?p[0]:"rgba(128,128,128,0.08)", border:`1px solid ${active?p[1]:"rgba(128,128,128,0.15)"}`, color:active?p[2]:"rgba(128,128,128,0.35)" }}>{children}</span>;
 }
 
 // ─── SERVICE CARD ─────────────────────────────────────────────
-function ServiceCard({ service, rate, onSelect, t }) {
-  const [hovered, setHovered] = useState(false);
+function SCard({ s, rate, onSelect, t }) {
+  const [hov, setHov] = useState(false);
   return (
-    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onClick={() => onSelect(service)}
-      style={{ background: hovered ? t.surface2 : t.surface, border: `1px solid ${hovered ? t.borderHov : t.border}`, transform: hovered ? "translateY(-3px)" : "none", boxShadow: hovered ? "0 8px 32px rgba(251,191,36,0.08)" : "none", transition: "all .2s", cursor: "pointer", borderRadius: 16, padding: 20 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 26 }}>{service.icon}</span>
+    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>onSelect(s)}
+      style={{ background:hov?t.card2:t.card, border:`1px solid ${hov?t.borderH:t.border}`, borderRadius:18, padding:20, cursor:"pointer", transition:"all .25s cubic-bezier(.4,0,.2,1)", transform:hov?"translateY(-4px)":"none", boxShadow:hov?t.shadow:"none" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:26, transition:"filter .2s", filter:hov?"drop-shadow(0 0 8px rgba(251,191,36,0.5))":"none" }}>{s.icon}</span>
           <div>
-            <div style={{ color: t.text, fontWeight: 700, fontSize: 14, fontFamily: "'Syne',sans-serif" }}>{service.name}</div>
-            <div style={{ color: t.textMuted, fontSize: 11, marginTop: 1 }}>{service.category}</div>
+            <div style={{ color:t.text, fontWeight:700, fontSize:14, fontFamily:"'Syne',sans-serif" }}>{s.name}</div>
+            <div style={{ color:t.muted, fontSize:11, marginTop:1 }}>{s.cat}</div>
           </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "flex-end" }}>
-          <Badge active={service.login} color="blue">🔐 Лог/пас</Badge>
-          <Badge active={service.gift} color="green">🎁 Gift</Badge>
-          <Badge active={service.family} color="purple">👨‍👩‍👧 Family</Badge>
-          <Badge active={service.newAcc} color="yellow">✨ Новый акк</Badge>
+        <div style={{ display:"flex", flexDirection:"column", gap:3, alignItems:"flex-end" }}>
+          <Badge active={s.login}  color="blue">🔐 Лог/пас</Badge>
+          <Badge active={s.gift}   color="green">🎁 Gift</Badge>
+          <Badge active={s.family} color="purple">👨‍👩‍👧 Family</Badge>
+          <Badge active={s.newAcc} color="yellow">✨ Новый акк</Badge>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-        {service.tiers.map((tier, i) => (
-          <div key={i} style={{ background: t.goldDim, border: `1px solid ${t.goldBorder}`, borderRadius: 8, padding: "5px 10px" }}>
-            <div style={{ color: t.textSub, fontSize: 10 }}>{tier.name}</div>
-            <div style={{ color: t.gold, fontWeight: 700, fontSize: 12 }}>
-              ${tier.price}
-              <span style={{ color: t.textMuted, fontWeight: 400, fontSize: 10 }}> = {rate ? calcPrice(tier.price, rate).toLocaleString("ru-RU") : "..."}₽</span>
-            </div>
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginTop:8 }}>
+        {s.tiers.map((tier,i)=>(
+          <div key={i} style={{ background:t.goldDim, border:`1px solid ${t.goldB}`, borderRadius:9, padding:"5px 10px" }}>
+            <div style={{ color:t.muted, fontSize:10 }}>{tier.n}</div>
+            <div style={{ color:t.gold, fontWeight:700, fontSize:12 }}>${tier.p} <span style={{ color:t.muted, fontWeight:400, fontSize:10 }}>= {rate?calc(tier.p,rate).toLocaleString("ru-RU"):"..."}₽</span></div>
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 4, textAlign: "right" }}>
-        <span style={{ fontSize: 10, color: t.textMuted }}>* цена с комиссией {Math.round(MARGIN * 100)}%</span>
-      </div>
-      <div style={{ marginTop: 10, padding: "7px 12px", borderRadius: 8, fontSize: 12, textAlign: "center", transition: "all .2s", fontWeight: 600, background: hovered ? t.goldDim : t.surface, color: hovered ? t.gold : t.textSub }}>
-        {hovered ? "→ Оформить заявку" : "Нажмите чтобы выбрать"}
+      <div style={{ marginTop:3, textAlign:"right" }}><span style={{ fontSize:10, color:t.muted }}>* с комиссией 10%</span></div>
+      <div style={{ marginTop:10, padding:"8px 12px", borderRadius:9, fontSize:12, textAlign:"center", fontWeight:600, transition:"all .2s", background:hov?t.goldDim:"transparent", color:hov?t.gold:t.muted, border:`1px solid ${hov?t.goldB:"transparent"}` }}>
+        {hov ? "→ Оформить заявку" : "Нажмите для заказа"}
       </div>
     </div>
   );
 }
 
 // ─── ORDER MODAL ──────────────────────────────────────────────
-function OrderModal({ service, rate, onClose, onSaveOrder, t }) {
-  const [selectedTier, setSelectedTier] = useState(service.tiers[0]);
-  const [method, setMethod] = useState(service.gift ? "gift" : service.newAcc ? "newAcc" : "login");
-  const [loginVal, setLoginVal] = useState("");
-  const [passVal, setPassVal] = useState("");
-  const [email, setEmail] = useState("");
-  const [step, setStep] = useState(1);
-  const [receiptFile, setReceiptFile] = useState(null);
-  const orderId = useRef(`#${Math.floor(10000 + Math.random() * 90000)}`).current;
-  const requisites = useRef(getRandomRequisites()).current;
+function OrderModal({ s, rate, onClose, onSave, t }) {
+  const [tier, setTier] = useState(s.tiers[0]);
+  const [method, setMethod] = useState(s.gift?"gift":s.newAcc?"newAcc":"login");
+  const [login, setLogin] = useState(""); const [pass, setPass] = useState(""); const [email, setEmail] = useState("");
+  const [step, setStep] = useState(1); const [file, setFile] = useState(null);
+  const orderId = useRef(`#${Math.floor(10000+Math.random()*90000)}`).current;
+  const req = useRef(getReq()).current;
   const fileRef = useRef();
-
-  const base = Math.round(selectedTier.price * rate);
-  const commission = Math.round(selectedTier.price * rate * MARGIN);
-  const finalPrice = base + commission;
-
+  const base = rate?Math.round(tier.p*rate):0;
+  const comm = rate?Math.round(tier.p*rate*MARGIN):0;
+  const total = base+comm;
   const methods = [];
-  if (service.login) methods.push({ id: "login",  icon: "🔐", label: "Войти в аккаунт",   desc: "Укажите логин и пароль — мы зайдём и активируем" });
-  if (service.gift)  methods.push({ id: "gift",   icon: "🎁", label: "Gift-карта",          desc: "Без доступа к аккаунту — пришлём код на email" });
-  if (service.family)methods.push({ id: "family", icon: "👨‍👩‍👧", label: "Family / Team план", desc: "Добавим вас по email — остаётесь в своём аккаунте" });
-  if (service.newAcc)methods.push({ id: "newAcc", icon: "✨", label: "Новый аккаунт",       desc: "Создадим аккаунт и передадим логин и пароль" });
-
-  const inputStyle = { width: "100%", background: t.input, border: `1px solid ${t.border}`, borderRadius: 10, padding: "12px 14px", color: t.text, fontSize: 14, outline: "none", marginBottom: 8, boxSizing: "border-box" };
-
-  const handleCreate = () => {
-    onSaveOrder({ id: orderId, service: service.name, tier: selectedTier.name, priceUsd: selectedTier.price, priceRub: finalPrice, method, login: loginVal, email, status: "new", createdAt: new Date().toISOString() });
-    setStep(2);
-  };
-
+  if(s.login)  methods.push({id:"login",  icon:"🔐", label:"Войти в аккаунт",   desc:"Укажите логин/пароль — зайдём и активируем"});
+  if(s.gift)   methods.push({id:"gift",   icon:"🎁", label:"Gift-карта",         desc:"Без доступа к аккаунту — пришлём код"});
+  if(s.family) methods.push({id:"family", icon:"👨‍👩‍👧", label:"Family/Team план",  desc:"Добавим по email — в своём аккаунте"});
+  if(s.newAcc) methods.push({id:"newAcc", icon:"✨", label:"Новый аккаунт",      desc:"Создадим и передадим готовые данные"});
+  const inp = {width:"100%",background:t.inp,border:`1px solid ${t.border}`,borderRadius:10,padding:"12px 14px",color:t.text,fontSize:14,outline:"none",marginBottom:8,boxSizing:"border-box"};
+  const handleCreate = () => { onSave({id:orderId,service:s.name,tier:tier.n,priceUsd:tier.p,priceRub:total,method,login,email,status:"new",createdAt:new Date().toISOString()}); setStep(2); };
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: t.dark ? "#0d0d14" : "#ffffff", border: `1px solid ${t.goldBorder}`, borderRadius: 20, width: "100%", maxWidth: 480, padding: 28, maxHeight: "90vh", overflowY: "auto" }}>
-        {step === 1 ? (
+    <div style={{ position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(16px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:t.dark?"#0c0c1a":"#ffffff", border:`1px solid ${t.goldB}`, borderRadius:22, width:"100%", maxWidth:490, padding:28, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,0.5)" }}>
+        {step===1 ? (
           <>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 22 }}>
-              <div>
-                <div style={{ fontSize: 20, fontFamily: "'Syne',sans-serif", fontWeight: 800, color: t.text }}>{service.icon} {service.name}</div>
-                <div style={{ color: t.textSub, fontSize: 12, marginTop: 2 }}>Оформление заявки</div>
-              </div>
-              <button onClick={onClose} style={{ color: t.textSub, fontSize: 20, background: "none", border: "none", cursor: "pointer" }}>✕</button>
+            <div style={{ display:"flex",justifyContent:"space-between",marginBottom:22 }}>
+              <div><div style={{ fontSize:20,fontFamily:"'Syne',sans-serif",fontWeight:800,color:t.text }}>{s.icon} {s.name}</div><div style={{ color:t.sub,fontSize:12,marginTop:2 }}>Оформление заявки</div></div>
+              <button onClick={onClose} style={{ color:t.sub,fontSize:22,background:"none",border:"none",cursor:"pointer" }}>✕</button>
             </div>
-
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ color: t.textSub, fontSize: 11, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>Тариф</div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {service.tiers.map((tier, i) => (
-                  <button key={i} onClick={() => setSelectedTier(tier)} style={{ padding: "10px 14px", borderRadius: 10, cursor: "pointer", background: selectedTier.name === tier.name ? t.goldDim : t.surface, border: `1px solid ${selectedTier.name === tier.name ? t.gold : t.border}`, color: selectedTier.name === tier.name ? t.gold : t.textSub, fontWeight: 600, fontSize: 13, transition: "all .15s" }}>
-                    {tier.name} — ${tier.price}
-                  </button>
-                ))}
+            <div style={{ marginBottom:18 }}>
+              <div style={{ color:t.muted,fontSize:11,marginBottom:8,textTransform:"uppercase",letterSpacing:1 }}>Тариф</div>
+              <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+                {s.tiers.map((ti,i)=><button key={i} onClick={()=>setTier(ti)} style={{ padding:"10px 14px",borderRadius:10,cursor:"pointer",background:tier.n===ti.n?t.goldDim:t.inp,border:`1px solid ${tier.n===ti.n?t.gold:t.border}`,color:tier.n===ti.n?t.gold:t.sub,fontWeight:600,fontSize:13,transition:"all .15s" }}>{ti.n} — ${ti.p}</button>)}
               </div>
             </div>
-
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ color: t.textSub, fontSize: 11, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>Способ активации</div>
-              {methods.map(m => (
-                <button key={m.id} onClick={() => setMethod(m.id)} style={{ width: "100%", padding: "11px 14px", borderRadius: 10, cursor: "pointer", textAlign: "left", background: method === m.id ? t.goldDim : t.surface, border: `1px solid ${method === m.id ? t.goldBorder : t.border}`, marginBottom: 7, transition: "all .15s" }}>
-                  <div style={{ color: t.text, fontWeight: 600, fontSize: 13 }}>{m.icon} {m.label}</div>
-                  <div style={{ color: t.textSub, fontSize: 11, marginTop: 2 }}>{m.desc}</div>
-                </button>
-              ))}
+            <div style={{ marginBottom:18 }}>
+              <div style={{ color:t.muted,fontSize:11,marginBottom:8,textTransform:"uppercase",letterSpacing:1 }}>Способ активации</div>
+              {methods.map(m=><button key={m.id} onClick={()=>setMethod(m.id)} style={{ width:"100%",padding:"11px 14px",borderRadius:10,cursor:"pointer",textAlign:"left",background:method===m.id?t.goldDim:t.inp,border:`1px solid ${method===m.id?t.goldB:t.border}`,marginBottom:7,transition:"all .15s" }}>
+                <div style={{ color:t.text,fontWeight:600,fontSize:13 }}>{m.icon} {m.label}</div>
+                <div style={{ color:t.sub,fontSize:11,marginTop:2 }}>{m.desc}</div>
+              </button>)}
             </div>
-
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ color: t.textSub, fontSize: 11, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>Ваши данные</div>
-              {(method === "gift" || method === "family") && <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email от аккаунта" style={inputStyle} />}
-              {method === "login" && (
-                <>
-                  <input value={loginVal} onChange={e => setLoginVal(e.target.value)} placeholder="Логин / Email" style={inputStyle} />
-                  <input value={passVal} onChange={e => setPassVal(e.target.value)} placeholder="Пароль" type="password" style={inputStyle} />
-                  <div style={{ background: t.goldDim, border: `1px solid ${t.goldBorder}`, borderRadius: 8, padding: "8px 12px", fontSize: 11, color: t.textSub }}>
-                    ⚠️ Если включена 2FA — будьте онлайн. Запросим код сразу после оплаты.
-                  </div>
-                </>
-              )}
-              {method === "newAcc" && <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 10, padding: 14, fontSize: 12, color: t.textSub, lineHeight: 1.6 }}>✨ Создадим аккаунт и пришлём логин и пароль после оплаты.</div>}
+            <div style={{ marginBottom:18 }}>
+              <div style={{ color:t.muted,fontSize:11,marginBottom:8,textTransform:"uppercase",letterSpacing:1 }}>Ваши данные</div>
+              {(method==="gift"||method==="family")&&<input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email от аккаунта" style={inp}/>}
+              {method==="login"&&<><input value={login} onChange={e=>setLogin(e.target.value)} placeholder="Логин / Email" style={inp}/><input value={pass} onChange={e=>setPass(e.target.value)} placeholder="Пароль" type="password" style={inp}/><div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:8,padding:"8px 12px",fontSize:11,color:t.sub }}>⚠️ Если включена 2FA — будьте онлайн. Запросим код сразу после оплаты.</div></>}
+              {method==="newAcc"&&<div style={{ background:t.inp,border:`1px solid ${t.border}`,borderRadius:10,padding:14,fontSize:12,color:t.sub,lineHeight:1.6 }}>✨ Создадим аккаунт и пришлём логин/пароль после оплаты. Ничего вводить не нужно.</div>}
             </div>
-
-            <div style={{ background: t.goldDim, border: `1px solid ${t.goldBorder}`, borderRadius: 12, padding: 16, marginBottom: 18 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ color: t.textSub, fontSize: 13 }}>Курс ЦБ</span>
-                <span style={{ color: t.textSub, fontSize: 13 }}>1$ = {rate?.toFixed(2)} ₽</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ color: t.textSub, fontSize: 13 }}>Комиссия {Math.round(MARGIN * 100)}%</span>
-                <span style={{ color: t.textSub, fontSize: 13 }}>+ {commission.toLocaleString("ru-RU")} ₽</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${t.border}`, paddingTop: 10, marginTop: 4 }}>
-                <span style={{ color: t.text, fontWeight: 700, fontSize: 15 }}>К оплате</span>
-                <span style={{ color: t.gold, fontWeight: 800, fontSize: 22 }}>{finalPrice.toLocaleString("ru-RU")} ₽</span>
-              </div>
+            <div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:14,padding:16,marginBottom:18 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",marginBottom:6 }}><span style={{ color:t.sub,fontSize:13 }}>Курс ЦБ</span><span style={{ color:t.sub,fontSize:13 }}>1$ = {rate?.toFixed(2)} ₽</span></div>
+              <div style={{ display:"flex",justifyContent:"space-between",marginBottom:10 }}><span style={{ color:t.sub,fontSize:13 }}>Комиссия 10%</span><span style={{ color:t.sub,fontSize:13 }}>+ {comm.toLocaleString("ru-RU")} ₽</span></div>
+              <div style={{ display:"flex",justifyContent:"space-between",borderTop:`1px solid ${t.border}`,paddingTop:12 }}><span style={{ color:t.text,fontWeight:700,fontSize:15 }}>К оплате</span><span style={{ color:t.gold,fontWeight:900,fontSize:26,fontFamily:"'Syne',sans-serif" }}>{total.toLocaleString("ru-RU")} ₽</span></div>
             </div>
-
-            <button onClick={handleCreate} style={{ width: "100%", padding: 14, borderRadius: 12, background: "linear-gradient(135deg,#f59e0b,#fbbf24)", border: "none", color: "#0d0d12", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>
-              Создать заявку →
-            </button>
+            <button onClick={handleCreate} style={{ width:"100%",padding:14,borderRadius:12,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:800,fontSize:15,cursor:"pointer",boxShadow:t.shadowG }}>Создать заявку →</button>
           </>
         ) : (
-          <>
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
-              <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 20, color: t.text, marginBottom: 8 }}>Заявка создана!</div>
-              <div style={{ background: t.goldDim, border: `1px solid ${t.goldBorder}`, borderRadius: 10, padding: "8px 20px", display: "inline-block", color: t.gold, fontWeight: 800, fontSize: 22 }}>{orderId}</div>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:52,marginBottom:14 }}>✅</div>
+            <div style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:22,color:t.text,marginBottom:10 }}>Заявка создана!</div>
+            <div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:12,padding:"10px 24px",display:"inline-block",color:t.gold,fontWeight:800,fontSize:28,marginBottom:18 }}>{orderId}</div>
+            <div style={{ color:t.sub,fontSize:13,marginBottom:20,lineHeight:1.7 }}>Переведите <strong style={{ color:t.text }}>{total.toLocaleString("ru-RU")} ₽</strong><br/>укажи номер заявки в комментарии</div>
+            <div style={{ background:t.card,border:`1px dashed ${t.border}`,borderRadius:14,padding:18,marginBottom:16,textAlign:"left" }}>
+              <div style={{ color:t.muted,fontSize:10,marginBottom:10,textTransform:"uppercase",letterSpacing:1 }}>Реквизиты · {req.label}</div>
+              <div style={{ marginBottom:10 }}><div style={{ color:t.muted,fontSize:11,marginBottom:3 }}>По СБП</div><div style={{ color:t.text,fontWeight:700,fontSize:16 }}>{req.sbp}</div><div style={{ color:t.muted,fontSize:11 }}>{req.holder}</div></div>
+              <div style={{ marginBottom:10 }}><div style={{ color:t.muted,fontSize:11,marginBottom:3 }}>По номеру карты</div><div style={{ color:t.text,fontWeight:700,fontSize:16 }}>{req.card}</div><div style={{ color:t.muted,fontSize:11 }}>{req.label} · {req.holder}</div></div>
+              <div style={{ paddingTop:10,borderTop:`1px solid ${t.border}`,color:t.muted,fontSize:11 }}>Комментарий: <strong style={{ color:t.gold,fontSize:15 }}>{orderId}</strong></div>
             </div>
-            <div style={{ color: t.textSub, fontSize: 13, marginBottom: 18, textAlign: "center", lineHeight: 1.6 }}>
-              Переведите <strong style={{ color: t.text }}>{finalPrice.toLocaleString("ru-RU")} ₽</strong> и укажи номер заявки в комментарии
-            </div>
-            <div style={{ background: t.surface, border: `1px dashed ${t.border}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
-              <div style={{ color: t.textMuted, fontSize: 10, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>Реквизиты · {requisites.label}</div>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ color: t.textMuted, fontSize: 11, marginBottom: 2 }}>По СБП</div>
-                <div style={{ color: t.text, fontWeight: 600, fontSize: 15 }}>{requisites.sbp}</div>
-                <div style={{ color: t.textMuted, fontSize: 11 }}>{requisites.holder}</div>
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ color: t.textMuted, fontSize: 11, marginBottom: 2 }}>По номеру карты</div>
-                <div style={{ color: t.text, fontWeight: 600, fontSize: 15 }}>{requisites.card}</div>
-                <div style={{ color: t.textMuted, fontSize: 11 }}>{requisites.label} · {requisites.holder}</div>
-              </div>
-              <div style={{ paddingTop: 10, borderTop: `1px solid ${t.border}`, color: t.textMuted, fontSize: 11 }}>
-                Комментарий: <strong style={{ color: t.gold }}>{orderId}</strong>
-              </div>
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ color: t.textSub, fontSize: 12, marginBottom: 8 }}>📎 Загрузите чек — ускорит обработку и защитит вас</div>
-              <input ref={fileRef} type="file" accept="image/*,.pdf" onChange={e => setReceiptFile(e.target.files[0])} style={{ display: "none" }} />
-              <button onClick={() => fileRef.current.click()} style={{ width: "100%", padding: "12px", borderRadius: 10, cursor: "pointer", background: receiptFile ? "rgba(52,211,153,0.1)" : t.surface, border: `1px dashed ${receiptFile ? "rgba(52,211,153,0.4)" : t.border}`, color: receiptFile ? "#6ee7b7" : t.textSub, fontSize: 13 }}>
-                {receiptFile ? `✅ ${receiptFile.name}` : "📤 Нажмите чтобы загрузить чек"}
+            <div style={{ marginBottom:16 }}>
+              <div style={{ color:t.sub,fontSize:12,marginBottom:8 }}>📎 Загрузите чек — ускорит обработку и защитит при споре с банком</div>
+              <input ref={fileRef} type="file" accept="image/*,.pdf" onChange={e=>setFile(e.target.files[0])} style={{ display:"none" }}/>
+              <button onClick={()=>fileRef.current.click()} style={{ width:"100%",padding:12,borderRadius:10,cursor:"pointer",background:file?"rgba(52,211,153,0.1)":t.inp,border:`1px dashed ${file?"rgba(52,211,153,0.4)":t.border}`,color:file?"#6ee7b7":t.sub,fontSize:13 }}>
+                {file?`✅ ${file.name}`:"📤 Нажмите чтобы загрузить чек"}
               </button>
             </div>
-            <div style={{ color: t.textMuted, fontSize: 11, marginBottom: 16, textAlign: "center", lineHeight: 1.6 }}>
-              ⏱ Обрабатываем в рабочее время. Обычно до 1 часа.<br />В редких случаях до 24 ч — напишем если задержимся.
-            </div>
-            <button onClick={onClose} style={{ width: "100%", padding: 12, borderRadius: 10, background: t.surface, border: `1px solid ${t.border}`, color: t.textSub, cursor: "pointer", fontSize: 13 }}>Закрыть</button>
-          </>
+            <div style={{ color:t.muted,fontSize:11,marginBottom:18,lineHeight:1.7 }}>⏱ Обрабатываем до 1 часа в рабочее время.<br/>В редких случаях до 24 ч — напишем если задержимся.</div>
+            <button onClick={onClose} style={{ width:"100%",padding:12,borderRadius:10,background:t.inp,border:`1px solid ${t.border}`,color:t.sub,cursor:"pointer",fontSize:13 }}>Закрыть</button>
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-// ─── ADMIN PANEL ──────────────────────────────────────────────
-function AdminPanel({ orders, onUpdateStatus, onBack, t }) {
-  const [password, setPassword] = useState("");
-  const [auth, setAuth] = useState(false);
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [search, setSearch] = useState("");
-  const [expandedId, setExpandedId] = useState(null);
-
-  const exportCSV = () => {
-    const headers = ["ID", "Сервис", "Тариф", "$", "₽", "Метод", "Статус", "Дата"];
-    const rows = orders.map(o => [o.id, o.service, o.tier, o.priceUsd, o.priceRub, o.method, STATUS_LABELS[o.status], new Date(o.createdAt).toLocaleString("ru-RU")]);
-    const csv = [headers, ...rows].map(r => r.join(";")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `payflow_orders_${Date.now()}.csv`; a.click();
-  };
-
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(orders, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `payflow_orders_${Date.now()}.json`; a.click();
-  };
-
-  const filtered = orders.filter(o => {
-    const matchStatus = filterStatus === "all" || o.status === filterStatus;
-    const matchSearch = o.id.includes(search) || o.service.toLowerCase().includes(search.toLowerCase());
-    return matchStatus && matchSearch;
-  });
-
-  const stats = {
-    total: orders.length,
-    done: orders.filter(o => o.status === "done").length,
-    totalRub: orders.filter(o => o.status === "done").reduce((s, o) => s + o.priceRub, 0),
-    pending: orders.filter(o => o.status === "new" || o.status === "paid").length,
-  };
-
-  const inputStyle = { background: t.input, border: `1px solid ${t.border}`, borderRadius: 10, padding: "10px 14px", color: t.text, fontSize: 14, outline: "none", boxSizing: "border-box" };
-
-  if (!auth) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: t.bg }}>
-      <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: 32, width: 340 }}>
-        <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 22, color: t.text, marginBottom: 6 }}>🔐 Админка</div>
-        <div style={{ color: t.textSub, fontSize: 13, marginBottom: 20 }}>Введите пароль для входа</div>
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && (password === ADMIN_PASSWORD ? setAuth(true) : alert("Неверный пароль"))} placeholder="Пароль" style={{ ...inputStyle, width: "100%", marginBottom: 12 }} />
-        <button onClick={() => password === ADMIN_PASSWORD ? setAuth(true) : alert("Неверный пароль")} style={{ width: "100%", padding: 12, borderRadius: 10, background: "linear-gradient(135deg,#f59e0b,#fbbf24)", border: "none", color: "#080810", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>Войти</button>
-        <button onClick={onBack} style={{ width: "100%", padding: 10, borderRadius: 10, background: "transparent", border: "none", color: t.textSub, cursor: "pointer", fontSize: 13, marginTop: 8 }}>← Назад</button>
+// ─── ADMIN ────────────────────────────────────────────────────
+function Admin({ orders, onStatus, onBack, t }) {
+  const [pw,setPw]=useState(""); const [auth,setAuth]=useState(false);
+  const [fil,setFil]=useState("all"); const [q,setQ]=useState(""); const [exp,setExp]=useState(null);
+  const exportCSV=()=>{ const h=["ID","Сервис","Тариф","$","₽","Метод","Статус","Дата"]; const rows=orders.map(o=>[o.id,o.service,o.tier,o.priceUsd,o.priceRub,o.method,SL[o.status],new Date(o.createdAt).toLocaleString("ru-RU")]); const csv=[h,...rows].map(r=>r.join(";")).join("\n"); const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"}));a.download=`payflow_${Date.now()}.csv`;a.click(); };
+  const exportJSON=()=>{ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(orders,null,2)],{type:"application/json"}));a.download=`payflow_${Date.now()}.json`;a.click(); };
+  const stats={ total:orders.length, done:orders.filter(o=>o.status==="done").length, earned:orders.filter(o=>o.status==="done").reduce((s,o)=>s+o.priceRub,0), pending:orders.filter(o=>o.status==="new"||o.status==="paid").length };
+  const filtered=orders.filter(o=>(fil==="all"||o.status===fil)&&(o.id.includes(q)||o.service.toLowerCase().includes(q.toLowerCase())));
+  const inp={background:t.inp,border:`1px solid ${t.border}`,borderRadius:10,padding:"10px 14px",color:t.text,fontSize:14,outline:"none",boxSizing:"border-box"};
+  if(!auth) return (
+    <div style={{ minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:t.bg }}>
+      <div style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:22,padding:36,width:360,boxShadow:t.shadow }}>
+        <div style={{ textAlign:"center",marginBottom:24 }}><div style={{ fontSize:44,marginBottom:10 }}>🔐</div><div style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:24,color:t.text }}>Панель управления</div><div style={{ color:t.sub,fontSize:13,marginTop:4 }}>Введите пароль</div></div>
+        <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&(pw===ADMIN_PASSWORD?setAuth(true):alert("Неверный пароль"))} placeholder="Пароль" style={{ ...inp,width:"100%",marginBottom:12 }}/>
+        <button onClick={()=>pw===ADMIN_PASSWORD?setAuth(true):alert("Неверный пароль")} style={{ width:"100%",padding:13,borderRadius:12,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:800,fontSize:15,cursor:"pointer" }}>Войти</button>
+        <button onClick={onBack} style={{ width:"100%",padding:10,borderRadius:10,background:"transparent",border:"none",color:t.sub,cursor:"pointer",fontSize:13,marginTop:8 }}>← Назад</button>
       </div>
     </div>
   );
-
   return (
-    <div style={{ background: t.bg, minHeight: "100vh", padding: "24px 20px", maxWidth: 960, margin: "0 auto" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 26, color: t.text }}>📋 Заявки</div>
-          <div style={{ color: t.textSub, fontSize: 13 }}>{getMoscowDateStr()} · Москва</div>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={exportCSV} style={{ padding: "8px 16px", borderRadius: 10, background: t.goldDim, border: `1px solid ${t.goldBorder}`, color: t.gold, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>↓ CSV</button>
-          <button onClick={exportJSON} style={{ padding: "8px 16px", borderRadius: 10, background: t.surface, border: `1px solid ${t.border}`, color: t.textSub, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>↓ JSON</button>
-          <button onClick={onBack} style={{ padding: "8px 16px", borderRadius: 10, background: t.surface, border: `1px solid ${t.border}`, color: t.textSub, cursor: "pointer", fontSize: 13 }}>← На сайт</button>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, marginBottom: 24 }}>
-        {[
-          { label: "Всего заявок", value: stats.total, color: t.gold },
-          { label: "Выполнено", value: stats.done, color: "#34d399" },
-          { label: "Заработано", value: stats.totalRub.toLocaleString("ru-RU") + " ₽", color: "#60a5fa" },
-          { label: "Ожидают", value: stats.pending, color: "#f87171" },
-        ].map(s => (
-          <div key={s.label} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, padding: "16px 18px" }}>
-            <div style={{ color: t.textSub, fontSize: 11, marginBottom: 4 }}>{s.label}</div>
-            <div style={{ color: s.color, fontWeight: 800, fontSize: 22, fontFamily: "'Syne',sans-serif" }}>{s.value}</div>
+    <div style={{ background:t.bg,minHeight:"100vh",padding:"24px 20px" }}>
+      <div style={{ maxWidth:980,margin:"0 auto" }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,flexWrap:"wrap",gap:12 }}>
+          <div><div style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:28,color:t.text }}>📋 Заявки</div><div style={{ color:t.sub,fontSize:13,marginTop:2 }}>{mosDate()} · Москва</div></div>
+          <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+            <button onClick={exportCSV} style={{ padding:"9px 18px",borderRadius:10,background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,cursor:"pointer",fontSize:13,fontWeight:600 }}>↓ CSV</button>
+            <button onClick={exportJSON} style={{ padding:"9px 18px",borderRadius:10,background:t.card,border:`1px solid ${t.border}`,color:t.sub,cursor:"pointer",fontSize:13,fontWeight:600 }}>↓ JSON</button>
+            <button onClick={onBack} style={{ padding:"9px 18px",borderRadius:10,background:t.card,border:`1px solid ${t.border}`,color:t.sub,cursor:"pointer",fontSize:13 }}>← На сайт</button>
           </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14, alignItems: "center" }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Поиск по ID или сервису" style={{ ...inputStyle, flex: 1, minWidth: 180 }} />
-      </div>
-      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 20 }}>
-        {[["all", "Все"], ...Object.entries(STATUS_LABELS)].map(([key, label]) => {
-          const cnt = key === "all" ? orders.length : orders.filter(o => o.status === key).length;
-          return (
-            <button key={key} onClick={() => setFilterStatus(key)} style={{ padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, cursor: "pointer", background: filterStatus === key ? t.goldDim : t.surface, border: `1px solid ${filterStatus === key ? t.goldBorder : t.border}`, color: filterStatus === key ? t.gold : t.textSub }}>
-              {label} ({cnt})
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Orders */}
-      {filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: t.textMuted }}>{orders.length === 0 ? "Заявок пока нет" : "Ничего не найдено"}</div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[...filtered].reverse().map(order => (
-            <div key={order.id} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 14, overflow: "hidden" }}>
-              <div style={{ padding: 18 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                      <span style={{ color: t.gold, fontWeight: 800, fontSize: 15 }}>{order.id}</span>
-                      <span style={{ background: STATUS_COLORS[order.status] + "22", border: `1px solid ${STATUS_COLORS[order.status]}66`, color: STATUS_COLORS[order.status], fontSize: 11, padding: "2px 10px", borderRadius: 100, fontWeight: 600 }}>
-                        {STATUS_LABELS[order.status]}
-                      </span>
-                    </div>
-                    <div style={{ color: t.text, fontWeight: 600, fontSize: 14, marginBottom: 3 }}>{order.service} · {order.tier}</div>
-                    <div style={{ color: t.textSub, fontSize: 12, marginBottom: 3 }}>
-                      {order.method === "login"  && `🔐 ${order.login}`}
-                      {order.method === "gift"   && `🎁 Gift → ${order.email}`}
-                      {order.method === "family" && `👨‍👩‍👧 Family → ${order.email}`}
-                      {order.method === "newAcc" && `✨ Новый аккаунт`}
-                    </div>
-                    <div style={{ color: t.textMuted, fontSize: 11 }}>{new Date(order.createdAt).toLocaleString("ru-RU")}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ color: t.gold, fontWeight: 800, fontSize: 20 }}>{order.priceRub.toLocaleString("ru-RU")} ₽</div>
-                    <div style={{ color: t.textMuted, fontSize: 12 }}>${order.priceUsd}</div>
-                    <button onClick={() => setExpandedId(expandedId === order.id ? null : order.id)} style={{ marginTop: 6, padding: "4px 12px", borderRadius: 100, background: t.surface2, border: `1px solid ${t.border}`, color: t.textSub, fontSize: 11, cursor: "pointer" }}>
-                      {expandedId === order.id ? "▲ свернуть" : "▼ действия"}
-                    </button>
-                  </div>
-                </div>
-
-                {expandedId === order.id && (
-                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${t.border}` }}>
-                    <div style={{ color: t.textSub, fontSize: 11, marginBottom: 8 }}>Изменить статус:</div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                        <button key={key} onClick={() => onUpdateStatus(order.id, key)} style={{ padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, cursor: "pointer", background: order.status === key ? STATUS_COLORS[key] + "22" : t.surface2, border: `1px solid ${order.status === key ? STATUS_COLORS[key] + "66" : t.border}`, color: order.status === key ? STATUS_COLORS[key] : t.textSub, transition: "all .15s" }}>
-                          {order.status === key ? "✓ " : ""}{label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+        </div>
+        <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12,marginBottom:24 }}>
+          {[{l:"Всего",v:stats.total,c:t.gold,i:"📋"},{l:"Выполнено",v:stats.done,c:"#34d399",i:"✅"},{l:"Заработано",v:stats.earned.toLocaleString("ru-RU")+" ₽",c:"#60a5fa",i:"💰"},{l:"Ожидают",v:stats.pending,c:"#f87171",i:"⏳"}].map(s=>(
+            <div key={s.l} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:16,padding:"18px 20px",boxShadow:t.shadow }}>
+              <div style={{ fontSize:22,marginBottom:6 }}>{s.i}</div>
+              <div style={{ color:t.sub,fontSize:12,marginBottom:4 }}>{s.l}</div>
+              <div style={{ color:s.c,fontWeight:800,fontSize:24,fontFamily:"'Syne',sans-serif" }}>{s.v}</div>
             </div>
           ))}
         </div>
-      )}
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="🔍 Поиск по ID или сервису" style={{ ...inp,width:"100%",marginBottom:12 }}/>
+        <div style={{ display:"flex",gap:7,flexWrap:"wrap",marginBottom:20 }}>
+          {[["all","Все"],...Object.entries(SL)].map(([k,l])=>{ const cnt=k==="all"?orders.length:orders.filter(o=>o.status===k).length; return <button key={k} onClick={()=>setFil(k)} style={{ padding:"7px 14px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:fil===k?(SC[k]||t.gold)+"22":t.card,border:`1px solid ${fil===k?(SC[k]||t.gold)+"55":t.border}`,color:fil===k?(SC[k]||t.gold):t.sub }}>{l} ({cnt})</button>; })}
+        </div>
+        {filtered.length===0
+          ? <div style={{ textAlign:"center",padding:"80px 0",color:t.muted }}><div style={{ fontSize:48,marginBottom:12 }}>📭</div>{orders.length===0?"Заявок пока нет":"Ничего не найдено"}</div>
+          : <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+            {[...filtered].reverse().map(o=>(
+              <div key={o.id} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:16,boxShadow:t.shadow }}>
+                <div style={{ padding:18 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10 }}>
+                    <div>
+                      <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:6 }}>
+                        <span style={{ color:t.gold,fontWeight:800,fontSize:16 }}>{o.id}</span>
+                        <span style={{ background:SC[o.status]+"22",border:`1px solid ${SC[o.status]}55`,color:SC[o.status],fontSize:11,padding:"3px 10px",borderRadius:100,fontWeight:600 }}>{SL[o.status]}</span>
+                      </div>
+                      <div style={{ color:t.text,fontWeight:600,fontSize:14,marginBottom:3 }}>{o.service} · {o.tier}</div>
+                      <div style={{ color:t.sub,fontSize:12,marginBottom:3 }}>{o.method==="login"&&`🔐 ${o.login}`}{o.method==="gift"&&`🎁 Gift → ${o.email}`}{o.method==="family"&&`👨‍👩‍👧 Family → ${o.email}`}{o.method==="newAcc"&&"✨ Новый аккаунт"}</div>
+                      <div style={{ color:t.muted,fontSize:11 }}>{new Date(o.createdAt).toLocaleString("ru-RU")}</div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ color:t.gold,fontWeight:800,fontSize:22 }}>{o.priceRub.toLocaleString("ru-RU")} ₽</div>
+                      <div style={{ color:t.muted,fontSize:12 }}>${o.priceUsd}</div>
+                      <button onClick={()=>setExp(exp===o.id?null:o.id)} style={{ marginTop:8,padding:"5px 14px",borderRadius:100,background:t.inp,border:`1px solid ${t.border}`,color:t.sub,fontSize:11,cursor:"pointer" }}>{exp===o.id?"▲ скрыть":"▼ действия"}</button>
+                    </div>
+                  </div>
+                  {exp===o.id&&(
+                    <div style={{ marginTop:14,paddingTop:12,borderTop:`1px solid ${t.border}` }}>
+                      <div style={{ color:t.sub,fontSize:11,marginBottom:8 }}>Изменить статус:</div>
+                      <div style={{ display:"flex",gap:7,flexWrap:"wrap" }}>
+                        {Object.entries(SL).map(([k,l])=><button key={k} onClick={()=>onStatus(o.id,k)} style={{ padding:"7px 16px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:o.status===k?SC[k]+"22":t.inp,border:`1px solid ${o.status===k?SC[k]+"66":t.border}`,color:o.status===k?SC[k]:t.sub,transition:"all .15s" }}>{o.status===k?"✓ ":""}{l}</button>)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        }
+      </div>
     </div>
   );
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────
+// ─── MAIN ─────────────────────────────────────────────────────
 export default function App() {
   const { t, toggle } = useTheme();
   const [page, setPage] = useState("home");
-  const [category, setCategory] = useState("Все");
+  const [cat, setCat] = useState("Все");
   const [search, setSearch] = useState("");
-  const [selectedService, setSelectedService] = useState(null);
-  const [usdAmount, setUsdAmount] = useState(20);
+  const [sel, setSel] = useState(null);
+  const [usd, setUsd] = useState(20);
   const [scrolled, setScrolled] = useState(false);
   const [rate, setRate] = useState(null);
   const [rateLoading, setRateLoading] = useState(true);
   const [rateDate, setRateDate] = useState("");
   const [orders, setOrders] = useState([]);
+  const [in_, setIn] = useState(false);
   const howRef = useRef(null);
 
-  // Курс ЦБ — через наш Vercel API Route (нет CORS проблем)
-  useEffect(() => {
-    async function fetchRate() {
+  useEffect(()=>{ setTimeout(()=>setIn(true),80); },[]);
+
+  useEffect(()=>{
+    async function fetch_() {
       setRateLoading(true);
-      try {
-        const res = await fetch("/api/rate");
-        const data = await res.json();
-        if (data?.rate) {
-          setRate(parseFloat(data.rate.toFixed(4)));
-          // Дата из ЦБ РФ, показываем по московскому времени
-          setRateDate(getMoscowDateStr());
-        } else throw new Error("no rate");
-      } catch {
-        // Fallback если API не работает
-        setRate(84.5);
-        setRateDate(getMoscowDateStr());
-      } finally {
-        setRateLoading(false);
-      }
+      try { const r=await fetch("/api/rate"); const d=await r.json(); if(d?.rate){setRate(parseFloat(d.rate));setRateDate(mosDate());} else throw 0; }
+      catch { setRate(84.5); setRateDate(mosDate()); }
+      finally { setRateLoading(false); }
     }
-    fetchRate();
-    // Обновляем каждые 30 минут
-    const interval = setInterval(fetchRate, 30 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+    fetch_();
+    const iv=setInterval(fetch_,30*60*1000);
+    return ()=>clearInterval(iv);
+  },[]);
 
-  useEffect(() => {
-    async function load() {
-      try { const r = await window.storage.get("orders"); if (r?.value) setOrders(JSON.parse(r.value)); } catch {}
-    }
-    load();
-  }, []);
+  useEffect(()=>{ (async()=>{ try{const r=await window.storage.get("orders");if(r?.value)setOrders(JSON.parse(r.value));}catch{} })(); },[]);
+  useEffect(()=>{ const fn=()=>setScrolled(window.scrollY>40); window.addEventListener("scroll",fn); return()=>window.removeEventListener("scroll",fn); },[]);
 
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", fn);
-    return () => window.removeEventListener("scroll", fn);
-  }, []);
+  const saveOrder=async(order)=>{ const u=[...orders,order]; setOrders(u); try{await window.storage.set("orders",JSON.stringify(u));}catch{} };
+  const updateStatus=async(id,status)=>{ const u=orders.map(o=>o.id===id?{...o,status}:o); setOrders(u); try{await window.storage.set("orders",JSON.stringify(u));}catch{} };
 
-  const saveOrder = async (order) => {
-    const updated = [...orders, order];
-    setOrders(updated);
-    try { await window.storage.set("orders", JSON.stringify(updated)); } catch {}
-  };
+  const filtered=SVC.filter(s=>(cat==="Все"||s.cat===cat)&&s.name.toLowerCase().includes(search.toLowerCase()));
+  const base=rate?Math.round(usd*rate):0;
+  const comm=rate?Math.round(usd*rate*MARGIN):0;
+  const total=base+comm;
+  const POPULAR=SVC.filter(s=>POPULAR_NAMES.includes(s.name));
 
-  const updateStatus = async (id, status) => {
-    const updated = orders.map(o => o.id === id ? { ...o, status } : o);
-    setOrders(updated);
-    try { await window.storage.set("orders", JSON.stringify(updated)); } catch {}
-  };
+  if(page==="admin") return <Admin orders={orders} onStatus={updateStatus} onBack={()=>setPage("home")} t={t}/>;
 
-  const filtered = SERVICES.filter(s =>
-    (category === "Все" || s.category === category) &&
-    s.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const base     = rate ? Math.round(usdAmount * rate) : 0;
-  const comm     = rate ? Math.round(usdAmount * rate * MARGIN) : 0;
-  const total    = base + comm;
-
-  if (page === "admin") return <AdminPanel orders={orders} onUpdateStatus={updateStatus} onBack={() => setPage("home")} t={t} />;
+  const navBtn=(p,l)=><button onClick={()=>setPage(p)} style={{ padding:"7px 18px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===p?t.goldDim:"transparent",border:`1px solid ${page===p?t.goldB:"transparent"}`,color:page===p?t.gold:t.sub,transition:"all .2s" }}>{l}</button>;
 
   return (
-    <div style={{ background: t.bg, minHeight: "100vh", fontFamily: "'DM Sans',sans-serif", color: t.text, transition: "background .3s,color .3s" }}>
+    <div style={{ background:t.bg,minHeight:"100vh",fontFamily:"'DM Sans',sans-serif",color:t.text,transition:"background .3s,color .3s" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        ::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(251,191,36,0.3);border-radius:3px}
-        input::placeholder{color:inherit;opacity:.4}
-        @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(251,191,36,0.4);border-radius:3px}
+        input::placeholder{opacity:.4}
+        @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
-        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-        .fu1{animation:fadeUp .6s ease forwards}
-        .fu2{animation:fadeUp .6s .1s ease forwards;opacity:0}
-        .fu3{animation:fadeUp .6s .2s ease forwards;opacity:0}
-        .fu4{animation:fadeUp .6s .3s ease forwards;opacity:0}
+        @keyframes float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-24px) rotate(3deg)}}
+        @keyframes floatB{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        .a1{animation:fadeUp .7s ease forwards}
+        .a2{animation:fadeUp .7s .1s ease forwards;opacity:0}
+        .a3{animation:fadeUp .7s .2s ease forwards;opacity:0}
+        .a4{animation:fadeUp .7s .3s ease forwards;opacity:0}
+        .a5{animation:fadeUp .7s .4s ease forwards;opacity:0}
+        .cg:hover .ci{opacity:.55;transform:none}
+        .ci{transition:all .25s!important}
+        .cg .ci:hover{opacity:1!important;transform:translateY(-4px)!important}
       `}</style>
 
       {/* NAV */}
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, padding: "0 28px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", background: scrolled ? t.nav : "transparent", backdropFilter: scrolled ? "blur(16px)" : "none", borderBottom: scrolled ? `1px solid ${t.border}` : "none", transition: "all .3s" }}>
-        <div onClick={() => setPage("home")} style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 18, cursor: "pointer", letterSpacing: -0.5, color: t.text }}>
-          pay<span style={{ color: t.gold }}>flow</span>
-        </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {[["home","Главная"],["catalog","Каталог"]].map(([p,label]) => (
-            <button key={p} onClick={() => setPage(p)} style={{ padding: "7px 16px", borderRadius: 100, fontSize: 13, fontWeight: 600, cursor: "pointer", background: page===p ? t.goldDim : "transparent", border: `1px solid ${page===p ? t.goldBorder : "transparent"}`, color: page===p ? t.gold : t.textSub, transition: "all .2s" }}>{label}</button>
-          ))}
-          {/* Theme toggle */}
-          <button onClick={toggle} style={{ width: 36, height: 36, borderRadius: 100, background: t.surface, border: `1px solid ${t.border}`, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {t.dark ? "☀️" : "🌙"}
-          </button>
-          <button onClick={() => setPage("admin")} style={{ width: 36, height: 36, borderRadius: 100, background: t.surface, border: `1px solid ${t.border}`, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", color: t.textMuted }}>⚙️</button>
+      <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 28px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .3s" }}>
+        <div onClick={()=>{setPage("home");window.scrollTo({top:0,behavior:"smooth"})}} style={{ fontFamily:"'Syne',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
+        <div style={{ display:"flex",gap:6,alignItems:"center" }}>
+          {navBtn("home","Главная")}{navBtn("catalog","Каталог")}
+          <button onClick={toggle} style={{ width:38,height:38,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark?"☀️":"🌙"}</button>
+          <button onClick={()=>setPage("admin")} style={{ width:38,height:38,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",color:t.muted }}>⚙️</button>
         </div>
       </nav>
 
-      {/* HOME */}
-      {page === "home" && (
+      {/* ══ HOME ══ */}
+      {page==="home"&&(
         <div>
           {/* HERO */}
-          <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "80px 24px 40px", background: t.dark ? "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(251,191,36,0.07) 0%, transparent 70%)" : "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(217,119,6,0.06) 0%, transparent 70%)" }}>
-            <div className="fu1" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: t.surface, border: `1px solid ${t.border}`, borderRadius: 100, padding: "7px 16px", marginBottom: 28, fontSize: 12 }}>
-              {rateLoading
-                ? <span style={{ width: 12, height: 12, border: `2px solid ${t.border}`, borderTopColor: t.gold, borderRadius: "50%", display: "inline-block", animation: "spin .8s linear infinite" }} />
-                : <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block", animation: "pulse 2s infinite" }} />}
-              <span style={{ color: t.textSub }}>Курс ЦБ на {rateDate || "сегодня"}:</span>
-              <span style={{ color: t.gold, fontWeight: 700 }}>{rateLoading ? "загрузка..." : `1$ = ${rate?.toFixed(2)} ₽`}</span>
+          <div style={{ position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"90px 24px 70px",overflow:"hidden" }}>
+            {/* BG */}
+            <div style={{ position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden" }}>
+              <div style={{ position:"absolute",top:"8%",left:"12%",width:500,height:500,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(251,191,36,0.07) 0%,transparent 70%)":"radial-gradient(circle,rgba(217,119,6,0.05) 0%,transparent 70%)",animation:"floatB 9s ease-in-out infinite" }}/>
+              <div style={{ position:"absolute",top:"35%",right:"8%",width:350,height:350,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(96,165,250,0.05) 0%,transparent 70%)":"radial-gradient(circle,rgba(59,130,246,0.04) 0%,transparent 70%)",animation:"floatB 11s ease-in-out infinite",animationDelay:"-4s" }}/>
+              <div style={{ position:"absolute",bottom:"10%",left:"20%",width:280,height:280,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(167,139,250,0.05) 0%,transparent 70%)":"radial-gradient(circle,rgba(139,92,246,0.03) 0%,transparent 70%)",animation:"floatB 13s ease-in-out infinite",animationDelay:"-7s" }}/>
+              <div style={{ position:"absolute",inset:0,backgroundImage:t.dark?"linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px)":"linear-gradient(rgba(0,0,0,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.025) 1px,transparent 1px)",backgroundSize:"64px 64px" }}/>
+              {[{s:"🤖",x:"7%",y:"18%",d:"0s"},{s:"🎨",x:"87%",y:"14%",d:"1.2s"},{s:"🎬",x:"4%",y:"62%",d:"2.1s"},{s:"🎵",x:"91%",y:"58%",d:.7+"s"},{s:"💻",x:"13%",y:"84%",d:"1.8s"},{s:"🔒",x:"82%",y:"78%",d:"3.2s"},{s:"🦉",x:"50%",y:"8%",d:"0.5s"},{s:"📝",x:"50%",y:"90%",d:"2.5s"}].map((f,i)=>(
+                <div key={i} style={{ position:"absolute",left:f.x,top:f.y,fontSize:30,animation:`float 7s ease-in-out infinite`,animationDelay:f.d,opacity:t.dark?.12:.09 }}>{f.s}</div>
+              ))}
             </div>
 
-            <h1 className="fu2" style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: "clamp(32px,6vw,66px)", lineHeight: 1.06, letterSpacing: -2, marginBottom: 18, color: t.text }}>
-              Оплати любой<br /><span style={{ color: t.gold }}>зарубежный сервис</span><br />за рубли
-            </h1>
-            <p className="fu3" style={{ color: t.textSub, fontSize: 16, maxWidth: 460, marginBottom: 10, lineHeight: 1.6 }}>ChatGPT, Midjourney, Netflix, Spotify и ещё 47 сервисов.</p>
-            <p className="fu3" style={{ color: t.dark ? "rgba(251,191,36,0.7)" : "rgba(180,83,9,0.8)", fontSize: 14, maxWidth: 420, marginBottom: 36, lineHeight: 1.5 }}>
-              Комиссия {Math.round(MARGIN * 100)}% — без скрытых платежей и процентов за пополнение.
-            </p>
+            {/* Content */}
+            {in_&&<div className="a1" style={{ display:"inline-flex",alignItems:"center",gap:8,background:t.card,border:`1px solid ${t.border}`,backdropFilter:"blur(12px)",borderRadius:100,padding:"8px 18px",marginBottom:28,fontSize:12,boxShadow:t.shadow }}>
+              {rateLoading?<span style={{ width:12,height:12,border:`2px solid ${t.border}`,borderTopColor:t.gold,borderRadius:"50%",display:"inline-block",animation:"spin .8s linear infinite" }}/>:<span style={{ width:7,height:7,borderRadius:"50%",background:"#22c55e",display:"inline-block",animation:"pulse 2s infinite" }}/>}
+              <span style={{ color:t.sub }}>Курс ЦБ на {rateDate||mosDate()}:</span>
+              <span style={{ color:t.gold,fontWeight:700 }}>{rateLoading?"загрузка...":`1$ = ${rate?.toFixed(2)} ₽`}</span>
+            </div>}
 
-            <div className="fu3" style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-              <button onClick={() => setPage("catalog")} style={{ padding: "15px 32px", borderRadius: 14, background: "linear-gradient(135deg,#f59e0b,#fbbf24)", border: "none", color: "#080810", fontWeight: 800, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 24px rgba(251,191,36,0.3)" }}>
+            {in_&&<h1 className="a2" style={{ fontFamily:"'Syne',sans-serif",fontWeight:900,fontSize:"clamp(38px,6.5vw,74px)",lineHeight:1.03,letterSpacing:-3,marginBottom:22,color:t.text }}>
+              Оплати любой<br/><span style={{ color:t.gold,position:"relative" }}>зарубежный сервис
+                <span style={{ position:"absolute",bottom:-4,left:0,right:0,height:3,background:`linear-gradient(90deg,${t.gold},transparent)`,borderRadius:2,opacity:.6 }}/>
+              </span><br/>за рубли
+            </h1>}
+            {in_&&<p className="a3" style={{ color:t.sub,fontSize:17,maxWidth:500,marginBottom:10,lineHeight:1.6 }}>ChatGPT, Midjourney, Netflix, Spotify и ещё 47 сервисов.</p>}
+            {in_&&<p className="a3" style={{ color:t.dark?"rgba(251,191,36,0.75)":"rgba(180,83,9,0.85)",fontSize:14,maxWidth:420,marginBottom:40,lineHeight:1.5,fontWeight:500 }}>Комиссия 10% — без скрытых платежей и процентов.</p>}
+
+            {in_&&<div className="a4" style={{ display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center",marginBottom:60 }}>
+              <button onClick={()=>setPage("catalog")}
+                style={{ padding:"16px 36px",borderRadius:14,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:800,fontSize:16,cursor:"pointer",boxShadow:"0 6px 28px rgba(251,191,36,0.35)" }}
+                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 12px 40px rgba(251,191,36,0.45)"}}
+                onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 6px 28px rgba(251,191,36,0.35)"}}>
                 Смотреть сервисы →
               </button>
-              <button onClick={() => howRef.current?.scrollIntoView({ behavior: "smooth" })} style={{ padding: "15px 32px", borderRadius: 14, background: t.surface, border: `1px solid ${t.border}`, color: t.textSub, fontWeight: 600, fontSize: 15, cursor: "pointer" }}>
+              <button onClick={()=>howRef.current?.scrollIntoView({behavior:"smooth"})}
+                style={{ padding:"16px 36px",borderRadius:14,background:t.card,border:`1px solid ${t.border}`,color:t.sub,fontWeight:600,fontSize:16,cursor:"pointer",backdropFilter:"blur(10px)" }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=t.borderH;e.currentTarget.style.color=t.text}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.color=t.sub}}>
                 Как это работает?
               </button>
-            </div>
+            </div>}
 
-            <div className="fu4" style={{ display: "flex", gap: 32, marginTop: 56, flexWrap: "wrap", justifyContent: "center" }}>
-              {[["50+","сервисов"],[`${Math.round(MARGIN*100)}%`,"комиссия"],["без скрытых","доплат"]].map(([v,l]) => (
-                <div key={l} style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 24, fontWeight: 800, color: t.gold }}>{v}</div>
-                  <div style={{ color: t.textMuted, fontSize: 12 }}>{l}</div>
+            {in_&&<div className="a5" style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center" }}>
+              {[["50+","сервисов","🌍"],["10%","комиссия","💸"],["без скрытых","доплат","✅"],["~1 час","среднее время","⚡"]].map(([v,l,ic])=>(
+                <div key={l} style={{ textAlign:"center",background:t.card,border:`1px solid ${t.border}`,borderRadius:18,padding:"16px 22px",backdropFilter:"blur(10px)" }}>
+                  <div style={{ fontSize:22,marginBottom:6 }}>{ic}</div>
+                  <div style={{ fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,color:t.gold }}>{v}</div>
+                  <div style={{ color:t.muted,fontSize:12,marginTop:2 }}>{l}</div>
                 </div>
               ))}
+            </div>}
+          </div>
+
+          {/* POPULAR */}
+          <div style={{ padding:"0 24px 80px",maxWidth:1100,margin:"0 auto" }}>
+            <div style={{ textAlign:"center",marginBottom:36 }}>
+              <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Популярное</div>
+              <h2 style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:32,color:t.text,marginBottom:8 }}>Часто заказывают</h2>
+              <p style={{ color:t.sub,fontSize:15 }}>Нажмите на любой сервис чтобы оформить заявку</p>
+            </div>
+            <div className="cg" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:14 }}>
+              {POPULAR.map(s=><div key={s.id} className="ci"><SCard s={s} rate={rate} onSelect={setSel} t={t}/></div>)}
+            </div>
+            <div style={{ textAlign:"center",marginTop:28 }}>
+              <button onClick={()=>setPage("catalog")} style={{ padding:"12px 28px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,cursor:"pointer",fontSize:14,fontWeight:600 }}>
+                Смотреть все {SVC.length} сервисов →
+              </button>
             </div>
           </div>
 
-          {/* CALCULATOR */}
-          <div style={{ padding: "70px 24px", maxWidth: 560, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 28 }}>
-              <div style={{ color: t.gold, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Калькулятор</div>
-              <h2 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 26, color: t.text }}>Сколько это стоит в рублях?</h2>
-            </div>
-            <div style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 20, padding: 26 }}>
-              <label style={{ color: t.textSub, fontSize: 12, marginBottom: 8, display: "block" }}>Сумма в долларах</label>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                <span style={{ color: t.textSub, fontSize: 22, fontWeight: 700 }}>$</span>
-                <input type="number" value={usdAmount} min={1} max={5000}
-                  onChange={e => setUsdAmount(Math.max(1, Number(e.target.value)))}
-                  style={{ flex: 1, background: t.input, border: `1px solid ${t.border}`, borderRadius: 12, padding: "13px 16px", color: t.text, fontSize: 24, fontWeight: 800, outline: "none" }} />
+          {/* CALC */}
+          <div style={{ padding:"70px 24px",background:t.dark?"rgba(251,191,36,0.02)":"rgba(0,0,0,0.02)",borderTop:`1px solid ${t.border}`,borderBottom:`1px solid ${t.border}` }}>
+            <div style={{ maxWidth:580,margin:"0 auto" }}>
+              <div style={{ textAlign:"center",marginBottom:32 }}>
+                <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Калькулятор</div>
+                <h2 style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:32,color:t.text }}>Сколько это стоит?</h2>
               </div>
-              <input type="range" min={1} max={2000} value={Math.min(usdAmount, 2000)} onChange={e => setUsdAmount(Number(e.target.value))}
-                style={{ width: "100%", marginTop: 10, marginBottom: 18, accentColor: t.gold }} />
-
-              <div style={{ background: t.goldDim, border: `1px solid ${t.goldBorder}`, borderRadius: 14, padding: "18px 20px" }}>
-                {rateLoading ? (
-                  <div style={{ textAlign: "center", color: t.textSub, fontSize: 13, padding: "10px 0" }}>⏳ Загружаем актуальный курс ЦБ...</div>
-                ) : (
-                  <>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <span style={{ color: t.textSub, fontSize: 13 }}>Курс ЦБ на {rateDate}</span>
-                      <span style={{ color: t.textSub, fontSize: 13 }}>1$ = {rate?.toFixed(2)} ₽</span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                      <span style={{ color: t.textSub, fontSize: 13 }}>Наша комиссия {Math.round(MARGIN * 100)}%</span>
-                      <span style={{ color: t.textSub, fontSize: 13 }}>+ {comm.toLocaleString("ru-RU")} ₽</span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${t.border}`, paddingTop: 12 }}>
-                      <span style={{ color: t.text, fontWeight: 700, fontSize: 15 }}>Итого к оплате</span>
-                      <span style={{ color: t.gold, fontWeight: 800, fontSize: 28 }}>{total.toLocaleString("ru-RU")} ₽</span>
-                    </div>
-                  </>
-                )}
+              <div style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:22,padding:28,boxShadow:t.shadow }}>
+                <label style={{ color:t.sub,fontSize:13,marginBottom:10,display:"block",fontWeight:500 }}>Сумма в долларах</label>
+                <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:8 }}>
+                  <div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:12,padding:"13px 18px",color:t.gold,fontWeight:900,fontSize:20,minWidth:52,textAlign:"center" }}>$</div>
+                  <input type="number" value={usd} min={1} max={5000} onChange={e=>setUsd(Math.max(1,Number(e.target.value)))}
+                    style={{ flex:1,background:t.inp,border:`1px solid ${t.border}`,borderRadius:12,padding:"13px 18px",color:t.text,fontSize:28,fontWeight:800,outline:"none" }}/>
+                </div>
+                <input type="range" min={1} max={2000} value={Math.min(usd,2000)} onChange={e=>setUsd(Number(e.target.value))}
+                  style={{ width:"100%",marginBottom:22,accentColor:t.gold }}/>
+                <div style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:16,padding:"20px 24px" }}>
+                  {rateLoading?<div style={{ textAlign:"center",color:t.sub,padding:"12px 0" }}>⏳ Загружаем курс ЦБ...</div>:<>
+                    <div style={{ display:"flex",justifyContent:"space-between",marginBottom:10 }}><span style={{ color:t.sub,fontSize:14 }}>Курс ЦБ на {rateDate}</span><span style={{ color:t.sub,fontSize:14,fontWeight:600 }}>1$ = {rate?.toFixed(2)} ₽</span></div>
+                    <div style={{ display:"flex",justifyContent:"space-between",marginBottom:14 }}><span style={{ color:t.sub,fontSize:14 }}>Наша комиссия 10%</span><span style={{ color:t.sub,fontSize:14,fontWeight:600 }}>+ {comm.toLocaleString("ru-RU")} ₽</span></div>
+                    <div style={{ display:"flex",justifyContent:"space-between",borderTop:`2px solid ${t.goldB}`,paddingTop:14 }}><span style={{ color:t.text,fontWeight:700,fontSize:16 }}>Итого к оплате</span><span style={{ color:t.gold,fontWeight:900,fontSize:34,fontFamily:"'Syne',sans-serif" }}>{total.toLocaleString("ru-RU")} ₽</span></div>
+                  </>}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* HOW IT WORKS */}
-          <div ref={howRef} style={{ padding: "60px 24px 100px", maxWidth: 880, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 44 }}>
-              <div style={{ color: t.gold, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Процесс</div>
-              <h2 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 28, color: t.text }}>Как это работает</h2>
+          {/* HOW */}
+          <div ref={howRef} style={{ padding:"80px 24px 100px",maxWidth:940,margin:"0 auto" }}>
+            <div style={{ textAlign:"center",marginBottom:50 }}>
+              <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Процесс</div>
+              <h2 style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:34,color:t.text }}>Как это работает</h2>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 14 }}>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:16 }}>
               {[
-                { n:"01", title:"Выбираешь сервис",    desc:"Находишь нужный сервис и тариф в каталоге. Цена в рублях видна сразу." },
-                { n:"02", title:"Оформляешь заявку",   desc:"Выбираешь способ: логин/пароль, Gift-карта, Family/Team план или новый аккаунт от нас." },
-                { n:"03", title:"Переводишь рубли",    desc:"По СБП или номеру карты. В комментарии к переводу укажи номер заявки и загрузи чек." },
-                { n:"04", title:"Получаешь доступ",    desc:"Активируем в рабочее время — обычно в течение часа. В редких случаях до 24 ч." },
-              ].map(s => (
-                <div key={s.n} style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 16, padding: "22px 18px" }}>
-                  <div style={{ fontFamily: "'Syne',sans-serif", color: t.dark ? "rgba(251,191,36,0.3)" : "rgba(180,83,9,0.3)", fontSize: 30, fontWeight: 800, marginBottom: 12 }}>{s.n}</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: t.text }}>{s.title}</div>
-                  <div style={{ color: t.textSub, fontSize: 12, lineHeight: 1.6 }}>{s.desc}</div>
+                {n:"01",icon:"🔍",title:"Выбираешь сервис",    desc:"Находишь нужный сервис в каталоге. Цена в рублях видна сразу."},
+                {n:"02",icon:"📝",title:"Оформляешь заявку",   desc:"Выбираешь способ: логин/пароль, Gift, Family/Team или новый аккаунт."},
+                {n:"03",icon:"💳",title:"Переводишь рубли",    desc:"По СБП или карте. Указываешь номер заявки и загружаешь чек."},
+                {n:"04",icon:"🚀",title:"Получаешь доступ",    desc:"Активируем до 1 часа в рабочее время. В редких случаях до 24 ч."},
+              ].map(s=>(
+                <div key={s.n} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:18,padding:"26px 22px",position:"relative",overflow:"hidden",boxShadow:t.shadow }}>
+                  <div style={{ position:"absolute",top:14,right:16,fontFamily:"'Syne',sans-serif",color:t.dark?"rgba(251,191,36,0.1)":"rgba(217,119,6,0.1)",fontSize:48,fontWeight:900,lineHeight:1 }}>{s.n}</div>
+                  <div style={{ fontSize:34,marginBottom:14 }}>{s.icon}</div>
+                  <div style={{ fontWeight:700,fontSize:15,marginBottom:8,color:t.text }}>{s.title}</div>
+                  <div style={{ color:t.sub,fontSize:13,lineHeight:1.6 }}>{s.desc}</div>
                 </div>
               ))}
             </div>
@@ -666,40 +513,31 @@ export default function App() {
         </div>
       )}
 
-      {/* CATALOG */}
-      {page === "catalog" && (
-        <div style={{ maxWidth: 1140, margin: "0 auto", padding: "78px 20px 60px" }}>
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ color: t.gold, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Каталог</div>
-            <h2 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 30, marginBottom: 4, color: t.text }}>Все сервисы</h2>
-            <div style={{ color: t.textSub, fontSize: 13 }}>
-              {SERVICES.length} сервисов · Курс ЦБ: {rateLoading ? "загрузка..." : `1$ = ${rate?.toFixed(2)} ₽`} · <span style={{ color: t.textMuted }}>цены с комиссией {Math.round(MARGIN*100)}%</span>
-            </div>
+      {/* ══ CATALOG ══ */}
+      {page==="catalog"&&(
+        <div style={{ maxWidth:1160,margin:"0 auto",padding:"78px 20px 60px" }}>
+          <div style={{ marginBottom:30 }}>
+            <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:8,fontWeight:600 }}>Каталог</div>
+            <h2 style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:32,marginBottom:6,color:t.text }}>Все сервисы</h2>
+            <div style={{ color:t.sub,fontSize:14 }}>{SVC.length} сервисов · Курс ЦБ: {rateLoading?"загрузка...":`1$ = ${rate?.toFixed(2)} ₽`} · <span style={{ color:t.muted }}>цены с комиссией 10%</span></div>
           </div>
-
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍  Поиск сервиса..."
-            style={{ width: "100%", background: t.input, border: `1px solid ${t.border}`, borderRadius: 12, padding: "13px 16px", color: t.text, fontSize: 14, outline: "none", marginBottom: 14 }} />
-
-          <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 24 }}>
-            {CATEGORIES.map(c => {
-              const cnt = SERVICES.filter(s => c==="Все" || s.category===c).length;
-              return <button key={c} onClick={() => setCategory(c)} style={{ padding: "7px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, cursor: "pointer", background: category===c ? t.goldDim : t.surface, border: `1px solid ${category===c ? t.goldBorder : t.border}`, color: category===c ? t.gold : t.textSub, transition: "all .15s" }}>
-                {c} <span style={{ opacity: 0.55 }}>({cnt})</span>
-              </button>;
-            })}
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Поиск по названию..."
+            style={{ width:"100%",background:t.card2,border:`1px solid ${t.border}`,borderRadius:14,padding:"14px 18px",color:t.text,fontSize:15,outline:"none",marginBottom:16,boxShadow:t.shadow }}/>
+          <div style={{ display:"flex",gap:8,flexWrap:"wrap",marginBottom:26 }}>
+            {CATS.map(c=>{ const cnt=SVC.filter(s=>c==="Все"||s.cat===c).length; return <button key={c} onClick={()=>setCat(c)} style={{ padding:"8px 16px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:cat===c?t.goldDim:t.card,border:`1px solid ${cat===c?t.goldB:t.border}`,color:cat===c?t.gold:t.sub,transition:"all .15s" }}>{c} <span style={{ opacity:.55 }}>({cnt})</span></button>; })}
           </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 12 }}>
-            {filtered.map(s => <ServiceCard key={s.id} service={s} rate={rate} onSelect={setSelectedService} t={t} />)}
+          <div className="cg" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14 }}>
+            {filtered.map(s=><div key={s.id} className="ci"><SCard s={s} rate={rate} onSelect={setSel} t={t}/></div>)}
           </div>
-          {filtered.length === 0 && <div style={{ textAlign: "center", padding: "60px 0", color: t.textMuted }}>Ничего не найдено</div>}
+          {filtered.length===0&&<div style={{ textAlign:"center",padding:"80px 0",color:t.muted }}><div style={{ fontSize:48,marginBottom:12 }}>🔍</div>Ничего не найдено</div>}
         </div>
       )}
 
-      {selectedService && <OrderModal service={selectedService} rate={rate} onClose={() => setSelectedService(null)} onSaveOrder={saveOrder} t={t} />}
+      {sel&&<OrderModal s={sel} rate={rate} onClose={()=>setSel(null)} onSave={saveOrder} t={t}/>}
 
-      <div style={{ borderTop: `1px solid ${t.border}`, padding: "22px 28px", textAlign: "center", color: t.textMuted, fontSize: 12 }}>
-        payflow · Оплата зарубежных сервисов · 2026
+      <div style={{ borderTop:`1px solid ${t.border}`,padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8 }}>
+        <div style={{ fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:15,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
+        <div style={{ color:t.muted,fontSize:12 }}>Оплата зарубежных сервисов · 2026</div>
       </div>
     </div>
   );
