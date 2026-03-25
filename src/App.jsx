@@ -46,9 +46,9 @@ const CFG = {
   MARGIN:       0.10,
   ADMIN_EMAIL:  "admin@payflow.ru",   // ← замени на свой email
   REQUISITES: [
-    { label:"Тинькофф", sbp:"+7 (900) 000-00-00", card:"2200 0000 0000 0001", holder:"Владислав Л." },
-    { label:"Сбербанк",  sbp:"+7 (900) 000-00-01", card:"2202 0000 0000 0002", holder:"Владислав Л." },
-    { label:"ВТБ",       sbp:"+7 (900) 000-00-02", card:"2200 0000 0000 0003", holder:"Владислав Л." },
+    { label:"Тинькофф", sbp:"+7 (900) 000-00-00", card:"2200 0000 0000 0001", holder:"Иван И." },
+    { label:"Сбербанк",  sbp:"+7 (900) 000-00-01", card:"2202 0000 0000 0002", holder:"Иван И." },
+    { label:"ВТБ",       sbp:"+7 (900) 000-00-02", card:"2200 0000 0000 0003", holder:"Иван И." },
   ],
 };
 
@@ -892,7 +892,6 @@ function Cabinet({ userHook, go, t }) {
       )}
 
       {/* Receipt modal */}
-        </>}
       {receiptModal && (
         <div style={{ position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.9)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={()=>setReceiptModal(null)}>
           <div onClick={e=>e.stopPropagation()} style={{ position:"relative", maxWidth:"90vw" }}>
@@ -1475,7 +1474,7 @@ export default function App() {
               </div>
 
               <div className="a5" style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center" }}>
-                {[["50+","сервисов","🌍"],[`${Math.round(CFG.MARGIN*100)}%`,"комиссия","💸"],["без скрытых","доплат","✅"],["~ 1 час","среднее время","⚡"]].map(([v,l,ic])=>(
+                {[["50+","сервисов","🌍"],[`${Math.round(CFG.MARGIN*100)}%`,"комиссия","💸"],["без скрытых","доплат","✅"],["~1 час","среднее время","⚡"]].map(([v,l,ic])=>(
                   <div key={l} style={{ textAlign:"center",background:t.card,border:`1px solid ${t.border}`,borderRadius:18,padding:"16px 22px",backdropFilter:"blur(10px)" }}>
                     <div style={{ fontSize:22,marginBottom:6 }}>{ic}</div>
                     <div style={{ fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:t.gold }}>{v}</div>
