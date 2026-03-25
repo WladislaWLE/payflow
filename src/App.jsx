@@ -3,6 +3,43 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase, auth as sbAuth, profiles, orders as sbOrders, notifications as sbNotifs, storage as sbStorage } from "./lib/supabase";
 
 // ══════════════════════════════════════════════════════════════
+//  ПРОМОКОДЫ — helper
+// ══════════════════════════════════════════════════════════════
+async function checkPromocode(code) {
+  const { data, error } = await supabase.rpc("apply_promocode", { promo_code_text: code });
+  if (error) return { ok: false, error: error.message };
+  return data;
+}
+
+async function getPromocodes() {
+  const { data } = await supabase.from("promocodes").select("*").order("created_at", { ascending: false });
+  return data || [];
+}
+
+async function savePromocode(promo) {
+  if (promo.id) {
+    const { error } = await supabase.from("promocodes").update(promo).eq("id", promo.id);
+    return { error };
+  } else {
+    const { error } = await supabase.from("promocodes").insert({ ...promo, code: promo.code.toUpperCase() });
+    return { error };
+  }
+}
+
+async function deletePromocode(id) {
+  const { error } = await supabase.from("promocodes").delete().eq("id", id);
+  return { error };
+}
+
+function calcDiscount(total, promo) {
+  if (!promo) return 0;
+  if (promo.type === "percent") return Math.round(total * promo.value / 100);
+  if (promo.type === "fixed")   return Math.min(promo.value, total);
+  if (promo.type === "free")    return Math.round(total * 0.10); // убираем нашу комиссию
+  return 0;
+}
+
+// ══════════════════════════════════════════════════════════════
 //  КОНФИГ
 // ══════════════════════════════════════════════════════════════
 const CFG = {
@@ -298,7 +335,7 @@ function SCard({ s, rate, onSelect, t }) {
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <span style={{ fontSize:26, transition:"filter .2s", filter:hov?"drop-shadow(0 0 8px rgba(251,191,36,0.5))":"none" }}>{s.icon}</span>
           <div>
-            <div style={{ color:t.text, fontWeight:700, fontSize:14, fontFamily:"'Syne',sans-serif" }}>{s.name}</div>
+            <div style={{ color:t.text, fontWeight:700, fontSize:14, fontFamily:"'Clash Display',sans-serif" }}>{s.name}</div>
             <div style={{ color:t.muted, fontSize:11, marginTop:1 }}>{s.cat}</div>
           </div>
         </div>
@@ -342,6 +379,10 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const [promoInput, setPromoInput] = useState("");
+  const [promoResult, setPromoResult] = useState(null);
+  const [promoError, setPromoError] = useState("");
+  const [promoChecking, setPromoChecking] = useState(false);
 
   const fileRef = useRef();
   const req     = useRef(randReq()).current;
@@ -386,6 +427,8 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
         setUploading(false);
       }
 
+      const discount = promoResult ? calcDiscount(total, promoResult) : 0;
+      const finalTotal = Math.max(0, total - discount);
       const orderData = {
         id:               orderId,
         user_id:          user.id,
@@ -395,7 +438,9 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
         service_icon:     s.icon,
         tier:             tier.n,
         price_usd:        tier.p,
-        price_rub:        total,
+        price_rub:        finalTotal,
+        promo_code:       promoResult ? promoInput : '',
+        promo_discount:   discount,
         method,
         login_data:       method === "login" ? loginV : "",
         email_data:       (method === "gift" || method === "family") ? emailV : "",
@@ -425,7 +470,7 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
         {step === 1 && <>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:22 }}>
             <div>
-              <div style={{ fontSize:20, fontFamily:"'Syne',sans-serif", fontWeight:800, color:"white" }}>{s.icon} {s.name}</div>
+              <div style={{ fontSize:20, fontFamily:"'Clash Display',sans-serif", fontWeight:800, color:"white" }}>{s.icon} {s.name}</div>
               <div style={{ color:"rgba(255,255,255,0.4)", fontSize:12, marginTop:2 }}>Оформление заявки</div>
             </div>
             <button onClick={onClose} style={{ color:"rgba(255,255,255,0.4)", fontSize:22, background:"none", border:"none", cursor:"pointer" }}>✕</button>
@@ -478,7 +523,35 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
           <div style={{ background:"rgba(251,191,36,0.07)", border:"1px solid rgba(251,191,36,0.25)", borderRadius:14, padding:16, marginBottom:18 }}>
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>Курс ЦБ</span><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>1$ = {rate?.toFixed(2)} ₽</span></div>
             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>Комиссия {Math.round(CFG.MARGIN*100)}%</span><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>+ {comm.toLocaleString("ru-RU")} ₽</span></div>
-            <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(255,255,255,0.08)", paddingTop:12 }}><span style={{ color:"white", fontWeight:700, fontSize:15 }}>К оплате</span><span style={{ color:"#fbbf24", fontWeight:900, fontSize:26, fontFamily:"'Syne',sans-serif" }}>{total.toLocaleString("ru-RU")} ₽</span></div>
+            <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(255,255,255,0.08)", paddingTop:12 }}><span style={{ color:"white", fontWeight:700, fontSize:15 }}>К оплате</span><span style={{ color:"#fbbf24", fontWeight:900, fontSize:26, fontFamily:"'Clash Display',sans-serif" }}>{total.toLocaleString("ru-RU")} ₽</span></div>
+          </div>
+
+          {/* Промокод */}
+          <div style={{ marginBottom:14 }}>
+            <div style={{ color:"rgba(255,255,255,0.4)", fontSize:11, marginBottom:8, textTransform:"uppercase", letterSpacing:1, fontWeight:600 }}>Промокод (необязательно)</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <input value={promoInput} onChange={e=>{ setPromoInput(e.target.value.toUpperCase()); setPromoResult(null); setPromoError(""); }}
+                placeholder="WELCOME10"
+                style={{ flex:1, background:"rgba(255,255,255,0.07)", border:`1px solid ${promoResult?"rgba(52,211,153,0.5)":promoError?"rgba(248,113,113,0.5)":"rgba(255,255,255,0.12)"}`, borderRadius:10, padding:"11px 14px", color:"white", fontSize:14, outline:"none", textTransform:"uppercase", letterSpacing:2 }}/>
+              <button onClick={async()=>{ if(!promoInput.trim()) return; setPromoChecking(true); setPromoError(""); const r=await checkPromocode(promoInput); setPromoChecking(false); if(r.ok){setPromoResult(r);}else{setPromoError(r.error||"Промокод недействителен");setPromoResult(null);} }}
+                disabled={promoChecking || !promoInput.trim()}
+                style={{ padding:"11px 16px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.7)", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap" }}>
+                {promoChecking ? "..." : "Применить"}
+              </button>
+            </div>
+            {promoResult && <div style={{ color:"#6ee7b7", fontSize:12, marginTop:5 }}>✅ Скидка: {promoResult.type==="percent"?promoResult.value+"%":promoResult.type==="fixed"?promoResult.value+"₽":"комиссия снята"}</div>}
+            {promoError && <div style={{ color:"#f87171", fontSize:12, marginTop:5 }}>❌ {promoError}</div>}
+          </div>
+
+          {/* Итог с учётом промокода */}
+          <div style={{ background:"rgba(251,191,36,0.07)", border:"1px solid rgba(251,191,36,0.25)", borderRadius:14, padding:16, marginBottom:14 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>Курс ЦБ</span><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>1$ = {rate?.toFixed(2)} ₽</span></div>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom: promoResult ? 8 : 10 }}><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>Комиссия {Math.round(CFG.MARGIN*100)}%</span><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>+ {comm.toLocaleString("ru-RU")} ₽</span></div>
+            {promoResult && <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}><span style={{ color:"#6ee7b7", fontSize:13 }}>🎁 Скидка промокода</span><span style={{ color:"#6ee7b7", fontSize:13, fontWeight:600 }}>− {calcDiscount(total,promoResult).toLocaleString("ru-RU")} ₽</span></div>}
+            <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(255,255,255,0.1)", paddingTop:12 }}>
+              <span style={{ color:"white", fontWeight:700, fontSize:15 }}>К оплате</span>
+              <span style={{ color:"#fbbf24", fontWeight:900, fontSize:26, fontFamily:"'Clash Display',sans-serif" }}>{Math.max(0, total - (promoResult ? calcDiscount(total,promoResult) : 0)).toLocaleString("ru-RU")} ₽</span>
+            </div>
           </div>
 
           {error && <Alert type="error" t={t}>{error}</Alert>}
@@ -491,7 +564,7 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
         {step === 2 && <>
           <div style={{ textAlign:"center", marginBottom:22 }}>
             <div style={{ fontSize:52, marginBottom:12 }}>✅</div>
-            <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:22, color:"white", marginBottom:8 }}>Заявка создана!</div>
+            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:22, color:"white", marginBottom:8 }}>Заявка создана!</div>
             <div style={{ background:"rgba(251,191,36,0.1)", border:"1px solid rgba(251,191,36,0.3)", borderRadius:12, padding:"10px 24px", display:"inline-block", color:"#fbbf24", fontWeight:800, fontSize:28 }}>{orderId}</div>
           </div>
 
@@ -576,7 +649,7 @@ function AuthModal({ onClose, userHook, t }) {
     <div style={{ position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(16px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{ background:"#0e0e1a", border:"1px solid rgba(255,255,255,0.12)", borderRadius:22, width:"100%", maxWidth:400, padding:32, boxShadow:"0 24px 80px rgba(0,0,0,0.7)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:24 }}>
-          <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:22, color:"white" }}>{mode==="login"?"👋 Вход":"🚀 Регистрация"}</div>
+          <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:22, color:"white" }}>{mode==="login"?"👋 Вход":"🚀 Регистрация"}</div>
           <button onClick={onClose} style={{ color:"rgba(255,255,255,0.4)", fontSize:20, background:"none", border:"none", cursor:"pointer" }}>✕</button>
         </div>
         <div style={{ display:"flex", background:"rgba(255,255,255,0.05)", borderRadius:12, padding:4, marginBottom:24 }}>
@@ -655,7 +728,7 @@ function Cabinet({ userHook, go, t }) {
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:32, flexWrap:"wrap", gap:12 }}>
         <div>
           <div style={{ color:t.muted, fontSize:13, marginBottom:4 }}>Личный кабинет</div>
-          <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:28, color:t.text }}>Привет, {profile?.name || ""}! 👋</div>
+          <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:28, color:t.text }}>Привет, {profile?.name || ""}! 👋</div>
         </div>
         <button onClick={()=>go("#catalog")} style={{ padding:"10px 20px", borderRadius:100, background:t.card, border:`1px solid ${t.border}`, color:t.sub, cursor:"pointer", fontSize:14, fontWeight:600 }}>🛍 Заказать ещё</button>
       </div>
@@ -671,7 +744,7 @@ function Cabinet({ userHook, go, t }) {
           <div key={s.l} style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, padding:"16px 18px", boxShadow:t.shadow }}>
             <div style={{ fontSize:22, marginBottom:6 }}>{s.i}</div>
             <div style={{ color:t.muted, fontSize:12, marginBottom:4 }}>{s.l}</div>
-            <div style={{ color:s.c, fontWeight:800, fontSize:22, fontFamily:"'Syne',sans-serif" }}>{s.v}</div>
+            <div style={{ color:s.c, fontWeight:800, fontSize:22, fontFamily:"'Clash Display',sans-serif" }}>{s.v}</div>
           </div>
         ))}
       </div>
@@ -735,7 +808,7 @@ function Cabinet({ userHook, go, t }) {
                       {o.operator_note && (
                         <div style={{ background:"rgba(52,211,153,0.08)", border:"1px solid rgba(52,211,153,0.3)", borderRadius:12, padding:14, marginBottom:12 }}>
                           <div style={{ color:"#6ee7b7", fontWeight:700, fontSize:13, marginBottom:8 }}>📩 Сообщение от оператора</div>
-                          <div style={{ color:t.text, fontSize:14, lineHeight:1.7, whiteSpace:"pre-wrap", fontFamily:"'Fira Mono',monospace", background:"rgba(0,0,0,0.2)", borderRadius:8, padding:"10px 12px" }}>{o.operator_note}</div>
+                          <div style={{ color:t.text, fontSize:14, lineHeight:1.7, whiteSpace:"pre-wrap", fontFamily:"monospace", background:"rgba(0,0,0,0.2)", borderRadius:8, padding:"10px 12px" }}>{o.operator_note}</div>
                         </div>
                       )}
 
@@ -806,7 +879,7 @@ function Cabinet({ userHook, go, t }) {
         <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:28 }}>
           <div style={{ textAlign:"center", marginBottom:24 }}>
             <div style={{ width:80, height:80, borderRadius:"50%", background:t.goldDim, border:`2px solid ${t.goldB}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32, margin:"0 auto 12px" }}>👤</div>
-            <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:700, fontSize:22, color:t.text }}>{profile?.name}</div>
+            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:700, fontSize:22, color:t.text }}>{profile?.name}</div>
             <div style={{ color:t.muted, fontSize:14, marginTop:4 }}>{session?.user?.email}</div>
             <div style={{ color:t.muted, fontSize:12, marginTop:2 }}>Зарегистрирован: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString("ru-RU") : ""}</div>
           </div>
@@ -819,6 +892,7 @@ function Cabinet({ userHook, go, t }) {
       )}
 
       {/* Receipt modal */}
+        </>}
       {receiptModal && (
         <div style={{ position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.9)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={()=>setReceiptModal(null)}>
           <div onClick={e=>e.stopPropagation()} style={{ position:"relative", maxWidth:"90vw" }}>
@@ -843,6 +917,46 @@ function AdminPanel({ userHook, go, t }) {
   const [noteValues, setNoteValues] = useState({});
   const [receiptModal, setReceiptModal] = useState(null);
   const [saving, setSaving] = useState(null);
+  const [adminTab, setAdminTab] = useState("orders");
+  const [promos, setPromos] = useState([]);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoForm, setPromoForm] = useState({ code:"", type:"percent", value:"", max_uses:-1, description:"", min_amount:0 });
+  const [promoFormOpen, setPromoFormOpen] = useState(false);
+  const [promoSaving, setPromoSaving] = useState(false);
+
+  useEffect(() => {
+    if (isAdmin && adminTab === "promos") {
+      setPromoLoading(true);
+      getPromocodes().then(d => { setPromos(d); setPromoLoading(false); });
+    }
+  }, [isAdmin, adminTab]);
+
+  const handleSavePromo = async () => {
+    if (!promoForm.code || !promoForm.value) return;
+    setPromoSaving(true);
+    const { error } = await savePromocode({
+      code: promoForm.code.toUpperCase(),
+      type: promoForm.type,
+      value: parseFloat(promoForm.value),
+      max_uses: parseInt(promoForm.max_uses) || -1,
+      min_amount: parseInt(promoForm.min_amount) || 0,
+      description: promoForm.description,
+    });
+    if (!error) {
+      setPromoForm({ code:"", type:"percent", value:"", max_uses:-1, description:"", min_amount:0 });
+      setPromoFormOpen(false);
+      const d = await getPromocodes(); setPromos(d);
+    }
+    setPromoSaving(false);
+  };
+
+  const handleDeletePromo = async (id) => {
+    if (!confirm("Удалить промокод?")) return;
+    await deletePromocode(id);
+    const d = await getPromocodes(); setPromos(d);
+  };
+
+  const PROMO_TYPE_LABELS = { percent:"% скидка", fixed:"Фикс. скидка ₽", free:"Без комиссии" };
 
   if (!isAdmin) return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:t.bg }}>
@@ -903,7 +1017,7 @@ function AdminPanel({ userHook, go, t }) {
 
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:28, flexWrap:"wrap", gap:12 }}>
           <div>
-            <div style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:28, color:t.text }}>📋 Панель управления</div>
+            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:28, color:t.text }}>📋 Панель управления</div>
             <div style={{ color:t.sub, fontSize:13, marginTop:2 }}>{new Date().toLocaleString("ru-RU")}</div>
           </div>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
@@ -924,11 +1038,107 @@ function AdminPanel({ userHook, go, t }) {
             <div key={s.l} style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, padding:"16px 18px", boxShadow:t.shadow }}>
               <div style={{ fontSize:20, marginBottom:6 }}>{s.i}</div>
               <div style={{ color:t.sub, fontSize:12, marginBottom:4 }}>{s.l}</div>
-              <div style={{ color:s.c, fontWeight:800, fontSize:22, fontFamily:"'Syne',sans-serif" }}>{s.v}</div>
+              <div style={{ color:s.c, fontWeight:800, fontSize:22, fontFamily:"'Clash Display',sans-serif" }}>{s.v}</div>
             </div>
           ))}
         </div>
 
+        {/* Admin tabs */}
+        <div style={{ display:"flex", gap:8, marginBottom:24 }}>
+          {[["orders","Заявки","📋"],["promos","Промокоды","🎁"]].map(([id,label,icon]) => (
+            <button key={id} onClick={()=>setAdminTab(id)} style={{ padding:"9px 20px", borderRadius:100, fontSize:13, fontWeight:600, cursor:"pointer", background:adminTab===id?t.goldDim:t.card, border:`1px solid ${adminTab===id?t.goldB:t.border}`, color:adminTab===id?t.gold:t.sub }}>
+              {icon} {label}
+              {id==="orders" && <span style={{ marginLeft:6, opacity:.6, fontSize:11 }}>({orders.length})</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* PROMOCODES TAB */}
+        {adminTab === "promos" && (
+          <div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <div style={{ color:t.sub, fontSize:14 }}>Управление промокодами</div>
+              <button onClick={()=>setPromoFormOpen(o=>!o)} style={{ padding:"9px 18px", borderRadius:10, background:t.goldDim, border:`1px solid ${t.goldB}`, color:t.gold, cursor:"pointer", fontSize:13, fontWeight:600 }}>
+                {promoFormOpen ? "Закрыть" : "+ Создать промокод"}
+              </button>
+            </div>
+
+            {/* Create form */}
+            {promoFormOpen && (
+              <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, padding:22, marginBottom:16 }}>
+                <div style={{ fontWeight:700, color:t.text, fontSize:15, marginBottom:16 }}>Новый промокод</div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12, marginBottom:12 }}>
+                  <div>
+                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>КОД</div>
+                    <input value={promoForm.code} onChange={e=>setPromoForm(f=>({...f,code:e.target.value.toUpperCase()}))} placeholder="SUMMER20" style={{ ...inp, width:"100%", textTransform:"uppercase", letterSpacing:2 }}/>
+                  </div>
+                  <div>
+                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>ТИП</div>
+                    <select value={promoForm.type} onChange={e=>setPromoForm(f=>({...f,type:e.target.value}))} style={{ ...inp, width:"100%", appearance:"none" }}>
+                      <option value="percent">% скидка от суммы</option>
+                      <option value="fixed">Фикс. скидка ₽</option>
+                      <option value="free">Без комиссии</option>
+                    </select>
+                  </div>
+                  {promoForm.type !== "free" && <div>
+                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>{promoForm.type==="percent"?"ПРОЦЕНТ %":"СУММА ₽"}</div>
+                    <input value={promoForm.value} onChange={e=>setPromoForm(f=>({...f,value:e.target.value}))} placeholder={promoForm.type==="percent"?"10":"500"} type="number" style={{ ...inp, width:"100%" }}/>
+                  </div>}
+                  <div>
+                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>МАК. ИСПОЛЬЗОВАНИЙ (-1 = ∞)</div>
+                    <input value={promoForm.max_uses} onChange={e=>setPromoForm(f=>({...f,max_uses:e.target.value}))} type="number" style={{ ...inp, width:"100%" }}/>
+                  </div>
+                  <div>
+                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>МИН. СУММА ЗАКАЗА ₽</div>
+                    <input value={promoForm.min_amount} onChange={e=>setPromoForm(f=>({...f,min_amount:e.target.value}))} type="number" placeholder="0" style={{ ...inp, width:"100%" }}/>
+                  </div>
+                  <div>
+                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>ЗАМЕТКА</div>
+                    <input value={promoForm.description} onChange={e=>setPromoForm(f=>({...f,description:e.target.value}))} placeholder="Для новых пользователей" style={{ ...inp, width:"100%" }}/>
+                  </div>
+                </div>
+                <button onClick={handleSavePromo} disabled={promoSaving} style={{ padding:"10px 24px", borderRadius:10, background:"linear-gradient(135deg,#f59e0b,#fbbf24)", border:"none", color:"#0a0a14", fontWeight:700, cursor:"pointer", fontSize:14 }}>
+                  {promoSaving ? "Сохранение..." : "💾 Создать промокод"}
+                </button>
+              </div>
+            )}
+
+            {/* Promos list */}
+            {promoLoading ? <div style={{ color:t.muted, textAlign:"center", padding:"40px" }}>Загрузка...</div> :
+            promos.length === 0 ? <div style={{ color:t.muted, textAlign:"center", padding:"60px" }}><div style={{ fontSize:40, marginBottom:12 }}>🎁</div>Промокодов пока нет</div> :
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {promos.map(p => (
+                <div key={p.id} style={{ background:t.card2, border:`1px solid ${p.is_active?t.border:"rgba(248,113,113,0.2)"}`, borderRadius:14, padding:16, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
+                  <div>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+                      <span style={{ color:t.gold, fontWeight:800, fontSize:16, letterSpacing:2 }}>{p.code}</span>
+                      <span style={{ background: p.is_active?"rgba(52,211,153,0.15)":"rgba(248,113,113,0.15)", border:`1px solid ${p.is_active?"rgba(52,211,153,0.3)":"rgba(248,113,113,0.3)"}`, color: p.is_active?"#6ee7b7":"#f87171", fontSize:11, padding:"2px 8px", borderRadius:100, fontWeight:600 }}>
+                        {p.is_active?"Активен":"Отключён"}
+                      </span>
+                    </div>
+                    <div style={{ color:t.text, fontSize:13, marginBottom:2 }}>
+                      {PROMO_TYPE_LABELS[p.type]}{p.type!=="free" && `: ${p.value}${p.type==="percent"?"%":"₽"}`}
+                      {p.min_amount > 0 && ` · мин. ${p.min_amount}₽`}
+                    </div>
+                    <div style={{ color:t.muted, fontSize:12 }}>
+                      Использований: {p.uses_count}{p.max_uses!==-1?`/${p.max_uses}`:""} · {p.description}
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={async()=>{ await supabase.from("promocodes").update({is_active:!p.is_active}).eq("id",p.id); const d=await getPromocodes(); setPromos(d); }} style={{ padding:"7px 14px", borderRadius:8, background:t.inp, border:`1px solid ${t.border}`, color:t.sub, cursor:"pointer", fontSize:12 }}>
+                      {p.is_active?"Отключить":"Включить"}
+                    </button>
+                    <button onClick={()=>handleDeletePromo(p.id)} style={{ padding:"7px 14px", borderRadius:8, background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.3)", color:"#f87171", cursor:"pointer", fontSize:12 }}>
+                      Удалить
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>}
+          </div>
+        )}
+
+        {adminTab === "orders" && <>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Поиск по ID, сервису или email" style={{ ...inp, width:"100%", marginBottom:12 }}/>
         <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:20 }}>
           {[["all","Все"],...Object.entries(SL)].map(([k,l]) => {
@@ -993,7 +1203,7 @@ function AdminPanel({ userHook, go, t }) {
                             onChange={e => setNoteValues(prev => ({ ...prev, [o.id]: e.target.value }))}
                             placeholder={"Логин: user@mail.com\nПароль: SecurePass123\n\nили Gift-код: XXXX-XXXX-XXXX"}
                             rows={4}
-                            style={{ width:"100%", background:t.inp, border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 12px", color:t.text, fontSize:13, outline:"none", resize:"vertical", fontFamily:"'Fira Mono',monospace", lineHeight:1.6, boxSizing:"border-box", marginBottom:8 }}
+                            style={{ width:"100%", background:t.inp, border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 12px", color:t.text, fontSize:13, outline:"none", resize:"vertical", fontFamily:"monospace", lineHeight:1.6, boxSizing:"border-box", marginBottom:8 }}
                           />
                           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                             <button
@@ -1042,7 +1252,7 @@ function Calculator({ rate, rateDate, rateLoading, t }) {
       <div style={{ maxWidth:560, margin:"0 auto" }}>
         <div style={{ textAlign:"center", marginBottom:32 }}>
           <div style={{ color:t.gold, fontSize:11, textTransform:"uppercase", letterSpacing:3, marginBottom:10, fontWeight:600 }}>Калькулятор</div>
-          <h2 style={{ fontFamily:"'Syne',sans-serif", fontWeight:800, fontSize:30, color:t.text }}>Сколько это стоит?</h2>
+          <h2 style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:30, color:t.text }}>Сколько это стоит?</h2>
         </div>
         <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:22, padding:28, boxShadow:t.shadow }}>
           <label style={{ color:t.sub, fontSize:14, marginBottom:10, display:"block", fontWeight:500 }}>Сумма в долларах</label>
@@ -1058,7 +1268,7 @@ function Calculator({ rate, rateDate, rateLoading, t }) {
               : <>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}><span style={{ color:t.sub, fontSize:14 }}>Курс ЦБ на {rateDate}</span><span style={{ color:t.sub, fontSize:14, fontWeight:600 }}>1$ = {rate?.toFixed(2)} ₽</span></div>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}><span style={{ color:t.sub, fontSize:14 }}>Комиссия {Math.round(CFG.MARGIN*100)}%</span><span style={{ color:t.sub, fontSize:14, fontWeight:600 }}>+ {comm.toLocaleString("ru-RU")} ₽</span></div>
-                <div style={{ display:"flex", justifyContent:"space-between", borderTop:`2px solid ${t.goldB}`, paddingTop:14 }}><span style={{ color:t.text, fontWeight:700, fontSize:16 }}>Итого к оплате</span><span style={{ color:t.gold, fontWeight:900, fontSize:34, fontFamily:"'Syne',sans-serif" }}>{total.toLocaleString("ru-RU")} ₽</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between", borderTop:`2px solid ${t.goldB}`, paddingTop:14 }}><span style={{ color:t.text, fontWeight:700, fontSize:16 }}>Итого к оплате</span><span style={{ color:t.gold, fontWeight:900, fontSize:34, fontFamily:"'Clash Display',sans-serif" }}>{total.toLocaleString("ru-RU")} ₽</span></div>
               </>}
           </div>
         </div>
@@ -1130,13 +1340,13 @@ export default function App() {
   // Показываем заглушку пока грузится auth
   if (userLoading) return (
     <div style={{ minHeight:"100vh", background:"#07070f", display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ fontFamily:"'Syne',sans-serif", color:"#fbbf24", fontSize:24, fontWeight:800 }}>pay<span style={{ color:"white" }}>flow</span></div>
+      <div style={{ fontFamily:"'Clash Display',sans-serif", color:"#fbbf24", fontSize:24, fontWeight:800 }}>pay<span style={{ color:"white" }}>flow</span></div>
     </div>
   );
 
   // Отдельные страницы
   if (page === "#admin") return (
-    <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'DM Sans',sans-serif", color:t.text }}>
+    <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Satoshi',sans-serif", color:t.text }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}input::placeholder,textarea::placeholder{opacity:.4}`}</style>
       <AdminPanel userHook={userHook} go={go} t={t}/>
     </div>
@@ -1145,10 +1355,10 @@ export default function App() {
   if (page === "#cabinet") {
     if (!session) { go("#home"); return null; }
     return (
-      <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'DM Sans',sans-serif", color:t.text }}>
+      <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Satoshi',sans-serif", color:t.text }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}input::placeholder,textarea::placeholder{opacity:.4}`}</style>
         <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 28px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:t.nav,backdropFilter:"blur(20px)",borderBottom:`1px solid ${t.border}` }}>
-          <div onClick={()=>go("#home")} style={{ fontFamily:"'Syne',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
+          <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
           <div style={{ display:"flex",gap:8,alignItems:"center" }}>
             <button onClick={()=>go("#home")} style={{ padding:"7px 16px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:"transparent",border:`1px solid ${t.border}`,color:t.sub }}>← Главная</button>
             <button onClick={toggle} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark?"☀️":"🌙"}</button>
@@ -1161,9 +1371,9 @@ export default function App() {
 
   // Основной layout
   return (
-    <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'DM Sans',sans-serif", color:t.text, transition:"background .3s,color .3s" }}>
+    <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Satoshi',sans-serif", color:t.text, transition:"background .3s,color .3s" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&family=Fira+Mono:wght@400;500&display=swap');
+        @import url('https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(251,191,36,0.4);border-radius:3px}
         input::placeholder,textarea::placeholder{opacity:.4}
@@ -1177,11 +1387,21 @@ export default function App() {
         .a4{animation:fadeUp .7s .3s ease forwards;opacity:0}
         .a5{animation:fadeUp .7s .4s ease forwards;opacity:0}
         .cg:hover .ci{opacity:.55}.ci{transition:all .25s!important}.cg .ci:hover{opacity:1!important;transform:translateY(-4px)!important}
+        @media(max-width:640px){
+          .mob-hide{display:none!important}
+          .mob-col{flex-direction:column!important}
+          .mob-full{width:100%!important}
+          .mob-sm{font-size:clamp(28px,8vw,48px)!important;letter-spacing:-1px!important}
+          .mob-pad{padding:70px 16px 40px!important}
+          .mob-grid{grid-template-columns:1fr!important}
+          .mob-nav{gap:4px!important}
+          .mob-inp{font-size:18px!important}
+        }
       `}</style>
 
       {/* NAV */}
       <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 20px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .3s" }}>
-        <div onClick={()=>go("#home")} style={{ fontFamily:"'Syne',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
+        <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
         <div style={{ display:"flex",gap:6,alignItems:"center" }}>
           {[["#home","Главная"],["#catalog","Каталог"]].map(([h,l]) => (
             <button key={h} onClick={()=>go(h)} style={{ padding:"7px 16px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===h?t.goldDim:"transparent",border:`1px solid ${page===h?t.goldB:"transparent"}`,color:page===h?t.gold:t.sub,transition:"all .2s" }}>{l}</button>
@@ -1189,9 +1409,16 @@ export default function App() {
           {session ? (
             <>
               {isAdmin && <button onClick={()=>go("#admin")} style={{ padding:"7px 14px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.35)",color:"#c4b5fd" }}>⚙️ Админ</button>}
-              <button onClick={()=>go("#cabinet")} style={{ padding:"7px 14px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:6 }}>
+              <button onClick={()=>go("#cabinet")} style={{ padding:"7px 14px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:6,position:"relative" }}>
                 👤 {profile?.name?.split(" ")[0] || "Кабинет"}
-                {unread > 0 && <span style={{ background:"#f87171",color:"white",borderRadius:100,padding:"1px 6px",fontSize:10,fontWeight:700 }}>{unread}</span>}
+                {unread > 0 && (
+                  <span style={{ background:"#f87171",color:"white",borderRadius:"50%",width:18,height:18,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",position:"absolute",top:-4,right:-4,boxShadow:"0 0 0 2px "+t.bg }}>
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                )}
+              </button>
+              <button onClick={async()=>{ await userHook.logout(); go("#home"); }} style={{ padding:"7px 14px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",color:"#f87171" }}>
+                Выйти
               </button>
             </>
           ) : (
@@ -1222,7 +1449,7 @@ export default function App() {
                 <span style={{ color:t.gold,fontWeight:700 }}>{rateLoading?"загрузка...":`1$ = ${rate?.toFixed(2)} ₽`}</span>
               </div>
 
-              <h1 className="a2" style={{ fontFamily:"'Syne',sans-serif",fontWeight:900,fontSize:"clamp(38px,6.5vw,74px)",lineHeight:1.03,letterSpacing:-3,marginBottom:22,color:t.text }}>
+              <h1 className="a2" style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:"clamp(32px,7vw,74px)",lineHeight:1.04,letterSpacing:-2,marginBottom:22,color:t.text,className:"mob-sm" }}>
                 Оплати любой<br/>
                 <span style={{ color:t.gold,position:"relative" }}>зарубежный сервис
                   <span style={{ position:"absolute",bottom:-4,left:0,right:0,height:3,background:`linear-gradient(90deg,${t.gold},transparent)`,borderRadius:2,opacity:.5 }}/>
@@ -1251,7 +1478,7 @@ export default function App() {
                 {[["50+","сервисов","🌍"],[`${Math.round(CFG.MARGIN*100)}%`,"комиссия","💸"],["без скрытых","доплат","✅"],["~1 час","среднее время","⚡"]].map(([v,l,ic])=>(
                   <div key={l} style={{ textAlign:"center",background:t.card,border:`1px solid ${t.border}`,borderRadius:18,padding:"16px 22px",backdropFilter:"blur(10px)" }}>
                     <div style={{ fontSize:22,marginBottom:6 }}>{ic}</div>
-                    <div style={{ fontFamily:"'Syne',sans-serif",fontSize:22,fontWeight:800,color:t.gold }}>{v}</div>
+                    <div style={{ fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:t.gold }}>{v}</div>
                     <div style={{ color:t.muted,fontSize:13,marginTop:2 }}>{l}</div>
                   </div>
                 ))}
@@ -1263,7 +1490,7 @@ export default function App() {
           <div style={{ padding:"0 24px 80px",maxWidth:1100,margin:"0 auto" }}>
             <div style={{ textAlign:"center",marginBottom:36 }}>
               <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Популярное</div>
-              <h2 style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:32,color:t.text,marginBottom:8 }}>Часто заказывают</h2>
+              <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:32,color:t.text,marginBottom:8 }}>Часто заказывают</h2>
             </div>
             <div className="cg" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:14 }}>
               {POPULAR.map(s=><div key={s.id} className="ci"><SCard s={s} rate={rate} onSelect={setSelSvc} t={t}/></div>)}
@@ -1279,7 +1506,7 @@ export default function App() {
           <div ref={howRef} style={{ padding:"80px 24px 100px",maxWidth:940,margin:"0 auto" }}>
             <div style={{ textAlign:"center",marginBottom:50 }}>
               <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Процесс</div>
-              <h2 style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:34,color:t.text }}>Как это работает</h2>
+              <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:34,color:t.text }}>Как это работает</h2>
             </div>
             <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:16 }}>
               {[
@@ -1289,7 +1516,7 @@ export default function App() {
                 {n:"04",icon:"🚀",title:"Получаешь доступ",  desc:"Активируем до 1 часа. Данные аккаунта приходят прямо в личный кабинет."},
               ].map(s => (
                 <div key={s.n} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:18,padding:"26px 22px",position:"relative",overflow:"hidden",boxShadow:t.shadow }}>
-                  <div style={{ position:"absolute",top:14,right:16,fontFamily:"'Syne',sans-serif",color:t.dark?"rgba(251,191,36,0.1)":"rgba(217,119,6,0.1)",fontSize:48,fontWeight:900,lineHeight:1 }}>{s.n}</div>
+                  <div style={{ position:"absolute",top:14,right:16,fontFamily:"'Clash Display',sans-serif",color:t.dark?"rgba(251,191,36,0.1)":"rgba(217,119,6,0.1)",fontSize:48,fontWeight:900,lineHeight:1 }}>{s.n}</div>
                   <div style={{ fontSize:34,marginBottom:14 }}>{s.icon}</div>
                   <div style={{ fontWeight:700,fontSize:15,marginBottom:8,color:t.text }}>{s.title}</div>
                   <div style={{ color:t.sub,fontSize:14,lineHeight:1.6 }}>{s.desc}</div>
@@ -1305,7 +1532,7 @@ export default function App() {
         <div style={{ maxWidth:1160,margin:"0 auto",padding:"80px 20px 60px" }}>
           <div style={{ marginBottom:30 }}>
             <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:8,fontWeight:600 }}>Каталог</div>
-            <h2 style={{ fontFamily:"'Syne',sans-serif",fontWeight:800,fontSize:32,marginBottom:6,color:t.text }}>Все сервисы</h2>
+            <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:32,marginBottom:6,color:t.text }}>Все сервисы</h2>
             <div style={{ color:t.sub,fontSize:14 }}>{SVC.length} сервисов · Курс ЦБ: {rateLoading?"загрузка...":`1$ = ${rate?.toFixed(2)} ₽`} · <span style={{ color:t.muted }}>цены с комиссией {Math.round(CFG.MARGIN*100)}%</span></div>
           </div>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Поиск по названию..." style={{ width:"100%",background:t.card2,border:`1px solid ${t.border}`,borderRadius:14,padding:"14px 18px",color:t.text,fontSize:15,outline:"none",marginBottom:16,boxShadow:t.shadow }}/>
@@ -1325,7 +1552,7 @@ export default function App() {
 
       {/* Footer */}
       <div style={{ borderTop:`1px solid ${t.border}`,padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8 }}>
-        <div style={{ fontFamily:"'Syne',sans-serif",fontWeight:700,fontSize:16,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
+        <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:700,fontSize:16,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
         <div style={{ color:t.muted,fontSize:13 }}>Оплата зарубежных сервисов · 2026</div>
       </div>
     </div>
