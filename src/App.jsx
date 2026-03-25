@@ -1475,7 +1475,7 @@ export default function App() {
               </div>
 
               <div className="a5" style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center" }}>
-                {[["50+","сервисов","🌍"],[`${Math.round(CFG.MARGIN*100)}%`,"комиссия","💸"],["без скрытых","доплат","✅"],["~1 час","среднее время","⚡"]].map(([v,l,ic])=>(
+                {[["50+","сервисов","🌍"],[`${Math.round(CFG.MARGIN*100)}%`,"комиссия","💸"],["без скрытых","доплат","✅"],["~ 1 час","среднее время","⚡"]].map(([v,l,ic])=>(
                   <div key={l} style={{ textAlign:"center",background:t.card,border:`1px solid ${t.border}`,borderRadius:18,padding:"16px 22px",backdropFilter:"blur(10px)" }}>
                     <div style={{ fontSize:22,marginBottom:6 }}>{ic}</div>
                     <div style={{ fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:t.gold }}>{v}</div>
