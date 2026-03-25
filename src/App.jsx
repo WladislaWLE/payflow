@@ -1221,6 +1221,7 @@ function AdminPanel({ userHook, go, t }) {
               ))}
             </div>
         }
+        </>}
       </div>
 
       {receiptModal && (
