@@ -665,6 +665,28 @@ function AuthModal({ onClose, userHook, t }) {
         <button onClick={handle} disabled={loading} style={{ width:"100%", padding:13, borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#fbbf24)", border:"none", color:"#0a0a14", fontWeight:800, fontSize:15, cursor:"pointer", opacity:loading?.7:1 }}>
           {loading ? "..." : mode==="login" ? "Войти" : "Создать аккаунт"}
         </button>
+
+        {/* Восстановление пароля */}
+        {mode==="login" && (
+          <div style={{ textAlign:"center", marginTop:10 }}>
+            <button onClick={async()=>{
+              if (!email) { setErr("Введите email для восстановления пароля"); return; }
+              const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/#reset" });
+              if (error) setErr(error.message);
+              else setErr(""); alert("Письмо с ссылкой для сброса пароля отправлено на " + email);
+            }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.4)", cursor:"pointer", fontSize:12, textDecoration:"underline" }}>
+              Забыли пароль?
+            </button>
+          </div>
+        )}
+
+        {/* Сообщение о подтверждении email после регистрации */}
+        {mode==="register" && (
+          <div style={{ background:"rgba(96,165,250,0.08)", border:"1px solid rgba(96,165,250,0.25)", borderRadius:10, padding:"10px 14px", marginTop:10, fontSize:12, color:"rgba(255,255,255,0.5)", lineHeight:1.6 }}>
+            📧 После регистрации проверьте почту — нужно подтвердить email чтобы войти в аккаунт.
+          </div>
+        )}
+
         <div style={{ color:"rgba(255,255,255,0.3)", fontSize:12, textAlign:"center", marginTop:12 }}>
           {mode==="login"?"Нет аккаунта? ":"Уже есть аккаунт? "}
           <button onClick={()=>setMode(mode==="login"?"register":"login")} style={{ background:"none", border:"none", color:"#fbbf24", cursor:"pointer", fontSize:12, fontWeight:600 }}>
@@ -1371,7 +1393,7 @@ export default function App() {
 
   // Основной layout
   return (
-    <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Satoshi',sans-serif", color:t.text, transition:"background .3s,color .3s" }}>
+    <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Satoshi',sans-serif", color:t.text, transition:"background .3s,color .3s", overflowX:"hidden", width:"100%" }}>
       <style>{`
         @import url('https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -1388,19 +1410,26 @@ export default function App() {
         .a5{animation:fadeUp .7s .4s ease forwards;opacity:0}
         .cg:hover .ci{opacity:.55}.ci{transition:all .25s!important}.cg .ci:hover{opacity:1!important;transform:translateY(-4px)!important}
         @media(max-width:640px){
+          body,#root{overflow-x:hidden!important;max-width:100vw!important}
           .mob-hide{display:none!important}
+          .mob-show{display:inline!important}
           .mob-col{flex-direction:column!important}
-          .mob-full{width:100%!important}
+          .mob-full{width:100%!important;max-width:100%!important}
           .mob-sm{font-size:clamp(28px,8vw,48px)!important;letter-spacing:-1px!important}
           .mob-pad{padding:70px 16px 40px!important}
           .mob-grid{grid-template-columns:1fr!important}
           .mob-nav{gap:4px!important}
           .mob-inp{font-size:18px!important}
+          nav{padding:0 12px!important}
+          nav button span.mob-show{display:inline!important}
+        }
+        @media(min-width:641px){
+          .mob-show{display:none!important}
         }
       `}</style>
 
       {/* NAV */}
-      <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 20px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .3s" }}>
+      <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 16px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .3s",overflowX:"hidden" }}>
         <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
         <div style={{ display:"flex",gap:6,alignItems:"center" }}>
           {[["#home","Главная"],["#catalog","Каталог"]].map(([h,l]) => (
@@ -1409,16 +1438,20 @@ export default function App() {
           {session ? (
             <>
               {isAdmin && <button onClick={()=>go("#admin")} style={{ padding:"7px 14px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.35)",color:"#c4b5fd" }}>⚙️ Админ</button>}
-              <button onClick={()=>go("#cabinet")} style={{ padding:"7px 14px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:6,position:"relative" }}>
-                👤 {profile?.name?.split(" ")[0] || "Кабинет"}
+              {/* Колокольчик уведомлений */}
+              <button onClick={()=>{ go("#cabinet"); }} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",flexShrink:0 }}>
+                🔔
                 {unread > 0 && (
-                  <span style={{ background:"#f87171",color:"white",borderRadius:"50%",width:18,height:18,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",position:"absolute",top:-4,right:-4,boxShadow:"0 0 0 2px "+t.bg }}>
+                  <span style={{ background:"#f87171",color:"white",borderRadius:"50%",width:16,height:16,fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",position:"absolute",top:-3,right:-3,boxShadow:"0 0 0 2px "+t.bg }}>
                     {unread > 9 ? "9+" : unread}
                   </span>
                 )}
               </button>
-              <button onClick={async()=>{ await userHook.logout(); go("#home"); }} style={{ padding:"7px 14px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",color:"#f87171" }}>
-                Выйти
+              <button onClick={()=>go("#cabinet")} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:5,flexShrink:0 }}>
+                👤 <span className="mob-hide">{profile?.name?.split(" ")[0] || "Кабинет"}</span>
+              </button>
+              <button onClick={async()=>{ await userHook.logout(); go("#home"); }} style={{ padding:"7px 12px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",color:"#f87171",flexShrink:0 }}>
+                <span className="mob-hide">Выйти</span><span style={{ display:"none" }} className="mob-show">✕</span>
               </button>
             </>
           ) : (
