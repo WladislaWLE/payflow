@@ -1560,6 +1560,30 @@ export default function App() {
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
         @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+        @keyframes meshFloat1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,15px) scale(0.97)}}
+        @keyframes meshFloat2{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-25px,20px) scale(1.03)}66%{transform:translate(15px,-25px) scale(0.98)}}
+        @keyframes gradientBorder{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+        @keyframes countUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+        @keyframes cursorGlow{0%,100%{opacity:.6}50%{opacity:1}}
+        @keyframes borderFlow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+        @keyframes bounceIn{0%{transform:scale(0) rotate(-10deg)}60%{transform:scale(1.15) rotate(3deg)}80%{transform:scale(0.95)}100%{transform:scale(1) rotate(0deg)}}
+        @keyframes slideInRight{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+        /* Stagger classes */
+        .stagger-1{animation:fadeUp .6s .05s ease forwards;opacity:0}
+        .stagger-2{animation:fadeUp .6s .1s ease forwards;opacity:0}
+        .stagger-3{animation:fadeUp .6s .15s ease forwards;opacity:0}
+        .stagger-4{animation:fadeUp .6s .2s ease forwards;opacity:0}
+        .stagger-5{animation:fadeUp .6s .25s ease forwards;opacity:0}
+        .stagger-6{animation:fadeUp .6s .3s ease forwards;opacity:0}
+        /* Animated gradient border on CTA */
+        .cta-primary{background:linear-gradient(135deg,#f59e0b,#fbbf24)!important;position:relative!important;isolation:isolate!important}
+        .cta-primary::before{content:"";position:absolute;inset:-2px;borderRadius:inherit;background:linear-gradient(270deg,#f59e0b,#fde68a,#fbbf24,#f97316,#fbbf24);backgroundSize:300% 300%;animation:borderFlow 3s ease infinite;zIndex:-1;filter:blur(6px);opacity:.7}
+        /* Magnetic button */
+        .btn-magnetic{transition:transform 200ms cubic-bezier(0,0,.2,1)!important}
+        /* Bento cards */
+        .bento-lg{grid-column:span 2;grid-row:span 2}
+        .bento-md{grid-column:span 1;grid-row:span 2}
+        @media(max-width:640px){.bento-lg,.bento-md{grid-column:span 1!important;grid-row:span 1!important}}
         .a1{animation:fadeUp .7s ease forwards}
         .a2{animation:fadeUp .7s .1s ease forwards;opacity:0}
         .a3{animation:fadeUp .7s .2s ease forwards;opacity:0}
@@ -1569,6 +1593,10 @@ export default function App() {
         /* ── Mobile First (UI/UX skill: mobile-first, no horizontal scroll) ── */
         @media(max-width:640px){
           html,body,#root{overflow-x:hidden!important;max-width:100dvw!important;width:100%!important}
+          /* Asymmetric hero → single column on mobile */
+          [style*="gridTemplateColumns:"1fr 1fr""]{grid-template-columns:1fr!important}
+          /* Bento grid → single col on mobile */
+          [style*="gridTemplateColumns:"repeat(3"]{grid-template-columns:1fr!important}
           /* Hide/show classes */
           .mob-hide{display:none!important}
           .mob-show{display:inline-flex!important;align-items:center}
@@ -1652,71 +1680,176 @@ export default function App() {
       {page==="#home" && (
         <div>
           {/* HERO */}
-          <div style={{ position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"80px 16px 60px",overflow:"hidden",width:"100%",boxSizing:"border-box" }}>
+          <div style={{ position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"90px 32px 60px",overflow:"hidden",width:"100%",boxSizing:"border-box" }}>
             <div style={{ position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden" }}>
-              <div style={{ position:"absolute",top:"10%",left:"12%",width:500,height:500,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(251,191,36,0.07) 0%,transparent 70%)":"radial-gradient(circle,rgba(217,119,6,0.05) 0%,transparent 70%)",animation:"float 9s ease-in-out infinite" }}/>
-              <div style={{ position:"absolute",top:"35%",right:"8%",width:350,height:350,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(96,165,250,0.05) 0%,transparent 70%)":"radial-gradient(circle,rgba(59,130,246,0.04) 0%,transparent 70%)",animation:"float 11s ease-in-out infinite",animationDelay:"-4s" }}/>
-              <div style={{ position:"absolute",inset:0,backgroundImage:t.dark?"linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px)":"linear-gradient(rgba(0,0,0,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.025) 1px,transparent 1px)",backgroundSize:"64px 64px" }}/>
-              {["🤖","🎨","🎬","🎵","💻","🔒","🦉","💎"].map((ic,i) => (
-                <div key={i} style={{ position:"absolute",left:`${[7,87,4,91,13,82,50,50][i]}%`,top:`${[18,14,62,58,84,78,8,90][i]}%`,fontSize:28,animation:`float ${7+i}s ease-in-out infinite`,animationDelay:`${i*0.7}s`,opacity:t.dark?.12:.08 }}>{ic}</div>
+              {/* Gradient mesh orbs */}
+              <div style={{ position:"absolute",top:"-10%",left:"-5%",width:700,height:700,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(251,191,36,0.09) 0%,transparent 65%)":"radial-gradient(circle,rgba(217,119,6,0.07) 0%,transparent 65%)",animation:"meshFloat1 12s ease-in-out infinite",filter:"blur(40px)" }}/>
+              <div style={{ position:"absolute",top:"20%",right:"-10%",width:600,height:600,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(96,165,250,0.07) 0%,transparent 65%)":"radial-gradient(circle,rgba(59,130,246,0.05) 0%,transparent 65%)",animation:"meshFloat2 15s ease-in-out infinite",animationDelay:"-5s",filter:"blur(40px)" }}/>
+              <div style={{ position:"absolute",bottom:"-5%",left:"30%",width:500,height:500,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(167,139,250,0.06) 0%,transparent 65%)":"radial-gradient(circle,rgba(139,92,246,0.04) 0%,transparent 65%)",animation:"meshFloat1 18s ease-in-out infinite",animationDelay:"-9s",filter:"blur(40px)" }}/>
+              {/* Noise texture overlay */}
+              <div style={{ position:"absolute",inset:0,opacity:t.dark?0.035:0.02,backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,backgroundSize:"128px 128px" }}/>
+              {/* Grid */}
+              <div style={{ position:"absolute",inset:0,backgroundImage:t.dark?"linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px)":"linear-gradient(rgba(0,0,0,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.04) 1px,transparent 1px)",backgroundSize:"64px 64px",maskImage:"radial-gradient(ellipse 80% 60% at 50% 50%,black 40%,transparent 100%)" }}/>
+              {/* Floating service icons with parallax */}
+              {[
+                {ic:"🤖",x:"6%",y:"16%",size:32,speed:8,delay:0},
+                {ic:"🎨",x:"88%",y:"12%",size:28,speed:10,delay:1.2},
+                {ic:"🎬",x:"3%",y:"60%",size:24,speed:12,delay:2.1},
+                {ic:"🎵",x:"92%",y:"55%",size:26,speed:9,delay:0.6},
+                {ic:"💻",x:"12%",y:"82%",size:30,speed:11,delay:1.8},
+                {ic:"🔒",x:"84%",y:"78%",size:22,speed:13,delay:3.2},
+                {ic:"🦉",x:"48%",y:"6%",size:28,speed:7,delay:0.4},
+                {ic:"💎",x:"52%",y:"92%",size:26,speed:14,delay:2.6},
+              ].map((f,i) => (
+                <div key={i} style={{ position:"absolute",left:f.x,top:f.y,fontSize:f.size,animation:`float ${f.speed}s ease-in-out infinite`,animationDelay:`${f.delay}s`,opacity:t.dark?.15:.1,filter:"drop-shadow(0 4px 8px rgba(0,0,0,0.3))",transition:"opacity .3s" }}>{f.ic}</div>
               ))}
             </div>
 
             {mounted && <>
-              <div className="a1" style={{ display:"inline-flex",alignItems:"center",gap:8,background:t.card,border:`1px solid ${t.border}`,backdropFilter:"blur(12px)",borderRadius:100,padding:"8px 18px",marginBottom:28,fontSize:13,boxShadow:t.shadow }}>
-                {rateLoading?<span style={{ width:12,height:12,border:`2px solid ${t.border}`,borderTopColor:t.gold,borderRadius:"50%",display:"inline-block",animation:"spin .8s linear infinite" }}/>:<span style={{ width:7,height:7,borderRadius:"50%",background:"#22c55e",display:"inline-block",animation:"pulse 2s infinite" }}/>}
-                <span style={{ color:t.sub }}>Курс ЦБ на {rateDate}:</span>
-                <span style={{ color:t.gold,fontWeight:700 }}>{rateLoading?"загрузка...":`1$ = ${rate?.toFixed(2)} ₽`}</span>
+              {/* ASYMMETRIC HERO */}
+              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,maxWidth:1100,width:"100%",alignItems:"center",textAlign:"left" }}>
+                {/* Left — text */}
+                <div style={{ display:"flex",flexDirection:"column",gap:0 }}>
+                  <div className="a1" style={{ display:"inline-flex",alignSelf:"flex-start",alignItems:"center",gap:8,background:t.dark?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.9)",border:`1px solid ${t.border}`,backdropFilter:"blur(12px)",borderRadius:100,padding:"8px 16px",marginBottom:28,fontSize:12,boxShadow:t.shadow }}>
+                    {rateLoading?<span style={{ width:10,height:10,border:`2px solid ${t.border}`,borderTopColor:t.gold,borderRadius:"50%",display:"inline-block",animation:"spin .8s linear infinite" }}/>:<span style={{ width:7,height:7,borderRadius:"50%",background:"#22c55e",display:"inline-block",animation:"pulse 2s infinite",boxShadow:"0 0 8px rgba(34,197,94,0.6)" }}/>}
+                    <span style={{ color:t.sub }}>Курс ЦБ на {rateDate}:</span>
+                    <span style={{ color:t.gold,fontWeight:700 }}>{rateLoading?"загрузка...":`1$ = ${rate?.toFixed(2)} ₽`}</span>
+                  </div>
+
+                  <h1 className="a2" style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:"clamp(32px,3.8vw,64px)",lineHeight:1.03,letterSpacing:-2.5,marginBottom:20,color:t.text }}>
+                    Оплати любой<br/>
+                    <span style={{ color:t.gold,position:"relative",display:"inline-block" }}>
+                      зарубежный
+                      <span style={{ position:"absolute",bottom:0,left:0,right:0,height:4,background:`linear-gradient(90deg,${t.gold},rgba(251,191,36,0))`,borderRadius:2 }}/>
+                    </span>
+                    {" "}сервис<br/>за рубли
+                  </h1>
+
+                  <p className="a3" style={{ color:t.sub,fontSize:16,maxWidth:400,marginBottom:8,lineHeight:1.65 }}>ChatGPT, Midjourney, Netflix, Spotify и ещё 47 сервисов.</p>
+                  <p className="a3" style={{ color:t.dark?"rgba(251,191,36,0.7)":"rgba(180,83,9,0.8)",fontSize:14,maxWidth:380,marginBottom:36,lineHeight:1.5,fontWeight:500 }}>
+                    Комиссия {Math.round(CFG.MARGIN*100)}% — без скрытых платежей.
+                  </p>
+
+                  <div className="a4" style={{ display:"flex",gap:12,flexWrap:"wrap" }}>
+                    <div style={{ position:"relative",display:"inline-block" }}>
+                      <div style={{ position:"absolute",inset:-3,borderRadius:18,background:"linear-gradient(270deg,#f59e0b,#fde68a,#fbbf24,#f97316,#fbbf24)",backgroundSize:"300% 300%",animation:"borderFlow 3s ease infinite",filter:"blur(10px)",opacity:.8,zIndex:0 }}/>
+                      <button onClick={()=>go("#catalog")} style={{ position:"relative",padding:"14px 28px",borderRadius:14,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:800,fontSize:15,cursor:"pointer",zIndex:1,transition:"transform 200ms" }}
+                        onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px) scale(1.02)"}
+                        onMouseLeave={e=>e.currentTarget.style.transform="none"}>
+                        Смотреть сервисы →
+                      </button>
+                    </div>
+                    <button onClick={()=>howRef.current?.scrollIntoView({behavior:"smooth"})} style={{ padding:"14px 28px",borderRadius:14,background:t.card,border:`1px solid ${t.border}`,color:t.sub,fontWeight:600,fontSize:15,cursor:"pointer",backdropFilter:"blur(10px)",transition:"all 200ms" }}
+                      onMouseEnter={e=>{e.currentTarget.style.borderColor=t.borderH;e.currentTarget.style.color=t.text}}
+                      onMouseLeave={e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.color=t.sub}}>
+                      Как это работает?
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right — floating service cards */}
+                <div className="a3 mob-hide" style={{ position:"relative",height:400 }}>
+                  <div style={{ position:"absolute",top:"10%",left:"50%",transform:"translateX(-50%)",width:280,height:280,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(251,191,36,0.08) 0%,transparent 70%)":"radial-gradient(circle,rgba(217,119,6,0.06) 0%,transparent 70%)",filter:"blur(20px)",animation:"meshFloat1 8s ease-in-out infinite" }}/>
+                  {[
+                    {name:"ChatGPT Plus",icon:"🤖",price:20,top:"2%",left:"5%",rotate:"-4deg",delay:"0s"},
+                    {name:"Midjourney",icon:"🎨",price:10,top:"25%",left:"38%",rotate:"3deg",delay:"0.2s"},
+                    {name:"Spotify",icon:"🎵",price:11.99,top:"52%",left:"2%",rotate:"-2deg",delay:"0.4s"},
+                    {name:"Netflix",icon:"🎬",price:15.49,top:"68%",left:"35%",rotate:"4deg",delay:"0.6s"},
+                  ].map((card,i)=>(
+                    <div key={i} style={{ position:"absolute",top:card.top,left:card.left,transform:`rotate(${card.rotate})`,animation:`fadeUp .7s ${card.delay} ease forwards`,opacity:0,transition:"transform 250ms cubic-bezier(0,0,.2,1)" }}
+                      onMouseEnter={e=>e.currentTarget.style.transform="scale(1.05) rotate(0deg)"}
+                      onMouseLeave={e=>e.currentTarget.style.transform=`rotate(${card.rotate})`}>
+                      <div style={{ background:t.dark?"rgba(14,14,26,0.95)":"rgba(255,255,255,0.97)",border:`1px solid ${t.border}`,borderRadius:16,padding:"14px 18px",backdropFilter:"blur(20px)",boxShadow:t.dark?"0 12px 40px rgba(0,0,0,0.6)":"0 8px 30px rgba(0,0,0,0.12)",minWidth:190 }}>
+                        <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:10 }}>
+                          <span style={{ fontSize:22 }}>{card.icon}</span>
+                          <span style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:700,fontSize:14,color:t.text }}>{card.name}</span>
+                        </div>
+                        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                          <span style={{ color:t.muted,fontSize:11 }}>от ${card.price}</span>
+                          <span style={{ color:t.gold,fontWeight:800,fontSize:17,fontFamily:"'Clash Display',sans-serif" }}>
+                            {rate?Math.round(card.price*rate*1.1).toLocaleString("ru-RU"):"—"} ₽
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ position:"absolute",bottom:"8%",right:"8%",width:64,height:64,borderRadius:"50%",background:`linear-gradient(135deg,rgba(251,191,36,0.9),rgba(245,158,11,0.7))`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,animation:"float 5s ease-in-out infinite",boxShadow:"0 8px 24px rgba(251,191,36,0.25)" }}>✅</div>
+                </div>
               </div>
 
-              <h1 className="a2" style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:"clamp(32px,7vw,74px)",lineHeight:1.04,letterSpacing:-2,marginBottom:22,color:t.text,className:"mob-sm" }}>
-                Оплати любой<br/>
-                <span style={{ color:t.gold,position:"relative" }}>зарубежный сервис
-                  <span style={{ position:"absolute",bottom:-4,left:0,right:0,height:3,background:`linear-gradient(90deg,${t.gold},transparent)`,borderRadius:2,opacity:.5 }}/>
-                </span><br/>за рубли
-              </h1>
-
-              <p className="a3" style={{ color:t.sub,fontSize:17,maxWidth:500,marginBottom:10,lineHeight:1.6 }}>ChatGPT, Midjourney, Netflix, Spotify и ещё 47 сервисов.</p>
-              <p className="a3" style={{ color:t.dark?"rgba(251,191,36,0.75)":"rgba(180,83,9,0.85)",fontSize:15,maxWidth:440,marginBottom:40,lineHeight:1.5,fontWeight:500 }}>
-                Комиссия {Math.round(CFG.MARGIN*100)}% — без скрытых платежей и процентов.
-              </p>
-
-              <div className="a4" style={{ display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center",marginBottom:60 }}>
-                <button onClick={()=>go("#catalog")} style={{ padding:"16px 36px",borderRadius:14,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:800,fontSize:16,cursor:"pointer",boxShadow:"0 6px 28px rgba(251,191,36,0.35)" }}
-                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 12px 40px rgba(251,191,36,0.45)"}}
-                  onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 6px 28px rgba(251,191,36,0.35)"}}>
-                  Смотреть сервисы →
-                </button>
-                <button onClick={()=>howRef.current?.scrollIntoView({behavior:"smooth"})} style={{ padding:"16px 36px",borderRadius:14,background:t.card,border:`1px solid ${t.border}`,color:t.sub,fontWeight:600,fontSize:16,cursor:"pointer",backdropFilter:"blur(10px)" }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=t.borderH;e.currentTarget.style.color=t.text}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.color=t.sub}}>
-                  Как это работает?
-                </button>
-              </div>
-
-              <div className="a5" style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"center" }}>
-                {[["50+","сервисов","🌍"],[`${Math.round(CFG.MARGIN*100)}%`,"комиссия","💸"],["без скрытых","доплат","✅"],["~1 час","среднее время","⚡"]].map(([v,l,ic])=>(
-                  <div key={l} style={{ textAlign:"center",background:t.card,border:`1px solid ${t.border}`,borderRadius:18,padding:"16px 22px",backdropFilter:"blur(10px)" }}>
-                    <div style={{ fontSize:22,marginBottom:6 }}>{ic}</div>
-                    <div style={{ fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:t.gold }}>{v}</div>
-                    <div style={{ color:t.muted,fontSize:13,marginTop:2 }}>{l}</div>
+              {/* Stats */}
+              <div className="a5" style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"flex-start",marginTop:52,maxWidth:1100,width:"100%" }}>
+              <style>{`@media(max-width:640px){.stats-row{justify-content:center!important;margin-top:36px!important}}`}</style>
+                {[
+                  {v:"50",suf:"+",l:"сервисов",ic:"🌍"},
+                  {v:"10",suf:"%",l:"комиссия",ic:"💸"},
+                  {v:"0",suf:" скрытых",l:"доплат",ic:"✅"},
+                  {v:"1",suf:" час",l:"среднее время",ic:"⚡"}
+                ].map(({v,suf,l,ic},i)=>(
+                  <div key={l} className={`stagger-${i+2}`} style={{ textAlign:"center",background:t.dark?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.9)",border:`1px solid ${t.border}`,borderRadius:18,padding:"18px 24px",backdropFilter:"blur(12px)",boxShadow:t.shadow,transition:"transform 200ms cubic-bezier(0,0,.2,1),box-shadow 200ms" }}
+                    onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow=t.shadowG}}
+                    onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=t.shadow}}>
+                    <div style={{ fontSize:24,marginBottom:8 }}>{ic}</div>
+                    <div style={{ fontFamily:"'Clash Display',sans-serif",fontSize:26,fontWeight:800,color:t.gold,letterSpacing:-1 }}>
+                      {v}{suf}
+                    </div>
+                    <div style={{ color:t.muted,fontSize:13,marginTop:3,fontWeight:500 }}>{l}</div>
                   </div>
                 ))}
               </div>
             </>}
           </div>
 
-          {/* POPULAR */}
-          <div style={{ padding:"0 24px 80px",maxWidth:1100,margin:"0 auto" }}>
-            <div style={{ textAlign:"center",marginBottom:36 }}>
+          {/* POPULAR — Bento Grid */}
+          <div style={{ padding:"0 24px 80px",maxWidth:1140,margin:"0 auto" }}>
+            <div style={{ textAlign:"center",marginBottom:40 }}>
               <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Популярное</div>
               <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:32,color:t.text,marginBottom:8 }}>Часто заказывают</h2>
+              <p style={{ color:t.muted,fontSize:15 }}>Нажмите чтобы оформить заявку</p>
             </div>
-            <div className="cg card-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14 }}>
-              {POPULAR.map(s=><div key={s.id} className="ci"><SCard s={s} rate={rate} onSelect={setSelSvc} t={t}/></div>)}
+            {/* Bento layout — first card big, rest normal */}
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gridTemplateRows:"auto",gap:14 }}>
+              {POPULAR.map((s,i) => {
+                const isBig = i === 0;
+                const base = rate ? Math.round(s.tiers[0].p * rate * (1+CFG.MARGIN)) : 0;
+                return (
+                  <div key={s.id}
+                    style={{ gridColumn:isBig?"span 2":"span 1",gridRow:isBig?"span 2":"span 1",background:t.dark?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.85)",border:`1px solid ${t.border}`,borderRadius:isBig?22:18,padding:isBig?28:20,cursor:"pointer",transition:"transform 200ms cubic-bezier(0,0,.2,1),box-shadow 200ms,border-color 200ms",position:"relative",overflow:"hidden" }}
+                    onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow=t.dark?"0 12px 40px rgba(251,191,36,0.12)":"0 12px 40px rgba(0,0,0,0.12)";e.currentTarget.style.borderColor=t.borderH}}
+                    onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=t.border}}
+                    onClick={()=>setSelSvc(s)}>
+                    {/* Bg glow on big card */}
+                    {isBig && <div style={{ position:"absolute",top:-40,right:-40,width:200,height:200,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,0.1) 0%,transparent 70%)",pointerEvents:"none" }}/>}
+                    <div style={{ display:"flex",alignItems:"flex-start",gap:12,marginBottom:isBig?20:12 }}>
+                      <span style={{ fontSize:isBig?40:26,filter:t.dark?"drop-shadow(0 2px 8px rgba(251,191,36,0.3))":"none" }}>{s.icon}</span>
+                      <div>
+                        <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:700,fontSize:isBig?20:15,color:t.text }}>{s.name}</div>
+                        <div style={{ color:t.muted,fontSize:12,marginTop:2 }}>{s.cat}</div>
+                      </div>
+                    </div>
+                    {isBig && <p style={{ color:t.sub,fontSize:14,lineHeight:1.6,marginBottom:20 }}>Самый популярный сервис. Активируем через логин/пароль или создадим новый аккаунт.</p>}
+                    <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:isBig?20:12 }}>
+                      {s.tiers.slice(0, isBig?3:2).map((tier,j) => (
+                        <div key={j} style={{ background:t.goldDim,border:`1px solid ${t.goldB}`,borderRadius:8,padding:"5px 10px" }}>
+                          <div style={{ color:t.muted,fontSize:10 }}>{tier.n}</div>
+                          <div style={{ color:t.gold,fontWeight:700,fontSize:12 }}>${tier.p} <span style={{ color:t.muted,fontWeight:400,fontSize:10 }}>≈{rate?Math.round(tier.p*rate*(1+CFG.MARGIN)).toLocaleString("ru-RU"):"..."}₽</span></div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display:"inline-flex",alignItems:"center",gap:6,padding:isBig?"10px 18px":"7px 14px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,fontSize:isBig?14:12,fontWeight:600 }}>
+                      Оформить заявку →
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <div style={{ textAlign:"center",marginTop:28 }}>
-              <button onClick={()=>go("#catalog")} style={{ padding:"12px 28px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,cursor:"pointer",fontSize:14,fontWeight:600 }}>Все {SVC.length} сервисов →</button>
+              <button onClick={()=>go("#catalog")}
+                style={{ padding:"12px 28px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,cursor:"pointer",fontSize:14,fontWeight:600,transition:"all 200ms" }}
+                onMouseEnter={e=>{e.currentTarget.style.background=t.gold;e.currentTarget.style.color="#0a0a14"}}
+                onMouseLeave={e=>{e.currentTarget.style.background=t.goldDim;e.currentTarget.style.color=t.gold}}>
+                Все {SVC.length} сервисов →
+              </button>
             </div>
           </div>
 
@@ -1728,18 +1861,26 @@ export default function App() {
               <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Процесс</div>
               <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:34,color:t.text }}>Как это работает</h2>
             </div>
-            <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:16 }}>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:2,position:"relative" }}>
+              {/* Connecting line */}
+              <div style={{ position:"absolute",top:40,left:"12%",right:"12%",height:1,background:`linear-gradient(90deg,transparent,${t.goldB},transparent)`,display:"block" }} className="mob-hide"/>
               {[
-                {n:"01",icon:"🔐",title:"Регистрируешься",  desc:"Создаёшь личный кабинет — всё в одном месте: заявки, статусы, уведомления."},
-                {n:"02",icon:"🔍",title:"Выбираешь сервис",  desc:"Находишь нужный сервис в каталоге. Цена в рублях видна сразу."},
-                {n:"03",icon:"💳",title:"Оплачиваешь",       desc:"Переводишь по СБП или карте с номером заявки в комментарии. Загружаешь чек."},
-                {n:"04",icon:"🚀",title:"Получаешь доступ",  desc:"Активируем до 1 часа. Данные аккаунта приходят прямо в личный кабинет."},
-              ].map(s => (
-                <div key={s.n} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:18,padding:"26px 22px",position:"relative",overflow:"hidden",boxShadow:t.shadow }}>
-                  <div style={{ position:"absolute",top:14,right:16,fontFamily:"'Clash Display',sans-serif",color:t.dark?"rgba(251,191,36,0.1)":"rgba(217,119,6,0.1)",fontSize:48,fontWeight:900,lineHeight:1 }}>{s.n}</div>
-                  <div style={{ fontSize:34,marginBottom:14 }}>{s.icon}</div>
-                  <div style={{ fontWeight:700,fontSize:15,marginBottom:8,color:t.text }}>{s.title}</div>
-                  <div style={{ color:t.sub,fontSize:14,lineHeight:1.6 }}>{s.desc}</div>
+                {n:"01",icon:"🔐",title:"Регистрируешься",  desc:"Создаёшь кабинет — заявки, статусы и уведомления в одном месте."},
+                {n:"02",icon:"🔍",title:"Выбираешь сервис",  desc:"Находишь нужный сервис. Цена в рублях видна сразу."},
+                {n:"03",icon:"💳",title:"Оплачиваешь",       desc:"Переводишь по СБП или карте. Загружаешь чек."},
+                {n:"04",icon:"🚀",title:"Получаешь доступ",  desc:"Активируем до 1 часа. Данные приходят в личный кабинет."},
+              ].map((s,i) => (
+                <div key={s.n} className={`stagger-${i+1}`} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:20,padding:"28px 22px",position:"relative",overflow:"hidden",boxShadow:t.shadow,transition:"transform 200ms cubic-bezier(0,0,.2,1),box-shadow 200ms",margin:"0 6px" }}
+                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-6px)";e.currentTarget.style.boxShadow=t.dark?"0 20px 60px rgba(251,191,36,0.1)":"0 20px 60px rgba(0,0,0,0.1)"}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=t.shadow}}>
+                  {/* Step number badge */}
+                  <div style={{ width:44,height:44,borderRadius:"50%",background:t.goldDim,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:15,color:t.gold,marginBottom:18 }}>{s.n}</div>
+                  {/* Background number watermark */}
+                  <div style={{ position:"absolute",top:8,right:12,fontFamily:"'Clash Display',sans-serif",color:t.dark?"rgba(251,191,36,0.06)":"rgba(217,119,6,0.07)",fontSize:72,fontWeight:900,lineHeight:1,pointerEvents:"none" }}>{s.n}</div>
+                  <div style={{ fontWeight:700,fontSize:16,marginBottom:10,color:t.text,letterSpacing:-0.3 }}>{s.title}</div>
+                  <div style={{ color:t.sub,fontSize:14,lineHeight:1.65 }}>{s.desc}</div>
+                  {/* Accent dot */}
+                  <div style={{ position:"absolute",bottom:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${t.gold},rgba(251,191,36,0))`,borderRadius:"0 0 20px 20px",opacity:0.6 }}/>
                 </div>
               ))}
             </div>
@@ -1750,10 +1891,17 @@ export default function App() {
       {/* CATALOG */}
       {page==="#catalog" && (
         <div style={{ maxWidth:1160,margin:"0 auto",padding:"80px 14px 60px",width:"100%",boxSizing:"border-box" }}>
-          <div style={{ marginBottom:30 }}>
-            <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:8,fontWeight:600 }}>Каталог</div>
-            <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:32,marginBottom:6,color:t.text }}>Все сервисы</h2>
-            <div style={{ color:t.sub,fontSize:14 }}>{SVC.length} сервисов · Курс ЦБ: {rateLoading?"загрузка...":`1$ = ${rate?.toFixed(2)} ₽`} · <span style={{ color:t.muted }}>цены с комиссией {Math.round(CFG.MARGIN*100)}%</span></div>
+          <div style={{ marginBottom:30, display:"flex", justifyContent:"space-between", alignItems:"flex-end", flexWrap:"wrap", gap:12 }}>
+            <div>
+              <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:8,fontWeight:600 }}>Каталог</div>
+              <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:32,marginBottom:6,color:t.text }}>Все сервисы</h2>
+              <div style={{ color:t.sub,fontSize:14 }}>{SVC.length} сервисов · <span style={{ color:t.gold, fontWeight:600 }}>1$ = {rateLoading?"...":`${rate?.toFixed(2)} ₽`}</span> · <span style={{ color:t.muted }}>с комиссией {Math.round(CFG.MARGIN*100)}%</span></div>
+            </div>
+            {/* Live indicator */}
+            <div style={{ display:"inline-flex",alignItems:"center",gap:6,padding:"6px 14px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}`,fontSize:12,color:t.gold,fontWeight:600 }}>
+              <span style={{ width:6,height:6,borderRadius:"50%",background:"#22c55e",display:"inline-block",animation:"pulse 2s infinite",boxShadow:"0 0 6px rgba(34,197,94,0.6)" }}/>
+              Цены обновлены сегодня
+            </div>
           </div>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍  Поиск по названию..." style={{ width:"100%",background:t.card2,border:`1px solid ${t.border}`,borderRadius:14,padding:"14px 18px",color:t.text,fontSize:15,outline:"none",marginBottom:16,boxShadow:t.shadow }}/>
           <div style={{ display:"flex",gap:8,flexWrap:"wrap",marginBottom:26 }}>
@@ -1771,10 +1919,23 @@ export default function App() {
       {showAuth && <AuthModal onClose={()=>setShowAuth(false)} userHook={userHook} t={t}/>}
 
       {/* Footer */}
-      <div style={{ borderTop:`1px solid ${t.border}`,padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8 }}>
-        <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:700,fontSize:16,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
-        <div style={{ color:t.muted,fontSize:13 }}>Оплата зарубежных сервисов · 2026</div>
-	  <button onClick={()=>go("#legal")} style={{ background:"none", border:"none", color:t.muted, fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Оферта</button>
+      <div style={{ borderTop:`1px solid ${t.border}`,padding:"32px",background:t.dark?"rgba(0,0,0,0.3)":"rgba(0,0,0,0.02)" }}>
+        <div style={{ maxWidth:1160,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16 }}>
+          <div>
+            <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:20,color:t.text,marginBottom:4 }}>pay<span style={{ color:t.gold }}>flow</span></div>
+            <div style={{ color:t.muted,fontSize:12 }}>Оплата зарубежных сервисов · 2026</div>
+	      <button onClick={()=>go("#legal")} style={{ background:"none", border:"none", color:t.muted, fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Оферта</button>
+          </div>
+          <div style={{ display:"flex",gap:16,alignItems:"center",flexWrap:"wrap" }}>
+            <button onClick={()=>go("#catalog")} style={{ background:"none",border:"none",color:t.muted,fontSize:13,cursor:"pointer",transition:"color 200ms" }} onMouseEnter={e=>e.currentTarget.style.color=t.text} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>Каталог</button>
+            <button onClick={()=>go("#legal")} style={{ background:"none",border:"none",color:t.muted,fontSize:13,cursor:"pointer",transition:"color 200ms" }} onMouseEnter={e=>e.currentTarget.style.color=t.text} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>Оферта</button>
+            <button onClick={()=>go("#cabinet")} style={{ background:"none",border:"none",color:t.muted,fontSize:13,cursor:"pointer",transition:"color 200ms" }} onMouseEnter={e=>e.currentTarget.style.color=t.text} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>Личный кабинет</button>
+            <div style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}` }}>
+              <span style={{ width:6,height:6,borderRadius:"50%",background:"#22c55e",display:"inline-block",animation:"pulse 2s infinite" }}/>
+              <span style={{ color:t.gold,fontSize:11,fontWeight:600 }}>Работаем 7/24</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
