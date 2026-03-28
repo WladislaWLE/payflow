@@ -1,3 +1,11 @@
+// 1. Импорт вверху файла
+import LegalPage from "./pages/LegalPage";
+
+// 2. В роутинге (после #cabinet)
+if (page === "#legal") return <LegalPage go={go} t={t} />;
+
+// 3. В футере
+<button onClick={()=>go("#legal")} style={{...}}>Оферта</button>
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase, auth as sbAuth, profiles, orders as sbOrders, notifications as sbNotifs, storage as sbStorage } from "./lib/supabase";
