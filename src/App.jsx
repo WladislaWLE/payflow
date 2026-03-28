@@ -1781,10 +1781,10 @@ export default function App() {
               <div className="a5" style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"flex-start",marginTop:52,maxWidth:1100,width:"100%" }}>
               <style>{`@media(max-width:640px){.stats-row{justify-content:center!important;margin-top:36px!important}}`}</style>
                 {[
-                  {v:"50",suf:"+",l:"сервисов",ic:"🌍"},
-                  {v:"10",suf:"%",l:"комиссия",ic:"💸"},
-                  {v:"0",suf:" скрытых",l:"доплат",ic:"✅"},
-                  {v:"1",suf:" час",l:"среднее время",ic:"⚡"}
+                  {v:"50 ",suf:"+",l:"сервисов",ic:"🌍"},
+                  {v:"10" ,suf:"%",l:"комиссия",ic:"💸"},
+                  {v:"0 ",suf:" скрытых",l:"доплат",ic:"✅"},
+                  {v:"1 ",suf:" час",l:"среднее время",ic:"⚡"}
                 ].map(({v,suf,l,ic},i)=>(
                   <div key={l} className={`stagger-${i+2}`} style={{ textAlign:"center",background:t.dark?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.9)",border:`1px solid ${t.border}`,borderRadius:18,padding:"18px 24px",backdropFilter:"blur(12px)",boxShadow:t.shadow,transition:"transform 200ms cubic-bezier(0,0,.2,1),box-shadow 200ms" }}
                     onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow=t.shadowG}}
