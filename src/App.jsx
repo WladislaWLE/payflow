@@ -318,11 +318,21 @@ function useOrders(userId, isAdmin) {
     const { data, error } = await sbOrders.update(orderId, updates);
     if (!error) {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
-      // Уведомление клиенту
+      // Уведомление клиенту — только если явно передан текст
       if (notifText) {
         const order = orders.find(o => o.id === orderId);
         if (order?.user_id) {
-          await sbNotifs.insert({ user_id: order.user_id, order_id: orderId, text: notifText });
+          // Проверяем что такого уведомления ещё нет (защита от дублей)
+          const { data: existing } = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("user_id", order.user_id)
+            .eq("order_id", orderId)
+            .eq("text", notifText)
+            .gte("created_at", new Date(Date.now() - 5000).toISOString());
+          if (!existing?.length) {
+            await sbNotifs.insert({ user_id: order.user_id, order_id: orderId, text: notifText });
+          }
         }
       }
     }
@@ -605,9 +615,9 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
             <div style={{ color:"#6ee7b7", fontSize:13, fontWeight:600, marginBottom:4 }}>📋 Что дальше?</div>
             <div style={{ color:"rgba(255,255,255,0.5)", fontSize:13, lineHeight:1.7 }}>
               • Переведите деньги по реквизитам выше<br/>
-              • Если нужно — загрузите чек в личном кабинете<br/>
+              • Обязательно загрузите скриншот чека в личном кабинете<br/>
               • Данные аккаунта придут в личный кабинет → Мои заявки<br/>
-              • При 2FA — напишите нам в разделе поддержки
+              • Если включена 2FA — будьте онлайн, мы свяжемся через кабинет
             </div>
           </div>
 
@@ -765,7 +775,7 @@ function Cabinet({ userHook, go, t }) {
       </div>
 
       {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:28 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:10, marginBottom:28 }}>
         {[
           {l:"Всего заявок", v:stats.total,  c:t.gold,   i:"📋"},
           {l:"Выполнено",    v:stats.done,   c:"#34d399",i:"✅"},
@@ -1470,7 +1480,7 @@ export default function App() {
     </div>
   );
 
-  if (page === "#legal") return <LegalPage go={go} t={t} />;
+  if (page === "#legal") return <LegalPage go={go} t={t} />;	
   if (page === "#cabinet") {
     if (!session) { go("#home"); return null; }
     return (
@@ -1507,18 +1517,29 @@ export default function App() {
         .a5{animation:fadeUp .7s .4s ease forwards;opacity:0}
         .cg:hover .ci{opacity:.55}.ci{transition:all .25s!important}.cg .ci:hover{opacity:1!important;transform:translateY(-4px)!important}
         @media(max-width:640px){
-          body,#root{overflow-x:hidden!important;max-width:100vw!important}
+          *{max-width:100vw}
+          body,#root{overflow-x:hidden!important;width:100%!important}
           .mob-hide{display:none!important}
           .mob-show{display:inline!important}
           .mob-col{flex-direction:column!important}
           .mob-full{width:100%!important;max-width:100%!important}
-          .mob-sm{font-size:clamp(28px,8vw,48px)!important;letter-spacing:-1px!important}
-          .mob-pad{padding:70px 16px 40px!important}
+          .mob-sm{font-size:clamp(26px,7vw,44px)!important;letter-spacing:-1px!important}
+          .mob-pad{padding:70px 14px 40px!important}
           .mob-grid{grid-template-columns:1fr!important}
-          .mob-nav{gap:4px!important}
-          .mob-inp{font-size:18px!important}
-          nav{padding:0 12px!important}
-          nav button span.mob-show{display:inline!important}
+          .mob-nav{gap:3px!important}
+          .mob-inp{font-size:16px!important}
+          nav{padding:0 10px!important;gap:4px!important}
+          /* Каталог и карточки */
+          [style*="grid-template-columns"]{grid-template-columns:1fr!important}
+          /* Модалки */
+          [style*="maxWidth:500"],[style*="maxWidth:490"],[style*="max-width:500px"]{
+            max-width:calc(100vw - 24px)!important;
+            width:calc(100vw - 24px)!important;
+          }
+          /* Кнопки в ряд не вылезают */
+          [style*="display:"flex""]{flex-wrap:wrap}
+          /* Фиксируем hero */
+          h1{font-size:clamp(28px,7vw,52px)!important;letter-spacing:-1.5px!important}
         }
         @media(min-width:641px){
           .mob-show{display:none!important}
@@ -1527,34 +1548,44 @@ export default function App() {
 
       {/* NAV */}
       <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 16px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .3s",overflowX:"hidden" }}>
-        <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
-        <div style={{ display:"flex",gap:6,alignItems:"center" }}>
-          {[["#home","Главная"],["#catalog","Каталог"]].map(([h,l]) => (
-            <button key={h} onClick={()=>go(h)} style={{ padding:"7px 16px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===h?t.goldDim:"transparent",border:`1px solid ${page===h?t.goldB:"transparent"}`,color:page===h?t.gold:t.sub,transition:"all .2s" }}>{l}</button>
+        <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text,flexShrink:0 }}>pay<span style={{ color:t.gold }}>flow</span></div>
+        <div style={{ display:"flex",gap:4,alignItems:"center",flexShrink:0,flexWrap:"nowrap" }}>
+          {/* Главная и Каталог — скрываем текст на мобиле */}
+          {[["#home","🏠","Главная"],["#catalog","🔍","Каталог"]].map(([h,ic,l]) => (
+            <button key={h} onClick={()=>go(h)} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===h?t.goldDim:"transparent",border:`1px solid ${page===h?t.goldB:"transparent"}`,color:page===h?t.gold:t.sub,transition:"all .2s",whiteSpace:"nowrap" }}>
+              <span className="mob-hide">{l}</span>
+              <span className="mob-show">{ic}</span>
+            </button>
           ))}
           {session ? (
             <>
-              {isAdmin && <button onClick={()=>go("#admin")} style={{ padding:"7px 14px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.35)",color:"#c4b5fd" }}>⚙️ Админ</button>}
-              {/* Колокольчик уведомлений */}
-              <button onClick={()=>{ go("#cabinet"); }} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",flexShrink:0 }}>
+              {isAdmin && <button onClick={()=>go("#admin")} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.35)",color:"#c4b5fd",whiteSpace:"nowrap" }}>
+                <span className="mob-hide">⚙️ Админ</span>
+                <span className="mob-show">⚙️</span>
+              </button>}
+              {/* Колокольчик */}
+              <button onClick={()=>go("#cabinet")} style={{ width:34,height:34,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",flexShrink:0,fontSize:15 }}>
                 🔔
                 {unread > 0 && (
-                  <span style={{ background:"#f87171",color:"white",borderRadius:"50%",width:16,height:16,fontSize:9,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",position:"absolute",top:-3,right:-3,boxShadow:"0 0 0 2px "+t.bg }}>
+                  <span style={{ background:"#f87171",color:"white",borderRadius:"50%",width:15,height:15,fontSize:8,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",position:"absolute",top:-2,right:-2,boxShadow:"0 0 0 2px "+t.bg }}>
                     {unread > 9 ? "9+" : unread}
                   </span>
                 )}
               </button>
-              <button onClick={()=>go("#cabinet")} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:5,flexShrink:0 }}>
-                👤 <span className="mob-hide">{profile?.name?.split(" ")[0] || "Кабинет"}</span>
+              {/* Кабинет */}
+              <button onClick={()=>go("#cabinet")} style={{ padding:"6px 10px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:4,flexShrink:0 }}>
+                👤<span className="mob-hide" style={{ marginLeft:2 }}>{profile?.name?.split(" ")[0] || ""}</span>
               </button>
-              <button onClick={async()=>{ await userHook.logout(); go("#home"); }} style={{ padding:"7px 12px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",color:"#f87171",flexShrink:0 }}>
-                <span className="mob-hide">Выйти</span><span style={{ display:"none" }} className="mob-show">✕</span>
+              {/* Выйти */}
+              <button onClick={async()=>{ await userHook.logout(); go("#home"); }} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",color:"#f87171",flexShrink:0 }}>
+                <span className="mob-hide">Выйти</span>
+                <span className="mob-show">✕</span>
               </button>
             </>
           ) : (
-            <button onClick={()=>setShowAuth(true)} style={{ padding:"7px 16px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold }}>Войти</button>
+            <button onClick={()=>setShowAuth(true)} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,whiteSpace:"nowrap" }}>Войти</button>
           )}
-          <button onClick={toggle} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark?"☀️":"🌙"}</button>
+          <button onClick={toggle} style={{ width:34,height:34,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{t.dark?"☀️":"🌙"}</button>
         </div>
       </nav>
 
@@ -1562,7 +1593,7 @@ export default function App() {
       {page==="#home" && (
         <div>
           {/* HERO */}
-          <div style={{ position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"90px 24px 70px",overflow:"hidden" }}>
+          <div style={{ position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",padding:"80px 16px 60px",overflow:"hidden",width:"100%",boxSizing:"border-box" }}>
             <div style={{ position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden" }}>
               <div style={{ position:"absolute",top:"10%",left:"12%",width:500,height:500,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(251,191,36,0.07) 0%,transparent 70%)":"radial-gradient(circle,rgba(217,119,6,0.05) 0%,transparent 70%)",animation:"float 9s ease-in-out infinite" }}/>
               <div style={{ position:"absolute",top:"35%",right:"8%",width:350,height:350,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(96,165,250,0.05) 0%,transparent 70%)":"radial-gradient(circle,rgba(59,130,246,0.04) 0%,transparent 70%)",animation:"float 11s ease-in-out infinite",animationDelay:"-4s" }}/>
@@ -1659,7 +1690,7 @@ export default function App() {
 
       {/* CATALOG */}
       {page==="#catalog" && (
-        <div style={{ maxWidth:1160,margin:"0 auto",padding:"80px 20px 60px" }}>
+        <div style={{ maxWidth:1160,margin:"0 auto",padding:"80px 14px 60px",width:"100%",boxSizing:"border-box" }}>
           <div style={{ marginBottom:30 }}>
             <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:8,fontWeight:600 }}>Каталог</div>
             <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:32,marginBottom:6,color:t.text }}>Все сервисы</h2>
