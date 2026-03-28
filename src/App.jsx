@@ -1,12 +1,4 @@
-// 1. Импорт вверху файла
 import LegalPage from "./pages/LegalPage";
-
-// 2. В роутинге (после #cabinet)
-if (page === "#legal") return <LegalPage go={go} t={t} />;
-
-// 3. В футере
-<button onClick={()=>go("#legal")} style={{...}}>Оферта</button>
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase, auth as sbAuth, profiles, orders as sbOrders, notifications as sbNotifs, storage as sbStorage } from "./lib/supabase";
 
@@ -1478,6 +1470,7 @@ export default function App() {
     </div>
   );
 
+  if (page === "#legal") return <LegalPage go={go} t={t} />;
   if (page === "#cabinet") {
     if (!session) { go("#home"); return null; }
     return (
@@ -1691,6 +1684,7 @@ export default function App() {
       <div style={{ borderTop:`1px solid ${t.border}`,padding:"24px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8 }}>
         <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:700,fontSize:16,color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
         <div style={{ color:t.muted,fontSize:13 }}>Оплата зарубежных сервисов · 2026</div>
+	  <button onClick={()=>go("#legal")} style={{ background:"none", border:"none", color:t.muted, fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Оферта</button>
       </div>
     </div>
   );
