@@ -11,6 +11,15 @@ async function checkPromocode(code) {
   return data;
 }
 
+// ── Настройки (ручной курс) ──────────────────────────────────
+async function getSetting(key) {
+  const { data } = await supabase.from("settings").select("value").eq("key", key).single();
+  return data?.value ?? null;
+}
+async function setSetting(key, value) {
+  await supabase.from("settings").upsert({ key, value, updated_at: new Date().toISOString() });
+}
+
 async function getPromocodes() {
   const { data } = await supabase.from("promocodes").select("*").order("created_at", { ascending: false });
   return data || [];
@@ -940,6 +949,10 @@ function AdminPanel({ userHook, go, t }) {
   const [saving, setSaving] = useState(null);
   const [adminTab, setAdminTab] = useState("orders");
   const [promos, setPromos] = useState([]);
+  const [manualRate, setManualRate] = useState("");
+  const [manualRateEnabled, setManualRateEnabled] = useState(false);
+  const [rateSaving, setRateSaving] = useState(false);
+  const [rateLoaded, setRateLoaded] = useState(false);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoForm, setPromoForm] = useState({ code:"", type:"percent", value:"", max_uses:-1, description:"", min_amount:0 });
   const [promoFormOpen, setPromoFormOpen] = useState(false);
@@ -949,6 +962,11 @@ function AdminPanel({ userHook, go, t }) {
     if (isAdmin && adminTab === "promos") {
       setPromoLoading(true);
       getPromocodes().then(d => { setPromos(d); setPromoLoading(false); });
+    }
+    if (isAdmin && adminTab === "settings" && !rateLoaded) {
+      setRateLoaded(true);
+      getSetting("manual_rate").then(v => { if(v) setManualRate(v); });
+      getSetting("manual_rate_enabled").then(v => setManualRateEnabled(v === "true"));
     }
   }, [isAdmin, adminTab]);
 
@@ -1065,8 +1083,8 @@ function AdminPanel({ userHook, go, t }) {
         </div>
 
         {/* Admin tabs */}
-        <div style={{ display:"flex", gap:8, marginBottom:24 }}>
-          {[["orders","Заявки","📋"],["promos","Промокоды","🎁"]].map(([id,label,icon]) => (
+        <div style={{ display:"flex", gap:8, marginBottom:24, flexWrap:"wrap" }}>
+          {[["orders","Заявки","📋"],["promos","Промокоды","🎁"],["settings","Настройки","⚙️"]].map(([id,label,icon]) => (
             <button key={id} onClick={()=>setAdminTab(id)} style={{ padding:"9px 20px", borderRadius:100, fontSize:13, fontWeight:600, cursor:"pointer", background:adminTab===id?t.goldDim:t.card, border:`1px solid ${adminTab===id?t.goldB:t.border}`, color:adminTab===id?t.gold:t.sub }}>
               {icon} {label}
               {id==="orders" && <span style={{ marginLeft:6, opacity:.6, fontSize:11 }}>({orders.length})</span>}
@@ -1156,6 +1174,84 @@ function AdminPanel({ userHook, go, t }) {
                 </div>
               ))}
             </div>}
+          </div>
+        )}
+
+        {/* SETTINGS TAB */}
+        {adminTab === "settings" && (
+          <div style={{ maxWidth:520 }}>
+            {/* Ручной курс */}
+            <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:24, marginBottom:16 }}>
+              <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:700, fontSize:18, color:t.text, marginBottom:6 }}>💱 Курс доллара</div>
+              <div style={{ color:t.sub, fontSize:13, marginBottom:20, lineHeight:1.6 }}>
+                По умолчанию курс берётся автоматически с ЦБ РФ. Ты можешь задать свой курс — он будет применяться ко всем расчётам на сайте.
+              </div>
+
+              {/* Toggle */}
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, padding:"12px 16px", background:t.inp, borderRadius:12 }}>
+                <div>
+                  <div style={{ color:t.text, fontWeight:600, fontSize:14 }}>Ручной курс</div>
+                  <div style={{ color:t.muted, fontSize:12 }}>{manualRateEnabled ? "Включён — используется твой курс" : "Выключен — курс берётся с ЦБ РФ"}</div>
+                </div>
+                <button onClick={async () => {
+                  const newVal = !manualRateEnabled;
+                  setManualRateEnabled(newVal);
+                  await setSetting("manual_rate_enabled", String(newVal));
+                }} style={{ width:48, height:26, borderRadius:100, border:"none", cursor:"pointer", background:manualRateEnabled?"#fbbf24":"rgba(128,128,128,0.3)", position:"relative", transition:"all .2s", flexShrink:0 }}>
+                  <span style={{ width:20, height:20, borderRadius:"50%", background:"white", position:"absolute", top:3, transition:"all .2s", left:manualRateEnabled?24:3 }}/>
+                </button>
+              </div>
+
+              {/* Rate input */}
+              <div style={{ marginBottom:16 }}>
+                <div style={{ color:t.muted, fontSize:12, marginBottom:8 }}>Курс 1$ в рублях</div>
+                <div style={{ display:"flex", gap:10 }}>
+                  <div style={{ display:"flex", flex:1, alignItems:"center", background:t.inp, border:`1px solid ${manualRateEnabled?t.goldB:t.border}`, borderRadius:12, padding:"0 16px", gap:8 }}>
+                    <span style={{ color:t.muted, fontSize:14 }}>1$ =</span>
+                    <input
+                      type="number"
+                      value={manualRate}
+                      onChange={e => setManualRate(e.target.value)}
+                      placeholder="84.50"
+                      step="0.01"
+                      style={{ flex:1, background:"none", border:"none", color:t.text, fontSize:20, fontWeight:700, outline:"none", padding:"12px 0" }}
+                    />
+                    <span style={{ color:t.muted, fontSize:14 }}>₽</span>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!manualRate || parseFloat(manualRate) <= 0) return;
+                      setRateSaving(true);
+                      await setSetting("manual_rate", manualRate);
+                      if (!manualRateEnabled) {
+                        setManualRateEnabled(true);
+                        await setSetting("manual_rate_enabled", "true");
+                      }
+                      setRateSaving(false);
+                      alert("✅ Курс сохранён: 1$ = " + manualRate + " ₽");
+                    }}
+                    disabled={rateSaving || !manualRate}
+                    style={{ padding:"12px 20px", borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#fbbf24)", border:"none", color:"#0a0a14", fontWeight:700, cursor:"pointer", fontSize:14, opacity:rateSaving||!manualRate?0.6:1, whiteSpace:"nowrap" }}>
+                    {rateSaving ? "..." : "💾 Сохранить"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div style={{ padding:"10px 14px", borderRadius:10, background:manualRateEnabled?t.goldDim:"rgba(52,211,153,0.08)", border:`1px solid ${manualRateEnabled?t.goldB:"rgba(52,211,153,0.25)"}`, fontSize:13, color:manualRateEnabled?t.gold:"#6ee7b7" }}>
+                {manualRateEnabled
+                  ? `⚠️ Сейчас применяется твой курс: 1$ = ${manualRate || "не задан"} ₽`
+                  : "✅ Сейчас применяется автоматический курс ЦБ РФ"}
+              </div>
+            </div>
+
+            {/* Комиссия — информационно */}
+            <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:24 }}>
+              <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:700, fontSize:18, color:t.text, marginBottom:6 }}>💸 Комиссия</div>
+              <div style={{ color:t.sub, fontSize:13, lineHeight:1.6, marginBottom:12 }}>
+                Текущая комиссия задана в коде: <strong style={{ color:t.gold }}>10%</strong>. Чтобы изменить — поправь константу <code style={{ background:t.inp, padding:"2px 6px", borderRadius:4, fontSize:12 }}>CFG.MARGIN</code> в файле <code style={{ background:t.inp, padding:"2px 6px", borderRadius:4, fontSize:12 }}>src/App.jsx</code>.
+              </div>
+            </div>
           </div>
         )}
 
