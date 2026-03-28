@@ -48,6 +48,22 @@ function calcDiscount(total, promo) {
   return 0;
 }
 
+
+// ─── SVG ICONS (no emoji for structural UI per no-emoji-icons rule) ────────
+const IconHome = ({size=18,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+const IconGrid = ({size=18,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>;
+const IconBell = ({size=18,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>;
+const IconUser = ({size=18,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>;
+const IconLogout = ({size=16,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+const IconSun = ({size=17,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>;
+const IconMoon = ({size=17,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>;
+const IconSettings = ({size=17,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
+const IconCheck = ({size=16,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+const IconX = ({size=16,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+const IconChevronDown = ({size=14,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
+const IconSearch = ({size=16,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+const IconDownload = ({size=16,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+
 // ══════════════════════════════════════════════════════════════
 //  КОНФИГ
 // ══════════════════════════════════════════════════════════════
@@ -177,6 +193,27 @@ function useTheme() {
 // ══════════════════════════════════════════════════════════════
 //  UI PRIMITIVES
 // ══════════════════════════════════════════════════════════════
+// ─── SKELETON LOADER (progressive loading per UX skill) ─────────
+function Skeleton({ width="100%", height=16, radius=8, style={} }) {
+  return <div style={{ width, height, borderRadius:radius, background:"linear-gradient(90deg,rgba(255,255,255,0.05) 25%,rgba(255,255,255,0.1) 50%,rgba(255,255,255,0.05) 75%)", backgroundSize:"200% 100%", animation:"shimmer 1.5s infinite", ...style }}/>;
+}
+
+function OrderSkeleton({ t }) {
+  return (
+    <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, padding:18 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
+        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+          <Skeleton width={60} height={20} radius={100}/>
+          <Skeleton width={80} height={20} radius={100}/>
+        </div>
+        <Skeleton width={80} height={24} radius={8}/>
+      </div>
+      <Skeleton width="60%" height={16} radius={6} style={{ marginBottom:8 }}/>
+      <Skeleton width="40%" height={12} radius={6}/>
+    </div>
+  );
+}
+
 function StatusBadge({ status, size=12 }) {
   return <span style={{ background:SC[status]+"22", border:`1px solid ${SC[status]}55`, color:SC[status], fontSize:size, padding:"4px 12px", borderRadius:100, fontWeight:700, whiteSpace:"nowrap" }}>{SE[status]} {SL[status]}</span>;
 }
@@ -349,7 +386,7 @@ function SCard({ s, rate, onSelect, t }) {
   const [hov, setHov] = useState(false);
   return (
     <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>onSelect(s)}
-      style={{ background:hov?t.card2:t.card, border:`1px solid ${hov?t.borderH:t.border}`, borderRadius:18, padding:20, cursor:"pointer", transition:"all .25s cubic-bezier(.4,0,.2,1)", transform:hov?"translateY(-4px)":"none", boxShadow:hov?t.shadow:"none" }}>
+      style={{ background:hov?t.card2:t.card, border:`1px solid ${hov?t.borderH:t.border}`, borderRadius:18, padding:20, cursor:"pointer", transition:"transform 200ms cubic-bezier(0,0,.2,1), box-shadow 200ms cubic-bezier(0,0,.2,1), border-color 200ms cubic-bezier(0,0,.2,1), background 200ms cubic-bezier(0,0,.2,1)", transform:hov?"translateY(-4px)":"none", boxShadow:hov?t.shadow:"none" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <span style={{ fontSize:26, transition:"filter .2s", filter:hov?"drop-shadow(0 0 8px rgba(251,191,36,0.5))":"none" }}>{s.icon}</span>
@@ -484,7 +521,7 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(16px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,overflowY:"auto" }} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{ background:"#0e0e1a", border:"1px solid rgba(251,191,36,0.25)", borderRadius:22, width:"100%", maxWidth:500, padding:28, margin:"auto", boxShadow:"0 24px 80px rgba(0,0,0,0.6)" }}>
+      <div onClick={e=>e.stopPropagation()} className="modal-inner" style={{ background:"#0e0e1a", border:"1px solid rgba(251,191,36,0.25)", borderRadius:22, width:"100%", maxWidth:500, padding:28, margin:"auto", boxShadow:"0 24px 80px rgba(0,0,0,0.6)" }}>
 
         {step === 1 && <>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:22 }}>
@@ -582,7 +619,7 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
 
         {step === 2 && <>
           <div style={{ textAlign:"center", marginBottom:22 }}>
-            <div style={{ fontSize:52, marginBottom:12 }}>✅</div>
+            <div style={{ fontSize:52, marginBottom:12, animation:"bounceIn .4s cubic-bezier(0.175,0.885,0.32,1.275)" }}>✅</div>
             <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:22, color:"white", marginBottom:8 }}>Заявка создана!</div>
             <div style={{ background:"rgba(251,191,36,0.1)", border:"1px solid rgba(251,191,36,0.3)", borderRadius:12, padding:"10px 24px", display:"inline-block", color:"#fbbf24", fontWeight:800, fontSize:28 }}>{orderId}</div>
           </div>
@@ -643,6 +680,7 @@ function AuthModal({ onClose, userHook, t }) {
   const [pass2, setPass2] = useState("");
   const [err, setErr]     = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
 
   const handle = async () => {
     setErr(""); setLoading(true);
@@ -666,7 +704,7 @@ function AuthModal({ onClose, userHook, t }) {
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(16px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{ background:"#0e0e1a", border:"1px solid rgba(255,255,255,0.12)", borderRadius:22, width:"100%", maxWidth:400, padding:32, boxShadow:"0 24px 80px rgba(0,0,0,0.7)" }}>
+      <div onClick={e=>e.stopPropagation()} className="modal-inner" style={{ background:"#0e0e1a", border:"1px solid rgba(255,255,255,0.12)", borderRadius:22, width:"100%", maxWidth:400, padding:32, boxShadow:"0 24px 80px rgba(0,0,0,0.7)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:24 }}>
           <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:22, color:"white" }}>{mode==="login"?"👋 Вход":"🚀 Регистрация"}</div>
           <button onClick={onClose} style={{ color:"rgba(255,255,255,0.4)", fontSize:20, background:"none", border:"none", cursor:"pointer" }}>✕</button>
@@ -678,7 +716,14 @@ function AuthModal({ onClose, userHook, t }) {
         </div>
         {mode==="register" && <input value={name} onChange={e=>setName(e.target.value)} placeholder="Ваше имя" style={inp}/>}
         <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" type="email" style={inp}/>
-        <input value={pass} onChange={e=>setPass(e.target.value)} placeholder="Пароль" type="password" style={inp} onKeyDown={e=>e.key==="Enter"&&handle()}/>
+        <div style={{ position:"relative", marginBottom:12 }}>
+          <input value={pass} onChange={e=>setPass(e.target.value)} placeholder="Пароль" type={showPass?"text":"password"}
+            style={{ ...inp, marginBottom:0, paddingRight:44 }} onKeyDown={e=>e.key==="Enter"&&handle()}/>
+          <button type="button" onClick={()=>setShowPass(s=>!s)}
+            style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"rgba(255,255,255,0.4)", cursor:"pointer", fontSize:13, padding:4 }}>
+            {showPass?"Скрыть":"Показать"}
+          </button>
+        </div>
         {mode==="register" && <input value={pass2} onChange={e=>setPass2(e.target.value)} placeholder="Повторите пароль" type="password" style={inp}/>}
         {err && <div style={{ background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.3)", color:"#f87171", borderRadius:8, padding:"8px 12px", fontSize:12, marginBottom:12 }}>{err}</div>}
         <button onClick={handle} disabled={loading} style={{ width:"100%", padding:13, borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#fbbf24)", border:"none", color:"#0a0a14", fontWeight:800, fontSize:15, cursor:"pointer", opacity:loading?.7:1 }}>
@@ -802,7 +847,9 @@ function Cabinet({ userHook, go, t }) {
 
       {/* Orders */}
       {tab==="orders" && (loading
-        ? <div style={{ textAlign:"center", padding:"40px", color:t.muted }}>Загружаем заявки...</div>
+        ? <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {[1,2,3].map(i => <OrderSkeleton key={i} t={t}/>)}
+          </div>
         : orders.length === 0
           ? <div style={{ textAlign:"center", padding:"60px 0", color:t.muted }}>
               <div style={{ fontSize:48, marginBottom:12 }}>📭</div>
@@ -1275,7 +1322,9 @@ function AdminPanel({ userHook, go, t }) {
         </div>
 
         {loading
-          ? <div style={{ textAlign:"center", padding:"40px", color:t.muted }}>Загружаем...</div>
+          ? <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {[1,2,3].map(i => <OrderSkeleton key={i} t={t}/>)}
+            </div>
           : filtered.length === 0
             ? <div style={{ textAlign:"center", padding:"80px 0", color:t.muted }}><div style={{ fontSize:48, marginBottom:12 }}>📭</div>{orders.length===0?"Заявок пока нет":"Ничего не найдено"}</div>
             : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
@@ -1480,7 +1529,7 @@ export default function App() {
     </div>
   );
 
-  if (page === "#legal") return <LegalPage go={go} t={t} />;	
+  if (page === "#legal") return <LegalPage go={go} t={t} />;
   if (page === "#cabinet") {
     if (!session) { go("#home"); return null; }
     return (
@@ -1490,7 +1539,7 @@ export default function App() {
           <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
           <div style={{ display:"flex",gap:8,alignItems:"center" }}>
             <button onClick={()=>go("#home")} style={{ padding:"7px 16px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:"transparent",border:`1px solid ${t.border}`,color:t.sub }}>← Главная</button>
-            <button onClick={toggle} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark?"☀️":"🌙"}</button>
+            <button onClick={toggle} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark ? <IconSun color={t.sub}/> : <IconMoon color={t.sub}/>}</button>
           </div>
         </nav>
         <Cabinet userHook={userHook} go={go} t={t}/>
@@ -1510,40 +1559,50 @@ export default function App() {
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
         .a1{animation:fadeUp .7s ease forwards}
         .a2{animation:fadeUp .7s .1s ease forwards;opacity:0}
         .a3{animation:fadeUp .7s .2s ease forwards;opacity:0}
         .a4{animation:fadeUp .7s .3s ease forwards;opacity:0}
         .a5{animation:fadeUp .7s .4s ease forwards;opacity:0}
         .cg:hover .ci{opacity:.55}.ci{transition:all .25s!important}.cg .ci:hover{opacity:1!important;transform:translateY(-4px)!important}
+        /* ── Mobile First (UI/UX skill: mobile-first, no horizontal scroll) ── */
         @media(max-width:640px){
-          *{max-width:100vw}
-          body,#root{overflow-x:hidden!important;width:100%!important}
+          html,body,#root{overflow-x:hidden!important;max-width:100dvw!important;width:100%!important}
+          /* Hide/show classes */
           .mob-hide{display:none!important}
-          .mob-show{display:inline!important}
+          .mob-show{display:inline-flex!important;align-items:center}
+          /* Layout */
           .mob-col{flex-direction:column!important}
-          .mob-full{width:100%!important;max-width:100%!important}
-          .mob-sm{font-size:clamp(26px,7vw,44px)!important;letter-spacing:-1px!important}
-          .mob-pad{padding:70px 14px 40px!important}
-          .mob-grid{grid-template-columns:1fr!important}
-          .mob-nav{gap:3px!important}
-          .mob-inp{font-size:16px!important}
-          nav{padding:0 10px!important;gap:4px!important}
-          /* Каталог и карточки */
-          [style*="grid-template-columns"]{grid-template-columns:1fr!important}
-          /* Модалки */
-          [style*="maxWidth:500"],[style*="maxWidth:490"],[style*="max-width:500px"]{
-            max-width:calc(100vw - 24px)!important;
-            width:calc(100vw - 24px)!important;
-          }
-          /* Кнопки в ряд не вылезают */
-          [style*="display:"flex""]{flex-wrap:wrap}
-          /* Фиксируем hero */
-          h1{font-size:clamp(28px,7vw,52px)!important;letter-spacing:-1.5px!important}
+          .mob-full{width:100%!important;max-width:100%!important;box-sizing:border-box!important}
+          /* Typography scale - min 16px on mobile (prevents iOS zoom) */
+          body{font-size:16px!important}
+          input,select,textarea{font-size:16px!important} /* Prevent iOS auto-zoom */
+          h1{font-size:clamp(28px,7.5vw,52px)!important;letter-spacing:-1.5px!important;line-height:1.05!important}
+          h2{font-size:clamp(22px,5.5vw,32px)!important}
+          /* Nav - compact with 44px touch targets */
+          nav{padding:0 10px!important}
+          /* Modals - full-width minus padding */
+          .modal-inner{max-width:calc(100dvw - 20px)!important;width:calc(100dvw - 20px)!important;padding:20px!important}
+          /* Cards grid - single column */
+          .card-grid,[class*="grid"]{grid-template-columns:1fr!important}
+          /* Spacing */
+          .mob-pad-sm{padding:76px 14px 40px!important}
         }
         @media(min-width:641px){
           .mob-show{display:none!important}
         }
+        /* ── Focus states (accessibility: visible focus rings) ── */
+        button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+          outline:2px solid #fbbf24!important;
+          outline-offset:2px!important;
+        }
+        /* ── Cursor pointer on all interactive elements ── */
+        button{cursor:pointer}
+        /* ── Smooth scroll ── */
+        html{scroll-behavior:smooth}
+        /* ── Touch action for faster tap ── */
+        button,a,[role="button"]{touch-action:manipulation}
       `}</style>
 
       {/* NAV */}
@@ -1554,18 +1613,18 @@ export default function App() {
           {[["#home","🏠","Главная"],["#catalog","🔍","Каталог"]].map(([h,ic,l]) => (
             <button key={h} onClick={()=>go(h)} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===h?t.goldDim:"transparent",border:`1px solid ${page===h?t.goldB:"transparent"}`,color:page===h?t.gold:t.sub,transition:"all .2s",whiteSpace:"nowrap" }}>
               <span className="mob-hide">{l}</span>
-              <span className="mob-show">{ic}</span>
+              <span className="mob-show" style={{display:"flex",alignItems:"center"}}>{h==="#home"?<IconHome size={16} color="currentColor"/>:<IconGrid size={16} color="currentColor"/>}</span>
             </button>
           ))}
           {session ? (
             <>
               {isAdmin && <button onClick={()=>go("#admin")} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.35)",color:"#c4b5fd",whiteSpace:"nowrap" }}>
-                <span className="mob-hide">⚙️ Админ</span>
-                <span className="mob-show">⚙️</span>
+                <span className="mob-hide" style={{display:"flex",alignItems:"center",gap:5}}><IconSettings size={14} color="currentColor"/> Админ</span>
+                <span className="mob-show" style={{display:"flex"}}><IconSettings size={16} color="currentColor"/></span>
               </button>}
               {/* Колокольчик */}
-              <button onClick={()=>go("#cabinet")} style={{ width:34,height:34,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",flexShrink:0,fontSize:15 }}>
-                🔔
+              <button onClick={()=>go("#cabinet")} aria-label={`Уведомления${unread>0?" ("+unread+" непрочитанных)":""}`} style={{ width:44,height:44,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",flexShrink:0 }}>
+                <IconBell size={17} color={t.sub}/>
                 {unread > 0 && (
                   <span style={{ background:"#f87171",color:"white",borderRadius:"50%",width:15,height:15,fontSize:8,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",position:"absolute",top:-2,right:-2,boxShadow:"0 0 0 2px "+t.bg }}>
                     {unread > 9 ? "9+" : unread}
@@ -1574,18 +1633,18 @@ export default function App() {
               </button>
               {/* Кабинет */}
               <button onClick={()=>go("#cabinet")} style={{ padding:"6px 10px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:4,flexShrink:0 }}>
-                👤<span className="mob-hide" style={{ marginLeft:2 }}>{profile?.name?.split(" ")[0] || ""}</span>
+                <IconUser size={16} color={t.sub}/><span className="mob-hide" style={{ marginLeft:2 }}>{profile?.name?.split(" ")[0] || ""}</span>
               </button>
               {/* Выйти */}
               <button onClick={async()=>{ await userHook.logout(); go("#home"); }} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",color:"#f87171",flexShrink:0 }}>
-                <span className="mob-hide">Выйти</span>
-                <span className="mob-show">✕</span>
+                <span className="mob-hide" style={{display:"flex",alignItems:"center",gap:5}}><IconLogout size={14} color="#f87171"/> Выйти</span>
+                <span className="mob-show" style={{display:"flex"}}><IconLogout size={16} color="#f87171"/></span>
               </button>
             </>
           ) : (
-            <button onClick={()=>setShowAuth(true)} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,whiteSpace:"nowrap" }}>Войти</button>
+            <button onClick={()=>setShowAuth(true)} aria-label="Войти в аккаунт" style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,whiteSpace:"nowrap",minHeight:36 }}>Войти</button>
           )}
-          <button onClick={toggle} style={{ width:34,height:34,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{t.dark?"☀️":"🌙"}</button>
+          <button onClick={toggle} aria-label={t.dark?"Переключить на светлую тему":"Переключить на тёмную тему"} style={{ width:44,height:44,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{t.dark ? <IconSun color={t.sub}/> : <IconMoon color={t.sub}/>}</button>
         </div>
       </nav>
 
@@ -1653,7 +1712,7 @@ export default function App() {
               <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Популярное</div>
               <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:32,color:t.text,marginBottom:8 }}>Часто заказывают</h2>
             </div>
-            <div className="cg" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:14 }}>
+            <div className="cg card-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14 }}>
               {POPULAR.map(s=><div key={s.id} className="ci"><SCard s={s} rate={rate} onSelect={setSelSvc} t={t}/></div>)}
             </div>
             <div style={{ textAlign:"center",marginTop:28 }}>
@@ -1700,7 +1759,7 @@ export default function App() {
           <div style={{ display:"flex",gap:8,flexWrap:"wrap",marginBottom:26 }}>
             {CATS.map(c=>{ const cnt=SVC.filter(s=>c==="Все"||s.cat===c).length; return <button key={c} onClick={()=>setCat(c)} style={{ padding:"8px 16px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:cat===c?t.goldDim:t.card,border:`1px solid ${cat===c?t.goldB:t.border}`,color:cat===c?t.gold:t.sub,transition:"all .15s" }}>{c} <span style={{ opacity:.55 }}>({cnt})</span></button>; })}
           </div>
-          <div className="cg" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14 }}>
+          <div className="cg card-grid" style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14 }}>
             {filteredSvc.map(s=><div key={s.id} className="ci"><SCard s={s} rate={rate} onSelect={setSelSvc} t={t}/></div>)}
           </div>
           {filteredSvc.length===0 && <div style={{ textAlign:"center",padding:"80px 0",color:t.muted }}><div style={{ fontSize:48,marginBottom:12 }}>🔍</div>Ничего не найдено</div>}
