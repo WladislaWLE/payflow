@@ -63,6 +63,13 @@ const IconX = ({size=16,color="currentColor"}) => <svg width={size} height={size
 const IconChevronDown = ({size=14,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
 const IconSearch = ({size=16,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
 const IconDownload = ({size=16,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+const IconTrendUp  = ({size=20,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>;
+const IconZap      = ({size=20,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+const IconLock     = ({size=20,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+const IconShield   = ({size=20,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+const IconKey      = ({size=20,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>;
+const IconCreditCard=({size=20,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="22" height="16" x="1" y="4" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
+const IconRefund   = ({size=20,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>;
 
 // ══════════════════════════════════════════════════════════════
 //  КОНФИГ
@@ -169,23 +176,24 @@ function useTheme() {
     try { return window.matchMedia("(prefers-color-scheme: dark)").matches; } catch { return true; }
   });
   const toggle = () => setDark(d => { localStorage.setItem("pf_theme", !d ? "dark" : "light"); return !d; });
+  // Canonical fintech/crypto dark palette (UI/UX Pro Max: Fintech/Crypto color system)
   const t = {
     dark,
-    bg:     dark ? "#07070f"               : "#ebebf0",
-    card:   dark ? "rgba(255,255,255,0.04)": "rgba(255,255,255,0.85)",
-    card2:  dark ? "rgba(255,255,255,0.07)": "#ffffff",
-    border: dark ? "rgba(255,255,255,0.09)": "rgba(0,0,0,0.1)",
-    borderH:dark ? "rgba(251,191,36,0.55)" : "rgba(217,119,6,0.6)",
-    text:   dark ? "#ffffff"               : "#111118",
-    sub:    dark ? "rgba(255,255,255,0.52)": "rgba(0,0,0,0.55)",
-    muted:  dark ? "rgba(255,255,255,0.26)": "rgba(0,0,0,0.35)",
-    nav:    dark ? "rgba(7,7,15,0.93)"     : "rgba(235,235,240,0.93)",
-    inp:    dark ? "rgba(255,255,255,0.07)": "rgba(0,0,0,0.06)",
+    bg:     dark ? "#0f172a"               : "#f1f5f9",
+    card:   dark ? "rgba(34,39,53,0.6)"    : "rgba(255,255,255,0.85)",
+    card2:  dark ? "#1e2537"               : "#ffffff",
+    border: dark ? "#334155"               : "rgba(0,0,0,0.09)",
+    borderH:dark ? "rgba(251,191,36,0.6)"  : "rgba(217,119,6,0.65)",
+    text:   dark ? "#f8fafc"               : "#0f172a",
+    sub:    dark ? "#94a3b8"               : "rgba(0,0,0,0.55)",
+    muted:  dark ? "#64748b"               : "rgba(0,0,0,0.38)",
+    nav:    dark ? "rgba(15,23,42,0.9)"    : "rgba(241,245,249,0.92)",
+    inp:    dark ? "rgba(51,65,85,0.5)"    : "rgba(0,0,0,0.05)",
     gold:   "#fbbf24", goldD:"#f59e0b",
-    goldDim:dark ? "rgba(251,191,36,0.1)"  : "rgba(217,119,6,0.09)",
-    goldB:  dark ? "rgba(251,191,36,0.35)" : "rgba(217,119,6,0.4)",
-    shadow: dark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 4px 24px rgba(0,0,0,0.1)",
-    shadowG:"0 6px 28px rgba(251,191,36,0.3)",
+    goldDim:dark ? "rgba(251,191,36,0.1)"  : "rgba(217,119,6,0.08)",
+    goldB:  dark ? "rgba(251,191,36,0.3)"  : "rgba(217,119,6,0.35)",
+    shadow: dark ? "0 8px 40px rgba(0,0,0,0.5)" : "0 4px 24px rgba(0,0,0,0.08)",
+    shadowG:"0 8px 32px rgba(251,191,36,0.22)",
   };
   return { t, toggle };
 }
@@ -415,7 +423,8 @@ function SCard({ s, rate, onSelect, t }) {
   const [hov, setHov] = useState(false);
   return (
     <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>onSelect(s)}
-      style={{ background:hov?t.card2:t.card, border:`1px solid ${hov?t.borderH:t.border}`, borderRadius:18, padding:20, cursor:"pointer", transition:"transform 200ms cubic-bezier(0,0,.2,1), box-shadow 200ms cubic-bezier(0,0,.2,1), border-color 200ms cubic-bezier(0,0,.2,1), background 200ms cubic-bezier(0,0,.2,1)", transform:hov?"translateY(-4px)":"none", boxShadow:hov?t.shadow:"none" }}>
+      style={{ background:hov?t.card2:t.card,border:`1px solid ${hov?t.borderH:t.border}`,borderRadius:20,padding:22,cursor:"pointer",transition:"transform 250ms cubic-bezier(0.23,1,0.32,1),box-shadow 250ms cubic-bezier(0.23,1,0.32,1),border-color 250ms,background 250ms",transform:hov?"translateY(-5px)":"none",boxShadow:hov?`${t.shadow},0 0 0 1px ${t.borderH}`:"none",position:"relative",overflow:"hidden" }}>
+      {hov && <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,rgba(251,191,36,0.6),transparent)",borderRadius:"20px 20px 0 0" }}/>}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <span style={{ fontSize:26, transition:"filter .2s", filter:hov?"drop-shadow(0 0 8px rgba(251,191,36,0.5))":"none" }}>{s.icon}</span>
@@ -441,9 +450,11 @@ function SCard({ s, rate, onSelect, t }) {
           </div>
         ))}
       </div>
-      <div style={{ marginTop:3, textAlign:"right" }}><span style={{ fontSize:10, color:t.muted }}>* с комиссией {Math.round(CFG.MARGIN*100)}%</span></div>
-      <div style={{ marginTop:10, padding:"8px 12px", borderRadius:9, fontSize:13, textAlign:"center", fontWeight:600, transition:"all .2s", background:hov?t.goldDim:"transparent", color:hov?t.gold:t.muted, border:`1px solid ${hov?t.goldB:"transparent"}` }}>
-        {hov ? "→ Оформить заявку" : "Нажмите для заказа"}
+      <div style={{ marginTop:10,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+        <span style={{ fontSize:10,color:t.muted }}>с комиссией {Math.round(CFG.MARGIN*100)}%</span>
+        <div style={{ display:"inline-flex",alignItems:"center",gap:4,padding:"5px 12px",borderRadius:100,fontSize:12,fontWeight:700,transition:"all .2s",background:hov?t.goldDim:"transparent",color:hov?t.gold:t.muted,border:`1px solid ${hov?t.goldB:"transparent"}` }}>
+          {hov?"Оформить →":"Подробнее"}
+        </div>
       </div>
     </div>
   );
@@ -550,7 +561,7 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(16px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,overflowY:"auto" }} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} className="modal-inner" style={{ background:"#0e0e1a", border:"1px solid rgba(251,191,36,0.25)", borderRadius:22, width:"100%", maxWidth:500, padding:28, margin:"auto", boxShadow:"0 24px 80px rgba(0,0,0,0.6)" }}>
+      <div onClick={e=>e.stopPropagation()} className="modal-inner" style={{ background:"#1e2537", border:"1px solid #334155", borderRadius:24, width:"100%", maxWidth:500, padding:28, margin:"auto", boxShadow:"0 32px 80px rgba(0,0,0,0.7)" }}>
 
         {step === 1 && <>
           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:22 }}>
@@ -726,7 +737,7 @@ function AuthModal({ onClose, userHook, t }) {
 
   return (
     <div style={{ position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(16px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} className="modal-inner" style={{ background:"#0e0e1a", border:"1px solid rgba(255,255,255,0.12)", borderRadius:22, width:"100%", maxWidth:400, padding:32, boxShadow:"0 24px 80px rgba(0,0,0,0.7)" }}>
+      <div onClick={e=>e.stopPropagation()} className="modal-inner" style={{ background:"#1e2537", border:"1px solid #334155", borderRadius:24, width:"100%", maxWidth:400, padding:32, boxShadow:"0 32px 80px rgba(0,0,0,0.7)" }}>
         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:24 }}>
           <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:22, color:"white" }}>{mode==="login"?"👋 Вход":"🚀 Регистрация"}</div>
           <button onClick={onClose} style={{ color:"rgba(255,255,255,0.4)", fontSize:20, background:"none", border:"none", cursor:"pointer" }}>✕</button>
@@ -1522,7 +1533,7 @@ function Calculator({ rate, rateDate, rateLoading, t }) {
               : <>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}><span style={{ color:t.sub, fontSize:14 }}>Курс ЦБ на {rateDate}</span><span style={{ color:t.sub, fontSize:14, fontWeight:600 }}>1$ = {rate?.toFixed(2)} ₽</span></div>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}><span style={{ color:t.sub, fontSize:14 }}>Комиссия {Math.round(CFG.MARGIN*100)}%</span><span style={{ color:t.sub, fontSize:14, fontWeight:600 }}>+ {comm.toLocaleString("ru-RU")} ₽</span></div>
-                <div style={{ display:"flex", justifyContent:"space-between", borderTop:`2px solid ${t.goldB}`, paddingTop:14 }}><span style={{ color:t.text, fontWeight:700, fontSize:16 }}>Итого к оплате</span><span style={{ color:t.gold, fontWeight:900, fontSize:34, fontFamily:"'Clash Display',sans-serif" }}>{total.toLocaleString("ru-RU")} ₽</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderTop:`1px solid rgba(251,191,36,0.2)`, paddingTop:16, marginTop:4 }}><span style={{ color:t.sub, fontWeight:600, fontSize:14 }}>Итого к оплате</span><span style={{ fontWeight:900, fontSize:38, fontFamily:"'Clash Display',sans-serif", letterSpacing:-1, background:"linear-gradient(135deg,#fbbf24,#f97316)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>{total.toLocaleString("ru-RU")} ₽</span></div>
               </>}
           </div>
         </div>
@@ -1560,7 +1571,7 @@ function RequestServiceModal({ onClose, user, t }) {
 
   return (
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(12px)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }} onClick={onClose}>
-      <div className="modal-inner" style={{ background:t.dark?"#12121f":"#ffffff",border:`1px solid ${t.border}`,borderRadius:24,padding:28,maxWidth:480,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,0.5)" }} onClick={e=>e.stopPropagation()}>
+      <div className="modal-inner" style={{ background:t.dark?t.card2:"#ffffff",border:`1px solid ${t.border}`,borderRadius:24,padding:28,maxWidth:480,width:"100%",boxShadow:"0 32px 80px rgba(0,0,0,0.5)" }} onClick={e=>e.stopPropagation()}>
         {done ? (
           <div style={{ textAlign:"center",padding:"16px 0" }}>
             <div style={{ fontSize:48,marginBottom:16 }}>✅</div>
@@ -1617,16 +1628,18 @@ function FaqSection({ t }) {
         <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>FAQ</div>
         <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:30,color:t.text }}>Частые вопросы</h2>
       </div>
-      <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+      <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
         {items.map((item,i)=>(
-          <div key={i} style={{ background:t.card2,border:`1px solid ${open===i?t.borderH:t.border}`,borderRadius:14,overflow:"hidden",transition:"border-color 200ms" }}>
-            <button onClick={()=>setOpen(open===i?null:i)} style={{ width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px",background:"none",border:"none",color:t.text,cursor:"pointer",textAlign:"left",gap:12 }}>
-              <span style={{ fontWeight:600,fontSize:14,lineHeight:1.4 }}>{item.q}</span>
-              <span style={{ flexShrink:0,color:t.gold,transform:open===i?"rotate(180deg)":"none",transition:"transform 200ms",display:"inline-block" }}><IconChevronDown size={16} color={t.gold}/></span>
+          <div key={i} style={{ background:t.card2,border:`1px solid ${open===i?t.borderH:t.border}`,borderRadius:16,overflow:"hidden",transition:"border-color 280ms cubic-bezier(0.23,1,0.32,1),background 280ms" }}>
+            <button onClick={()=>setOpen(open===i?null:i)} style={{ width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"20px 22px",background:"none",border:"none",color:t.text,cursor:"pointer",textAlign:"left",gap:12 }}>
+              <span style={{ fontWeight:600,fontSize:14,lineHeight:1.45,letterSpacing:-0.2 }}>{item.q}</span>
+              <span style={{ flexShrink:0,color:t.gold,transform:open===i?"rotate(180deg)":"none",transition:"transform 280ms cubic-bezier(0.23,1,0.32,1)",display:"inline-block" }}><IconChevronDown size={16} color={t.gold}/></span>
             </button>
-            {open===i && (
-              <div style={{ padding:"0 20px 18px",color:t.sub,fontSize:14,lineHeight:1.65 }}>{item.a}</div>
-            )}
+            <div className={`faq-body${open===i?" open":""}`}>
+              <div className="faq-inner">
+                <div style={{ padding:"0 22px 20px",color:t.sub,fontSize:14,lineHeight:1.7 }}>{item.a}</div>
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -1789,11 +1802,39 @@ export default function App() {
         html{scroll-behavior:smooth}
         /* ── Touch action for faster tap ── */
         button,a,[role="button"]{touch-action:manipulation}
+        /* ── Tabular numerals for prices (UI/UX Pro Max: number-tabular) ── */
+        .price-num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+        /* ── Prefers reduced motion ── */
+        @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+        /* ── Premium text selection ── */
+        ::selection{background:rgba(251,191,36,0.18);color:inherit}
+        /* ── Better text rendering ── */
+        body{font-feature-settings:"kern" 1,"liga" 1;letter-spacing:-0.01em}
+        h1,h2,h3{letter-spacing:-0.03em}
+        /* ── Scrollbar — ultra thin gold ── */
+        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(251,191,36,0.35);border-radius:2px}
+        /* ── Section divider accent ── */
+        .section-divider{width:40px;height:3px;background:linear-gradient(90deg,#fbbf24,rgba(251,191,36,0));border-radius:2px;margin:0 auto 12px}
+        /* ── Premium card inner border glow on hover ── */
+        .card-hover{transition:all 250ms cubic-bezier(0.23,1,0.32,1)!important}
+        .card-hover:hover{transform:translateY(-5px)!important;box-shadow:0 20px 60px rgba(0,0,0,0.4),0 0 0 1px rgba(251,191,36,0.15)!important}
+        /* ── Gold gradient text ── */
+        .gold-grad{background:linear-gradient(135deg,#fbbf24 0%,#f97316 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        /* ── Smooth section fade ── */
+        .section-fade{animation:fadeUp .8s ease both}
+        /* ── nav pill border glow when scrolled ── */
+        .nav-scrolled{box-shadow:0 0 0 1px rgba(251,191,36,0.12),0 8px 32px rgba(0,0,0,0.4)!important}
+        /* ── Star rating ── */
+        .star-filled{color:#fbbf24}
+        /* ── FAQ smooth expand ── */
+        .faq-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows 280ms cubic-bezier(0.23,1,0.32,1)}
+        .faq-body.open{grid-template-rows:1fr}
+        .faq-inner{overflow:hidden;min-height:0}
       `}</style>
 
       {/* NAV */}
-      <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 16px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .3s",overflowX:"hidden" }}>
-        <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text,flexShrink:0 }}>pay<span style={{ color:t.gold }}>flow</span></div>
+      <nav className={scrolled?"nav-scrolled":""} style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:isMobile?"0 12px":"0 24px",height:isMobile?58:64,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(28px) saturate(180%)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .35s cubic-bezier(0.23,1,0.32,1)",overflowX:"hidden" }}>
+        <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:isMobile?19:21,cursor:"pointer",letterSpacing:-1,color:t.text,flexShrink:0,userSelect:"none" }}>pay<span style={{ background:"linear-gradient(135deg,#fbbf24,#f97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text" }}>flow</span></div>
         <div style={{ display:"flex",gap:4,alignItems:"center",flexShrink:0 }}>
           {/* Главная/Каталог — только на десктопе */}
           {!isMobile && [["#home","Главная",<IconHome size={15} color="currentColor"/>],["#catalog","Каталог",<IconGrid size={15} color="currentColor"/>]].map(([h,l,ic]) => (
@@ -1877,13 +1918,11 @@ export default function App() {
                     <span style={{ color:t.gold,fontWeight:700 }}>{rateLoading?"загрузка...":`1$ = ${rate?.toFixed(2)} ₽`}</span>
                   </div>
 
-                  <h1 className="a2" style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:"clamp(32px,3.8vw,64px)",lineHeight:1.03,letterSpacing:-2.5,marginBottom:20,color:t.text }}>
+                  <h1 className="a2" style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:"clamp(34px,4vw,68px)",lineHeight:1.0,letterSpacing:-3,marginBottom:24,color:t.text }}>
                     Оплати любой<br/>
-                    <span style={{ color:t.gold,position:"relative",display:"inline-block" }}>
-                      зарубежный
-                      <span style={{ position:"absolute",bottom:0,left:0,right:0,height:4,background:`linear-gradient(90deg,${t.gold},rgba(251,191,36,0))`,borderRadius:2 }}/>
-                    </span>
-                    {" "}сервис<br/>за рубли
+                    <span className="gold-grad">зарубежный</span>
+                    {" "}сервис<br/>
+                    <span style={{ color:t.text }}>за рубли</span>
                   </h1>
 
                   <p className="a3" style={{ color:t.sub,fontSize:16,maxWidth:400,marginBottom:8,lineHeight:1.65 }}>ChatGPT, Midjourney, Netflix, Spotify и ещё 47 сервисов.</p>
@@ -1941,19 +1980,18 @@ export default function App() {
               {/* Stats */}
               <div className="a5 stats-row" style={{ display:isMobile?"grid":"flex",gridTemplateColumns:isMobile?"1fr 1fr":undefined,gap:isMobile?8:10,flexWrap:"wrap",justifyContent:"flex-start",marginTop:isMobile?28:52,maxWidth:1100,width:"100%" }}>
                 {[
-                  {v:"50 ",suf:"+",l:"сервисов",ic:"🌍"},
-                  {v:"10" ,suf:"%",l:"комиссия",ic:"💸"},
-                  {v:ordersCount !== null ? String(ordersCount) : "...", suf:"+",l:"заявок выполнено",ic:"✅"},
-                  {v:"1 ",suf:" час",l:"среднее время",ic:"⚡"}
-                ].map(({v,suf,l,ic},i)=>(
-                  <div key={l} className={`stagger-${i+2}`} style={{ textAlign:"center",background:t.dark?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.9)",border:`1px solid ${t.border}`,borderRadius:18,padding:"18px 24px",backdropFilter:"blur(12px)",boxShadow:t.shadow,transition:"transform 200ms cubic-bezier(0,0,.2,1),box-shadow 200ms" }}
-                    onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-4px)";e.currentTarget.style.boxShadow=t.shadowG}}
-                    onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=t.shadow}}>
-                    <div style={{ fontSize:24,marginBottom:8 }}>{ic}</div>
-                    <div style={{ fontFamily:"'Clash Display',sans-serif",fontSize:26,fontWeight:800,color:t.gold,letterSpacing:-1 }}>
-                      {v}{suf}
+                  {v:"50",suf:"+",l:"сервисов"},
+                  {v:"10",suf:"%",l:"комиссия"},
+                  {v:ordersCount !== null ? String(ordersCount) : "—",suf:"+",l:"выполнено"},
+                  {v:"<1",suf:" ч",l:"активация"},
+                ].map(({v,suf,l},i)=>(
+                  <div key={l} className={`stagger-${i+2}`} style={{ textAlign:"center",background:t.dark?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.92)",border:`1px solid ${t.border}`,borderRadius:20,padding:isMobile?"14px 16px":"20px 28px",backdropFilter:"blur(16px)",boxShadow:t.shadow,transition:"transform 250ms cubic-bezier(0.23,1,0.32,1),box-shadow 250ms",minWidth:isMobile?undefined:100 }}
+                    onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-5px)";e.currentTarget.style.boxShadow=t.shadowG;e.currentTarget.style.borderColor=t.borderH}}
+                    onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=t.shadow;e.currentTarget.style.borderColor=t.border}}>
+                    <div style={{ fontFamily:"'Clash Display',sans-serif",fontSize:isMobile?24:32,fontWeight:900,letterSpacing:-1.5,background:"linear-gradient(135deg,#fbbf24,#f97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",lineHeight:1 }}>
+                      {v}<span style={{ fontSize:isMobile?16:20 }}>{suf}</span>
                     </div>
-                    <div style={{ color:t.muted,fontSize:13,marginTop:3,fontWeight:500 }}>{l}</div>
+                    <div style={{ color:t.muted,fontSize:11,marginTop:6,fontWeight:500,letterSpacing:0.5,textTransform:"uppercase" }}>{l}</div>
                   </div>
                 ))}
               </div>
@@ -1996,8 +2034,9 @@ export default function App() {
                         </div>
                       ))}
                     </div>
-                    <div style={{ display:"inline-flex",alignItems:"center",gap:6,padding:isBig?"10px 18px":"7px 14px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,fontSize:isBig?14:12,fontWeight:600 }}>
-                      Оформить заявку →
+                    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:isBig?4:0 }}>
+                      <span style={{ color:t.muted,fontSize:11 }}>от {rate?Math.round(s.tiers[0].p*rate*(1+CFG.MARGIN)).toLocaleString("ru-RU"):"..."}₽</span>
+                      <div style={{ display:"inline-flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,fontSize:12,fontWeight:700 }}>Выбрать →</div>
                     </div>
                   </div>
                 );
@@ -2025,16 +2064,19 @@ export default function App() {
               {/* Connecting line */}
               <div style={{ position:"absolute",top:40,left:"12%",right:"12%",height:1,background:`linear-gradient(90deg,transparent,${t.goldB},transparent)`,display:"block" }} className="mob-hide"/>
               {[
-                {n:"01",icon:"🔐",title:"Регистрируешься",  desc:"Создаёшь кабинет — заявки, статусы и уведомления в одном месте."},
-                {n:"02",icon:"🔍",title:"Выбираешь сервис",  desc:"Находишь нужный сервис. Цена в рублях видна сразу."},
-                {n:"03",icon:"💳",title:"Оплачиваешь",       desc:"Переводишь по СБП или карте. Загружаешь чек."},
-                {n:"04",icon:"🚀",title:"Получаешь доступ",  desc:"Активируем до 1 часа. Данные приходят в личный кабинет."},
+                {n:"01",svg:<IconUser size={18} color="#fbbf24"/>,title:"Регистрируешься",  desc:"Создаёшь кабинет — заявки, статусы и уведомления в одном месте."},
+                {n:"02",svg:<IconSearch size={18} color="#fbbf24"/>,title:"Выбираешь сервис",  desc:"Находишь нужный сервис. Цена в рублях видна сразу."},
+                {n:"03",svg:<IconCreditCard size={18} color="#fbbf24"/>,title:"Оплачиваешь",       desc:"Переводишь по СБП или карте. Загружаешь чек."},
+                {n:"04",svg:<IconKey size={18} color="#fbbf24"/>,title:"Получаешь доступ",  desc:"Активируем до 1 часа. Данные приходят в личный кабинет."},
               ].map((s,i) => (
                 <div key={s.n} className={`stagger-${i+1}`} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:20,padding:"28px 22px",position:"relative",overflow:"hidden",boxShadow:t.shadow,transition:"transform 200ms cubic-bezier(0,0,.2,1),box-shadow 200ms",margin:"0 6px" }}
                   onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-6px)";e.currentTarget.style.boxShadow=t.dark?"0 20px 60px rgba(251,191,36,0.1)":"0 20px 60px rgba(0,0,0,0.1)"}}
                   onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=t.shadow}}>
-                  {/* Step number badge */}
-                  <div style={{ width:44,height:44,borderRadius:"50%",background:t.goldDim,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:15,color:t.gold,marginBottom:18 }}>{s.n}</div>
+                  {/* Step number + icon badge */}
+                  <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:18 }}>
+                    <div style={{ width:44,height:44,borderRadius:"50%",background:`linear-gradient(135deg,rgba(251,191,36,0.18),rgba(249,115,22,0.08))`,border:`1px solid rgba(251,191,36,0.3)`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{s.svg}</div>
+                    <span style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:13,background:"linear-gradient(135deg,#fbbf24,#f97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",letterSpacing:1 }}>{s.n}</span>
+                  </div>
                   {/* Background number watermark */}
                   <div style={{ position:"absolute",top:8,right:12,fontFamily:"'Clash Display',sans-serif",color:t.dark?"rgba(251,191,36,0.06)":"rgba(217,119,6,0.07)",fontSize:72,fontWeight:900,lineHeight:1,pointerEvents:"none" }}>{s.n}</div>
                   <div style={{ fontWeight:700,fontSize:16,marginBottom:10,color:t.text,letterSpacing:-0.3 }}>{s.title}</div>
@@ -2048,18 +2090,24 @@ export default function App() {
 
           {/* TRUST BADGES */}
           <div style={{ padding:"0 24px 80px",maxWidth:940,margin:"0 auto" }}>
+            <div style={{ textAlign:"center",marginBottom:32 }}>
+              <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Надёжность</div>
+              <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:30,color:t.text }}>Почему доверяют нам</h2>
+            </div>
             <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:14 }}>
               {[
-                {icon:"📊",title:"Курс ЦБ РФ",desc:"Конвертируем по официальному курсу без накрутки на курс"},
-                {icon:"⚡",title:"Оплата по СБП",desc:"Мгновенный перевод через систему быстрых платежей"},
-                {icon:"🔐",title:"Данные в кабинете",desc:"Доступ к сервису появляется в личном кабинете, не в Telegram"},
-                {icon:"🛡️",title:"Возврат за 24 часа",desc:"Если не активировали — полный возврат средств"},
+                {svg:<IconTrendUp size={20} color="#fbbf24"/>,title:"Курс ЦБ РФ",desc:"Конвертируем по официальному курсу без накрутки"},
+                {svg:<IconZap size={20} color="#fbbf24"/>,title:"Оплата по СБП",desc:"Мгновенный перевод через систему быстрых платежей"},
+                {svg:<IconLock size={20} color="#fbbf24"/>,title:"Данные в кабинете",desc:"Доступ к сервису — в личном кабинете, не в Telegram"},
+                {svg:<IconShield size={20} color="#fbbf24"/>,title:"Возврат за 24 часа",desc:"Если не активировали — полный возврат средств"},
               ].map((b,i)=>(
-                <div key={i} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:18,padding:"22px 20px",display:"flex",alignItems:"flex-start",gap:14 }}>
-                  <div style={{ width:42,height:42,borderRadius:12,background:t.goldDim,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>{b.icon}</div>
+                <div key={i} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:20,padding:"24px 22px",display:"flex",alignItems:"flex-start",gap:14,transition:"border-color 250ms,transform 250ms cubic-bezier(0.23,1,0.32,1)" }}
+                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor=t.borderH}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=t.border}}>
+                  <div style={{ width:44,height:44,borderRadius:14,background:`linear-gradient(135deg,rgba(251,191,36,0.15),rgba(249,115,22,0.08))`,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{b.svg}</div>
                   <div>
-                    <div style={{ fontWeight:700,fontSize:14,color:t.text,marginBottom:4 }}>{b.title}</div>
-                    <div style={{ color:t.sub,fontSize:13,lineHeight:1.55 }}>{b.desc}</div>
+                    <div style={{ fontWeight:700,fontSize:14,color:t.text,marginBottom:5,letterSpacing:-0.3 }}>{b.title}</div>
+                    <div style={{ color:t.sub,fontSize:13,lineHeight:1.6 }}>{b.desc}</div>
                   </div>
                 </div>
               ))}
@@ -2071,6 +2119,10 @@ export default function App() {
             <div style={{ textAlign:"center",marginBottom:36 }}>
               <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Отзывы</div>
               <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:30,color:t.text }}>Что говорят пользователи</h2>
+              <div style={{ display:"flex",justifyContent:"center",gap:3,marginTop:12 }}>
+                {"★★★★★".split("").map((s,i)=><span key={i} style={{ color:"#fbbf24",fontSize:20 }}>{s}</span>)}
+                <span style={{ color:t.sub,fontSize:14,marginLeft:8,lineHeight:"26px" }}>5.0 / 50+ отзывов</span>
+              </div>
             </div>
             <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14 }}>
               {[
@@ -2078,19 +2130,21 @@ export default function App() {
                 {name:"Дарья К.",svc:"Midjourney",rating:5,text:"Искала где купить Midjourney в России — нашла здесь. Активировали за полчаса, всё работает.",date:"март 2026"},
                 {name:"Игорь В.",svc:"Cursor Pro",rating:5,text:"Удобно, что цена сразу в рублях. Оплатил по СБП, через 40 минут пришли данные в кабинет.",date:"апрель 2026"},
               ].map((r,i)=>(
-                <div key={i} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:18,padding:"22px 20px" }}>
-                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12 }}>
-                    <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                      <div style={{ width:36,height:36,borderRadius:"50%",background:`linear-gradient(135deg,${t.gold},#f97316)`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:"#0a0a14",flexShrink:0 }}>{r.name[0]}</div>
-                      <div>
-                        <div style={{ fontWeight:700,fontSize:13,color:t.text }}>{r.name}</div>
-                        <div style={{ color:t.muted,fontSize:11 }}>{r.svc}</div>
-                      </div>
-                    </div>
-                    <div style={{ color:t.gold,fontSize:13,letterSpacing:1 }}>{"★".repeat(r.rating)}</div>
+                <div key={i} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:20,padding:"24px 22px",position:"relative",overflow:"hidden",transition:"border-color 250ms,transform 250ms cubic-bezier(0.23,1,0.32,1)" }}
+                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor=t.borderH}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=t.border}}>
+                  <div style={{ position:"absolute",top:14,right:18,fontFamily:"Georgia,serif",fontSize:64,color:t.gold,opacity:0.07,lineHeight:1,pointerEvents:"none",fontWeight:900 }}>"</div>
+                  <div style={{ display:"flex",gap:3,marginBottom:14 }}>
+                    {"★★★★★".split("").map((s,j)=><span key={j} style={{ color:"#fbbf24",fontSize:15 }}>{s}</span>)}
                   </div>
-                  <p style={{ color:t.sub,fontSize:13,lineHeight:1.65,marginBottom:10 }}>{r.text}</p>
-                  <div style={{ color:t.muted,fontSize:11 }}>{r.date}</div>
+                  <p style={{ color:t.sub,fontSize:14,lineHeight:1.7,marginBottom:16,fontStyle:"italic" }}>«{r.text}»</p>
+                  <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                    <div style={{ width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,rgba(251,191,36,0.8),rgba(249,115,22,0.8))`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:13,color:"#0a0a14",flexShrink:0 }}>{r.name[0]}</div>
+                    <div>
+                      <div style={{ fontWeight:700,fontSize:13,color:t.text,letterSpacing:-0.3 }}>{r.name}</div>
+                      <div style={{ color:t.muted,fontSize:11 }}>{r.svc} · {r.date}</div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -2145,12 +2199,13 @@ export default function App() {
       {showReqSvc && <RequestServiceModal onClose={()=>setShowReqSvc(false)} user={session?.user} t={t}/>}
 
       {/* Footer */}
-      <div style={{ borderTop:`1px solid ${t.border}`,padding:"32px",background:t.dark?"rgba(0,0,0,0.3)":"rgba(0,0,0,0.02)" }}>
+      <div style={{ position:"relative",padding:"40px 32px 32px",background:t.dark?"rgba(0,0,0,0.4)":"rgba(0,0,0,0.02)" }}>
+        <div style={{ position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${t.borderH},transparent)` }}/>
         <div style={{ maxWidth:1160,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16 }}>
           <div>
-            <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:20,color:t.text,marginBottom:4 }}>pay<span style={{ color:t.gold }}>flow</span></div>
-            <div style={{ color:t.muted,fontSize:12 }}>Оплата зарубежных сервисов · 2026</div>
-	      <button onClick={()=>go("#legal")} style={{ background:"none", border:"none", color:t.muted, fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Оферта</button>
+            <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:22,marginBottom:5,letterSpacing:-0.5 }}>pay<span style={{ background:"linear-gradient(135deg,#fbbf24,#f97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text" }}>flow</span></div>
+            <div style={{ color:t.muted,fontSize:12,marginBottom:4 }}>Оплата зарубежных сервисов · 2026</div>
+            <button onClick={()=>go("#legal")} style={{ background:"none",border:"none",color:t.muted,fontSize:12,cursor:"pointer",padding:0,textDecoration:"underline",textUnderlineOffset:3 }}>Оферта</button>
           </div>
           <div style={{ display:"flex",gap:16,alignItems:"center",flexWrap:"wrap" }}>
             <button onClick={()=>go("#catalog")} style={{ background:"none",border:"none",color:t.muted,fontSize:13,cursor:"pointer",transition:"color 200ms" }} onMouseEnter={e=>e.currentTarget.style.color=t.text} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>Каталог</button>
