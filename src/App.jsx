@@ -1820,8 +1820,8 @@ export default function App() {
       <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 16px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .3s",overflowX:"hidden" }}>
         <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text,flexShrink:0 }}>pay<span style={{ color:t.gold }}>flow</span></div>
         <div style={{ display:"flex",gap:4,alignItems:"center",flexShrink:0,flexWrap:"nowrap" }}>
-          {/* Главная и Каталог — скрыты на мобиле через CSS */}
-          <div className="nav-page-links" style={{ display:"contents" }}>
+          {/* Главная и Каталог — скрыты на мобиле через CSS (.nav-page-links) */}
+          <div className="nav-page-links" style={{ display:"flex",gap:4 }}>
             {[["#home","Главная",<IconHome size={16} color="currentColor"/>],["#catalog","Каталог",<IconGrid size={16} color="currentColor"/>]].map(([h,l,ic]) => (
               <button key={h} onClick={()=>go(h)} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===h?t.goldDim:"transparent",border:`1px solid ${page===h?t.goldB:"transparent"}`,color:page===h?t.gold:t.sub,transition:"all .2s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:6 }}>
                 {ic}{l}
@@ -2163,7 +2163,7 @@ export default function App() {
       )}
 
       {/* Modals */}
-      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const {data,error}=await sbOrders.insert(order); if(!error&&data){ fetch("/api/tg-notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`🆕 <b>Новая заявка</b> ${data.id}\n📦 ${data.service} · ${data.tier}\n💰 ${data.price_rub?.toLocaleString("ru-RU")} ₽\n👤 ${data.user_email}`})}).catch(()=>{}); } return {data,error}; }} go={go} t={t}/>}
+      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const {data,error}=await sbOrders.insert(order); if(!error&&data){ fetch("/api/tg-notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`🆕 <b>Новая заявка</b> ${data.id}\n📦 ${data.service} · ${data.tier}\n💰 ${data.price_rub?.toLocaleString("ru-RU")} ₽\n👤 ${data.user_email}`})}).then(r=>r.json()).then(d=>{if(!d.ok)console.warn("TG:",d);}).catch(e=>console.error("TG fetch error:",e)); } return {data,error}; }} go={go} t={t}/>}
       {showAuth && <AuthModal onClose={()=>setShowAuth(false)} userHook={userHook} t={t}/>}
       {showReqSvc && <RequestServiceModal onClose={()=>setShowReqSvc(false)} user={session?.user} t={t}/>}
 
