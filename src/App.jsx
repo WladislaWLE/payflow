@@ -191,6 +191,20 @@ function useTheme() {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  HOOK: определяем мобильный экран (≤ 640px)
+// ══════════════════════════════════════════════════════════════
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const fn = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
+  }, []);
+  return isMobile;
+}
+
+// ══════════════════════════════════════════════════════════════
 //  UI PRIMITIVES
 // ══════════════════════════════════════════════════════════════
 // ─── SKELETON LOADER (progressive loading per UX skill) ─────────
@@ -588,13 +602,6 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
               {receiptFile ? `✅ ${receiptFile.name}` : "📤 Загрузить чек (необязательно)"}
             </button>
             {receiptPreview && <img src={receiptPreview} alt="preview" style={{ width:"100%", maxHeight:200, objectFit:"contain", borderRadius:10, marginTop:8, border:"1px solid rgba(255,255,255,0.1)" }}/>}
-          </div>
-
-          {/* Итог */}
-          <div style={{ background:"rgba(251,191,36,0.07)", border:"1px solid rgba(251,191,36,0.25)", borderRadius:14, padding:16, marginBottom:18 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>Курс ЦБ</span><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>1$ = {rate?.toFixed(2)} ₽</span></div>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>Комиссия {Math.round(CFG.MARGIN*100)}%</span><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>+ {comm.toLocaleString("ru-RU")} ₽</span></div>
-            <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(255,255,255,0.08)", paddingTop:12 }}><span style={{ color:"white", fontWeight:700, fontSize:15 }}>К оплате</span><span style={{ color:"#fbbf24", fontWeight:900, fontSize:26, fontFamily:"'Clash Display',sans-serif" }}>{total.toLocaleString("ru-RU")} ₽</span></div>
           </div>
 
           {/* Промокод */}
@@ -1650,6 +1657,7 @@ export default function App() {
 
   const { notifs, unread } = useNotifications(session?.user?.id);
   const { ordersCount } = usePublicStats();
+  const isMobile = useIsMobile();
 
   const page = hash.split("?")[0];
 
@@ -1786,23 +1794,23 @@ export default function App() {
       {/* NAV */}
       <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 16px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .3s",overflowX:"hidden" }}>
         <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text,flexShrink:0 }}>pay<span style={{ color:t.gold }}>flow</span></div>
-        <div style={{ display:"flex",gap:4,alignItems:"center",flexShrink:0,flexWrap:"nowrap" }}>
-          {/* Главная и Каталог — скрыты на мобиле через CSS (.nav-page-links) */}
-          <div className="nav-page-links" style={{ display:"flex",gap:4 }}>
-            {[["#home","Главная",<IconHome size={16} color="currentColor"/>],["#catalog","Каталог",<IconGrid size={16} color="currentColor"/>]].map(([h,l,ic]) => (
-              <button key={h} onClick={()=>go(h)} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===h?t.goldDim:"transparent",border:`1px solid ${page===h?t.goldB:"transparent"}`,color:page===h?t.gold:t.sub,transition:"all .2s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:6 }}>
-                {ic}{l}
-              </button>
-            ))}
-          </div>
+        <div style={{ display:"flex",gap:4,alignItems:"center",flexShrink:0 }}>
+          {/* Главная/Каталог — только на десктопе */}
+          {!isMobile && [["#home","Главная",<IconHome size={15} color="currentColor"/>],["#catalog","Каталог",<IconGrid size={15} color="currentColor"/>]].map(([h,l,ic]) => (
+            <button key={h} onClick={()=>go(h)} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===h?t.goldDim:"transparent",border:`1px solid ${page===h?t.goldB:"transparent"}`,color:page===h?t.gold:t.sub,display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap" }}>
+              {ic}{l}
+            </button>
+          ))}
           {session ? (
             <>
-              {isAdmin && <button onClick={()=>go("#admin")} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.35)",color:"#c4b5fd",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5 }}>
-                <IconSettings size={14} color="currentColor"/>
-                <span className="mob-hide">Админ</span>
-              </button>}
-              {/* Колокольчик — ведёт в кабинет, показывает непрочитанные */}
-              <button onClick={()=>go("#cabinet")} aria-label={`Кабинет${unread>0?" ("+unread+" уведомлений)":""}`} style={{ width:40,height:40,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",flexShrink:0 }}>
+              {isAdmin && (
+                <button onClick={()=>go("#admin")} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.35)",color:"#c4b5fd",display:"flex",alignItems:"center",gap:5 }}>
+                  <IconSettings size={14} color="#c4b5fd"/>
+                  {!isMobile && "Админ"}
+                </button>
+              )}
+              {/* Колокольчик → кабинет */}
+              <button onClick={()=>go("#cabinet")} style={{ width:40,height:40,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",flexShrink:0 }}>
                 <IconBell size={17} color={t.sub}/>
                 {unread > 0 && (
                   <span style={{ background:"#f87171",color:"white",borderRadius:"50%",width:15,height:15,fontSize:8,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",position:"absolute",top:-2,right:-2,boxShadow:"0 0 0 2px "+t.bg }}>
@@ -1810,20 +1818,22 @@ export default function App() {
                   </span>
                 )}
               </button>
-              {/* Кабинет — скрыт на мобиле (колокольчик уже есть) */}
-              <button className="nav-cabinet-btn" onClick={()=>go("#cabinet")} style={{ padding:"6px 10px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:4,flexShrink:0 }}>
-                <IconUser size={16} color={t.sub}/><span>{profile?.name?.split(" ")[0] || "Кабинет"}</span>
-              </button>
+              {/* Имя пользователя — только десктоп */}
+              {!isMobile && (
+                <button onClick={()=>go("#cabinet")} style={{ padding:"6px 10px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:4 }}>
+                  <IconUser size={16} color={t.sub}/>{profile?.name?.split(" ")[0] || "Кабинет"}
+                </button>
+              )}
               {/* Выйти */}
-              <button onClick={async()=>{ await userHook.logout(); go("#home"); }} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",color:"#f87171",flexShrink:0,display:"flex",alignItems:"center",gap:5 }}>
+              <button onClick={async()=>{ await userHook.logout(); go("#home"); }} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",color:"#f87171",display:"flex",alignItems:"center",gap:isMobile?0:5 }}>
                 <IconLogout size={14} color="#f87171"/>
-                <span className="mob-hide">Выйти</span>
+                {!isMobile && "Выйти"}
               </button>
             </>
           ) : (
-            <button onClick={()=>setShowAuth(true)} aria-label="Войти" style={{ padding:"7px 14px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,whiteSpace:"nowrap",minHeight:36 }}>Войти</button>
+            <button onClick={()=>setShowAuth(true)} style={{ padding:"7px 14px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,whiteSpace:"nowrap" }}>Войти</button>
           )}
-          <button onClick={toggle} aria-label={t.dark?"Светлая тема":"Тёмная тема"} style={{ width:40,height:40,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{t.dark ? <IconSun color={t.sub}/> : <IconMoon color={t.sub}/>}</button>
+          <button onClick={toggle} style={{ width:40,height:40,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{t.dark ? <IconSun color={t.sub}/> : <IconMoon color={t.sub}/>}</button>
         </div>
       </nav>
 
@@ -1858,7 +1868,7 @@ export default function App() {
 
             {mounted && <>
               {/* ASYMMETRIC HERO */}
-              <div className="hero-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,maxWidth:1100,width:"100%",alignItems:"center",textAlign:"left" }}>
+              <div className="hero-grid" style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:isMobile?28:60,maxWidth:1100,width:"100%",alignItems:"center",textAlign:"left" }}>
                 {/* Left — text */}
                 <div style={{ display:"flex",flexDirection:"column",gap:0 }}>
                   <div className="a1" style={{ display:"inline-flex",alignSelf:"flex-start",alignItems:"center",gap:8,background:t.dark?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.9)",border:`1px solid ${t.border}`,backdropFilter:"blur(12px)",borderRadius:100,padding:"8px 16px",marginBottom:28,fontSize:12,boxShadow:t.shadow }}>
@@ -1929,7 +1939,7 @@ export default function App() {
               </div>
 
               {/* Stats */}
-              <div className="a5 stats-row" style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"flex-start",marginTop:52,maxWidth:1100,width:"100%" }}>
+              <div className="a5 stats-row" style={{ display:isMobile?"grid":"flex",gridTemplateColumns:isMobile?"1fr 1fr":undefined,gap:isMobile?8:10,flexWrap:"wrap",justifyContent:"flex-start",marginTop:isMobile?28:52,maxWidth:1100,width:"100%" }}>
                 {[
                   {v:"50 ",suf:"+",l:"сервисов",ic:"🌍"},
                   {v:"10" ,suf:"%",l:"комиссия",ic:"💸"},
@@ -1958,13 +1968,13 @@ export default function App() {
               <p style={{ color:t.muted,fontSize:15 }}>Нажмите чтобы оформить заявку</p>
             </div>
             {/* Bento layout — first card big, rest normal */}
-            <div className="bento-grid" style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gridTemplateRows:"auto",gap:14 }}>
+            <div className="bento-grid" style={{ display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gridTemplateRows:"auto",gap:14 }}>
               {POPULAR.map((s,i) => {
                 const isBig = i === 0;
                 const base = rate ? Math.round(s.tiers[0].p * rate * (1+CFG.MARGIN)) : 0;
                 return (
                   <div key={s.id}
-                    style={{ gridColumn:isBig?"span 2":"span 1",gridRow:isBig?"span 2":"span 1",background:t.dark?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.85)",border:`1px solid ${t.border}`,borderRadius:isBig?22:18,padding:isBig?28:20,cursor:"pointer",transition:"transform 200ms cubic-bezier(0,0,.2,1),box-shadow 200ms,border-color 200ms",position:"relative",overflow:"hidden" }}
+                    style={{ gridColumn:isMobile?"span 1":isBig?"span 2":"span 1",gridRow:isMobile?"span 1":isBig?"span 2":"span 1",background:t.dark?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.85)",border:`1px solid ${t.border}`,borderRadius:isBig?22:18,padding:isBig?28:20,cursor:"pointer",transition:"transform 200ms cubic-bezier(0,0,.2,1),box-shadow 200ms,border-color 200ms",position:"relative",overflow:"hidden" }}
                     onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow=t.dark?"0 12px 40px rgba(251,191,36,0.12)":"0 12px 40px rgba(0,0,0,0.12)";e.currentTarget.style.borderColor=t.borderH}}
                     onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=t.border}}
                     onClick={()=>setSelSvc(s)}>
