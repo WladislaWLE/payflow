@@ -602,7 +602,7 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
             <div style={{ color:"rgba(255,255,255,0.4)", fontSize:11, marginBottom:8, textTransform:"uppercase", letterSpacing:1, fontWeight:600 }}>Промокод (необязательно)</div>
             <div style={{ display:"flex", gap:8 }}>
               <input value={promoInput} onChange={e=>{ setPromoInput(e.target.value.toUpperCase()); setPromoResult(null); setPromoError(""); }}
-                placeholder="WELCOME10"
+                placeholder="XXXXXXXX"
                 style={{ flex:1, background:"rgba(255,255,255,0.07)", border:`1px solid ${promoResult?"rgba(52,211,153,0.5)":promoError?"rgba(248,113,113,0.5)":"rgba(255,255,255,0.12)"}`, borderRadius:10, padding:"11px 14px", color:"white", fontSize:14, outline:"none", textTransform:"uppercase", letterSpacing:2 }}/>
               <button onClick={async()=>{ if(!promoInput.trim()) return; setPromoChecking(true); setPromoError(""); const r=await checkPromocode(promoInput); setPromoChecking(false); if(r.ok){setPromoResult(r);}else{setPromoError(r.error||"Промокод недействителен");setPromoResult(null);} }}
                 disabled={promoChecking || !promoInput.trim()}
@@ -1699,7 +1699,7 @@ export default function App() {
   // Отдельные страницы
   if (page === "#admin") return (
     <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Satoshi',sans-serif", color:t.text }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}input::placeholder,textarea::placeholder{opacity:.4}`}</style>
+      <style>{`*{box-sizing:border-box;margin:0;padding:0}input::placeholder,textarea::placeholder{opacity:.4}`}</style>
       <AdminPanel userHook={userHook} go={go} t={t}/>
     </div>
   );
@@ -1709,7 +1709,7 @@ export default function App() {
     if (!session) { go("#home"); return null; }
     return (
       <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Satoshi',sans-serif", color:t.text }}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}input::placeholder,textarea::placeholder{opacity:.4}`}</style>
+        <style>{`*{box-sizing:border-box;margin:0;padding:0}input::placeholder,textarea::placeholder{opacity:.4}`}</style>
         <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 28px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:t.nav,backdropFilter:"blur(20px)",borderBottom:`1px solid ${t.border}` }}>
           <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
           <div style={{ display:"flex",gap:8,alignItems:"center" }}>
@@ -1726,7 +1726,6 @@ export default function App() {
   return (
     <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Satoshi',sans-serif", color:t.text, transition:"background .3s,color .3s", overflowX:"hidden", width:"100%" }}>
       <style>{`
-        @import url('https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(251,191,36,0.4);border-radius:3px}
         input::placeholder,textarea::placeholder{opacity:.4}
@@ -1768,27 +1767,36 @@ export default function App() {
         /* ── Mobile First (UI/UX skill: mobile-first, no horizontal scroll) ── */
         @media(max-width:640px){
           html,body,#root{overflow-x:hidden!important;max-width:100dvw!important;width:100%!important}
-          /* Asymmetric hero → single column on mobile */
-          [style*="gridTemplateColumns:"1fr 1fr""]{grid-template-columns:1fr!important}
-          /* Bento grid → single col on mobile */
-          [style*="gridTemplateColumns:"repeat(3"]{grid-template-columns:1fr!important}
+          /* Hero 2-col → 1 col */
+          .hero-grid{grid-template-columns:1fr!important;gap:32px!important}
+          /* Bento grid → 1 col */
+          .bento-grid{grid-template-columns:1fr!important}
+          .bento-grid > *{grid-column:span 1!important;grid-row:span 1!important}
           /* Hide/show classes */
           .mob-hide{display:none!important}
           .mob-show{display:inline-flex!important;align-items:center}
+          /* Nav: скрываем навигационные кнопки Главная/Каталог — лого служит домом */
+          .nav-page-links{display:none!important}
+          /* Кабинет-кнопку на мобиле скрываем — есть колокольчик */
+          .nav-cabinet-btn{display:none!important}
           /* Layout */
           .mob-col{flex-direction:column!important}
           .mob-full{width:100%!important;max-width:100%!important;box-sizing:border-box!important}
           /* Typography scale - min 16px on mobile (prevents iOS zoom) */
           body{font-size:16px!important}
-          input,select,textarea{font-size:16px!important} /* Prevent iOS auto-zoom */
+          input,select,textarea{font-size:16px!important}
           h1{font-size:clamp(28px,7.5vw,52px)!important;letter-spacing:-1.5px!important;line-height:1.05!important}
           h2{font-size:clamp(22px,5.5vw,32px)!important}
-          /* Nav - compact with 44px touch targets */
-          nav{padding:0 10px!important}
-          /* Modals - full-width minus padding */
+          /* Nav - compact */
+          nav{padding:0 12px!important}
+          /* Modals - full-width */
           .modal-inner{max-width:calc(100dvw - 20px)!important;width:calc(100dvw - 20px)!important;padding:20px!important}
           /* Cards grid - single column */
-          .card-grid,[class*="grid"]{grid-template-columns:1fr!important}
+          .card-grid{grid-template-columns:1fr!important}
+          /* Hero padding */
+          .hero-section{padding:80px 16px 48px!important}
+          /* Stats row: 2x2 grid */
+          .stats-row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:32px!important}
           /* Spacing */
           .mob-pad-sm{padding:76px 14px 40px!important}
         }
@@ -1812,21 +1820,22 @@ export default function App() {
       <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:"0 16px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:scrolled?t.nav:"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${t.border}`:"none",transition:"all .3s",overflowX:"hidden" }}>
         <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",letterSpacing:-.5,color:t.text,flexShrink:0 }}>pay<span style={{ color:t.gold }}>flow</span></div>
         <div style={{ display:"flex",gap:4,alignItems:"center",flexShrink:0,flexWrap:"nowrap" }}>
-          {/* Главная и Каталог — скрываем текст на мобиле */}
-          {[["#home","🏠","Главная"],["#catalog","🔍","Каталог"]].map(([h,ic,l]) => (
-            <button key={h} onClick={()=>go(h)} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===h?t.goldDim:"transparent",border:`1px solid ${page===h?t.goldB:"transparent"}`,color:page===h?t.gold:t.sub,transition:"all .2s",whiteSpace:"nowrap" }}>
-              <span className="mob-hide">{l}</span>
-              <span className="mob-show" style={{display:"flex",alignItems:"center"}}>{h==="#home"?<IconHome size={16} color="currentColor"/>:<IconGrid size={16} color="currentColor"/>}</span>
-            </button>
-          ))}
+          {/* Главная и Каталог — скрыты на мобиле через CSS */}
+          <div className="nav-page-links" style={{ display:"contents" }}>
+            {[["#home","Главная",<IconHome size={16} color="currentColor"/>],["#catalog","Каталог",<IconGrid size={16} color="currentColor"/>]].map(([h,l,ic]) => (
+              <button key={h} onClick={()=>go(h)} style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:page===h?t.goldDim:"transparent",border:`1px solid ${page===h?t.goldB:"transparent"}`,color:page===h?t.gold:t.sub,transition:"all .2s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:6 }}>
+                {ic}{l}
+              </button>
+            ))}
+          </div>
           {session ? (
             <>
-              {isAdmin && <button onClick={()=>go("#admin")} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.35)",color:"#c4b5fd",whiteSpace:"nowrap" }}>
-                <span className="mob-hide" style={{display:"flex",alignItems:"center",gap:5}}><IconSettings size={14} color="currentColor"/> Админ</span>
-                <span className="mob-show" style={{display:"flex"}}><IconSettings size={16} color="currentColor"/></span>
+              {isAdmin && <button onClick={()=>go("#admin")} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.35)",color:"#c4b5fd",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5 }}>
+                <IconSettings size={14} color="currentColor"/>
+                <span className="mob-hide">Админ</span>
               </button>}
-              {/* Колокольчик */}
-              <button onClick={()=>go("#cabinet")} aria-label={`Уведомления${unread>0?" ("+unread+" непрочитанных)":""}`} style={{ width:44,height:44,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",flexShrink:0 }}>
+              {/* Колокольчик — ведёт в кабинет, показывает непрочитанные */}
+              <button onClick={()=>go("#cabinet")} aria-label={`Кабинет${unread>0?" ("+unread+" уведомлений)":""}`} style={{ width:40,height:40,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",flexShrink:0 }}>
                 <IconBell size={17} color={t.sub}/>
                 {unread > 0 && (
                   <span style={{ background:"#f87171",color:"white",borderRadius:"50%",width:15,height:15,fontSize:8,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",position:"absolute",top:-2,right:-2,boxShadow:"0 0 0 2px "+t.bg }}>
@@ -1834,20 +1843,20 @@ export default function App() {
                   </span>
                 )}
               </button>
-              {/* Кабинет */}
-              <button onClick={()=>go("#cabinet")} style={{ padding:"6px 10px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:4,flexShrink:0 }}>
-                <IconUser size={16} color={t.sub}/><span className="mob-hide" style={{ marginLeft:2 }}>{profile?.name?.split(" ")[0] || ""}</span>
+              {/* Кабинет — скрыт на мобиле (колокольчик уже есть) */}
+              <button className="nav-cabinet-btn" onClick={()=>go("#cabinet")} style={{ padding:"6px 10px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:4,flexShrink:0 }}>
+                <IconUser size={16} color={t.sub}/><span>{profile?.name?.split(" ")[0] || "Кабинет"}</span>
               </button>
               {/* Выйти */}
-              <button onClick={async()=>{ await userHook.logout(); go("#home"); }} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",color:"#f87171",flexShrink:0 }}>
-                <span className="mob-hide" style={{display:"flex",alignItems:"center",gap:5}}><IconLogout size={14} color="#f87171"/> Выйти</span>
-                <span className="mob-show" style={{display:"flex"}}><IconLogout size={16} color="#f87171"/></span>
+              <button onClick={async()=>{ await userHook.logout(); go("#home"); }} style={{ padding:"6px 10px",borderRadius:100,fontSize:12,fontWeight:600,cursor:"pointer",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",color:"#f87171",flexShrink:0,display:"flex",alignItems:"center",gap:5 }}>
+                <IconLogout size={14} color="#f87171"/>
+                <span className="mob-hide">Выйти</span>
               </button>
             </>
           ) : (
-            <button onClick={()=>setShowAuth(true)} aria-label="Войти в аккаунт" style={{ padding:"7px 12px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,whiteSpace:"nowrap",minHeight:36 }}>Войти</button>
+            <button onClick={()=>setShowAuth(true)} aria-label="Войти" style={{ padding:"7px 14px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,whiteSpace:"nowrap",minHeight:36 }}>Войти</button>
           )}
-          <button onClick={toggle} aria-label={t.dark?"Переключить на светлую тему":"Переключить на тёмную тему"} style={{ width:44,height:44,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{t.dark ? <IconSun color={t.sub}/> : <IconMoon color={t.sub}/>}</button>
+          <button onClick={toggle} aria-label={t.dark?"Светлая тема":"Тёмная тема"} style={{ width:40,height:40,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{t.dark ? <IconSun color={t.sub}/> : <IconMoon color={t.sub}/>}</button>
         </div>
       </nav>
 
@@ -1855,7 +1864,7 @@ export default function App() {
       {page==="#home" && (
         <div>
           {/* HERO */}
-          <div style={{ position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"90px 32px 60px",overflow:"hidden",width:"100%",boxSizing:"border-box" }}>
+          <div className="hero-section" style={{ position:"relative",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"90px 32px 60px",overflow:"hidden",width:"100%",boxSizing:"border-box" }}>
             <div style={{ position:"absolute",inset:0,pointerEvents:"none",overflow:"hidden" }}>
               {/* Gradient mesh orbs */}
               <div style={{ position:"absolute",top:"-10%",left:"-5%",width:700,height:700,borderRadius:"50%",background:t.dark?"radial-gradient(circle,rgba(251,191,36,0.09) 0%,transparent 65%)":"radial-gradient(circle,rgba(217,119,6,0.07) 0%,transparent 65%)",animation:"meshFloat1 12s ease-in-out infinite",filter:"blur(40px)" }}/>
@@ -1882,7 +1891,7 @@ export default function App() {
 
             {mounted && <>
               {/* ASYMMETRIC HERO */}
-              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,maxWidth:1100,width:"100%",alignItems:"center",textAlign:"left" }}>
+              <div className="hero-grid" style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,maxWidth:1100,width:"100%",alignItems:"center",textAlign:"left" }}>
                 {/* Left — text */}
                 <div style={{ display:"flex",flexDirection:"column",gap:0 }}>
                   <div className="a1" style={{ display:"inline-flex",alignSelf:"flex-start",alignItems:"center",gap:8,background:t.dark?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.9)",border:`1px solid ${t.border}`,backdropFilter:"blur(12px)",borderRadius:100,padding:"8px 16px",marginBottom:28,fontSize:12,boxShadow:t.shadow }}>
@@ -1953,8 +1962,7 @@ export default function App() {
               </div>
 
               {/* Stats */}
-              <div className="a5" style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"flex-start",marginTop:52,maxWidth:1100,width:"100%" }}>
-              <style>{`@media(max-width:640px){.stats-row{justify-content:center!important;margin-top:36px!important}}`}</style>
+              <div className="a5 stats-row" style={{ display:"flex",gap:10,flexWrap:"wrap",justifyContent:"flex-start",marginTop:52,maxWidth:1100,width:"100%" }}>
                 {[
                   {v:"50 ",suf:"+",l:"сервисов",ic:"🌍"},
                   {v:"10" ,suf:"%",l:"комиссия",ic:"💸"},
@@ -1983,7 +1991,7 @@ export default function App() {
               <p style={{ color:t.muted,fontSize:15 }}>Нажмите чтобы оформить заявку</p>
             </div>
             {/* Bento layout — first card big, rest normal */}
-            <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gridTemplateRows:"auto",gap:14 }}>
+            <div className="bento-grid" style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gridTemplateRows:"auto",gap:14 }}>
               {POPULAR.map((s,i) => {
                 const isBig = i === 0;
                 const base = rate ? Math.round(s.tiers[0].p * rate * (1+CFG.MARGIN)) : 0;
