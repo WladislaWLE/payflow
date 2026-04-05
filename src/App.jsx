@@ -1754,51 +1754,18 @@ export default function App() {
         .cta-primary::before{content:"";position:absolute;inset:-2px;borderRadius:inherit;background:linear-gradient(270deg,#f59e0b,#fde68a,#fbbf24,#f97316,#fbbf24);backgroundSize:300% 300%;animation:borderFlow 3s ease infinite;zIndex:-1;filter:blur(6px);opacity:.7}
         /* Magnetic button */
         .btn-magnetic{transition:transform 200ms cubic-bezier(0,0,.2,1)!important}
-        /* Bento cards */
+        /* Bento cards (мобильные overrides — в index.css) */
         .bento-lg{grid-column:span 2;grid-row:span 2}
         .bento-md{grid-column:span 1;grid-row:span 2}
-        @media(max-width:640px){.bento-lg,.bento-md{grid-column:span 1!important;grid-row:span 1!important}}
         .a1{animation:fadeUp .7s ease forwards}
         .a2{animation:fadeUp .7s .1s ease forwards;opacity:0}
         .a3{animation:fadeUp .7s .2s ease forwards;opacity:0}
         .a4{animation:fadeUp .7s .3s ease forwards;opacity:0}
         .a5{animation:fadeUp .7s .4s ease forwards;opacity:0}
         .cg:hover .ci{opacity:.55}.ci{transition:all .25s!important}.cg .ci:hover{opacity:1!important;transform:translateY(-4px)!important}
-        /* ── Mobile First (UI/UX skill: mobile-first, no horizontal scroll) ── */
+        /* Мобильные стили вынесены в index.css (загружаются до JS) */
         @media(max-width:640px){
-          html,body,#root{overflow-x:hidden!important;max-width:100dvw!important;width:100%!important}
-          /* Hero 2-col → 1 col */
-          .hero-grid{grid-template-columns:1fr!important;gap:32px!important}
-          /* Bento grid → 1 col */
-          .bento-grid{grid-template-columns:1fr!important}
-          .bento-grid > *{grid-column:span 1!important;grid-row:span 1!important}
-          /* Hide/show classes */
-          .mob-hide{display:none!important}
           .mob-show{display:inline-flex!important;align-items:center}
-          /* Nav: скрываем навигационные кнопки Главная/Каталог — лого служит домом */
-          .nav-page-links{display:none!important}
-          /* Кабинет-кнопку на мобиле скрываем — есть колокольчик */
-          .nav-cabinet-btn{display:none!important}
-          /* Layout */
-          .mob-col{flex-direction:column!important}
-          .mob-full{width:100%!important;max-width:100%!important;box-sizing:border-box!important}
-          /* Typography scale - min 16px on mobile (prevents iOS zoom) */
-          body{font-size:16px!important}
-          input,select,textarea{font-size:16px!important}
-          h1{font-size:clamp(28px,7.5vw,52px)!important;letter-spacing:-1.5px!important;line-height:1.05!important}
-          h2{font-size:clamp(22px,5.5vw,32px)!important}
-          /* Nav - compact */
-          nav{padding:0 12px!important}
-          /* Modals - full-width */
-          .modal-inner{max-width:calc(100dvw - 20px)!important;width:calc(100dvw - 20px)!important;padding:20px!important}
-          /* Cards grid - single column */
-          .card-grid{grid-template-columns:1fr!important}
-          /* Hero padding */
-          .hero-section{padding:80px 16px 48px!important}
-          /* Stats row: 2x2 grid */
-          .stats-row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:32px!important}
-          /* Spacing */
-          .mob-pad-sm{padding:76px 14px 40px!important}
         }
         @media(min-width:641px){
           .mob-show{display:none!important}
