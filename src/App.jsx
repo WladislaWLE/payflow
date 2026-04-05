@@ -291,6 +291,21 @@ function useUser() {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  HOOK: публичная статистика
+// ══════════════════════════════════════════════════════════════
+function usePublicStats() {
+  const [ordersCount, setOrdersCount] = useState(null);
+  useEffect(() => {
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "done")
+      .then(({ count }) => setOrdersCount(count || 0));
+  }, []);
+  return { ordersCount };
+}
+
+// ══════════════════════════════════════════════════════════════
 //  HOOK: уведомления
 // ══════════════════════════════════════════════════════════════
 function useNotifications(userId) {
@@ -1006,6 +1021,8 @@ function AdminPanel({ userHook, go, t }) {
   const [saving, setSaving] = useState(null);
   const [adminTab, setAdminTab] = useState("orders");
   const [promos, setPromos] = useState([]);
+  const [serviceReqs, setServiceReqs] = useState([]);
+  const [serviceReqsLoading, setServiceReqsLoading] = useState(false);
   const [manualRate, setManualRate] = useState("");
   const [manualRateEnabled, setManualRateEnabled] = useState(false);
   const [rateSaving, setRateSaving] = useState(false);
@@ -1019,6 +1036,11 @@ function AdminPanel({ userHook, go, t }) {
     if (isAdmin && adminTab === "promos") {
       setPromoLoading(true);
       getPromocodes().then(d => { setPromos(d); setPromoLoading(false); });
+    }
+    if (isAdmin && adminTab === "requests") {
+      setServiceReqsLoading(true);
+      supabase.from("service_requests").select("*").order("created_at", { ascending: false })
+        .then(({ data }) => { setServiceReqs(data || []); setServiceReqsLoading(false); });
     }
     if (isAdmin && adminTab === "settings" && !rateLoaded) {
       setRateLoaded(true);
@@ -1141,10 +1163,11 @@ function AdminPanel({ userHook, go, t }) {
 
         {/* Admin tabs */}
         <div style={{ display:"flex", gap:8, marginBottom:24, flexWrap:"wrap" }}>
-          {[["orders","Заявки","📋"],["promos","Промокоды","🎁"],["settings","Настройки","⚙️"]].map(([id,label,icon]) => (
+          {[["orders","Заявки","📋"],["promos","Промокоды","🎁"],["requests","Запросы","💡"],["settings","Настройки","⚙️"]].map(([id,label,icon]) => (
             <button key={id} onClick={()=>setAdminTab(id)} style={{ padding:"9px 20px", borderRadius:100, fontSize:13, fontWeight:600, cursor:"pointer", background:adminTab===id?t.goldDim:t.card, border:`1px solid ${adminTab===id?t.goldB:t.border}`, color:adminTab===id?t.gold:t.sub }}>
               {icon} {label}
               {id==="orders" && <span style={{ marginLeft:6, opacity:.6, fontSize:11 }}>({orders.length})</span>}
+              {id==="requests" && serviceReqs.filter(r=>r.status==="pending").length > 0 && <span style={{ marginLeft:6, background:"#f87171", color:"white", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center" }}>{serviceReqs.filter(r=>r.status==="pending").length}</span>}
             </button>
           ))}
         </div>
@@ -1312,6 +1335,53 @@ function AdminPanel({ userHook, go, t }) {
           </div>
         )}
 
+        {/* REQUESTS TAB */}
+        {adminTab === "requests" && (
+          <div>
+            <div style={{ marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ color:t.sub, fontSize:14 }}>Запросы пользователей на добавление новых сервисов</div>
+              <div style={{ color:t.muted, fontSize:12 }}>{serviceReqs.length} запросов</div>
+            </div>
+            {serviceReqsLoading
+              ? <div style={{ textAlign:"center", padding:40, color:t.muted }}>Загрузка...</div>
+              : serviceReqs.length === 0
+                ? <div style={{ textAlign:"center", padding:"60px 0", color:t.muted }}><div style={{ fontSize:40, marginBottom:12 }}>💡</div>Запросов пока нет</div>
+                : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {serviceReqs.map(req => (
+                      <div key={req.id} style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:14, padding:18 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+                          <div style={{ flex:1 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                              <span style={{ fontWeight:700, fontSize:15, color:t.text }}>{req.service_name}</span>
+                              <span style={{ fontSize:11, padding:"2px 8px", borderRadius:100, background:req.status==="pending"?"rgba(251,191,36,0.15)":req.status==="added"?"rgba(52,211,153,0.15)":"rgba(128,128,128,0.1)", border:`1px solid ${req.status==="pending"?"rgba(251,191,36,0.4)":req.status==="added"?"rgba(52,211,153,0.4)":"rgba(128,128,128,0.2)"}`, color:req.status==="pending"?t.gold:req.status==="added"?"#6ee7b7":t.muted, fontWeight:600 }}>
+                                {req.status==="pending"?"На рассмотрении":req.status==="added"?"Добавлен":req.status==="reviewing"?"В работе":"Отклонён"}
+                              </span>
+                            </div>
+                            {req.service_url && <div style={{ color:t.muted, fontSize:12, marginBottom:4 }}>🔗 {req.service_url}</div>}
+                            {req.comment && <div style={{ color:t.sub, fontSize:13, marginBottom:4 }}>{req.comment}</div>}
+                            <div style={{ color:t.muted, fontSize:11 }}>{req.user_email} · {new Date(req.created_at).toLocaleDateString("ru-RU")}</div>
+                          </div>
+                          <select
+                            value={req.status}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value;
+                              await supabase.from("service_requests").update({ status: newStatus }).eq("id", req.id);
+                              setServiceReqs(prev => prev.map(r => r.id === req.id ? { ...r, status: newStatus } : r));
+                            }}
+                            style={{ padding:"6px 10px", borderRadius:8, background:t.inp, border:`1px solid ${t.border}`, color:t.text, fontSize:12, cursor:"pointer" }}>
+                            <option value="pending">На рассмотрении</option>
+                            <option value="reviewing">В работе</option>
+                            <option value="added">Добавлен</option>
+                            <option value="declined">Отклонён</option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+            }
+          </div>
+        )}
+
         {adminTab === "orders" && <>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Поиск по ID, сервису или email" style={{ ...inp, width:"100%", marginBottom:12 }}/>
         <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:20 }}>
@@ -1455,6 +1525,109 @@ function Calculator({ rate, rateDate, rateLoading, t }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  REQUEST SERVICE MODAL
+// ══════════════════════════════════════════════════════════════
+function RequestServiceModal({ onClose, user, t }) {
+  const [name, setName] = useState("");
+  const [url, setUrl]   = useState("");
+  const [comment, setComment] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr]   = useState("");
+
+  const submit = async () => {
+    if (!name.trim()) { setErr("Укажите название сервиса"); return; }
+    setLoading(true);
+    setErr("");
+    const { error } = await supabase.from("service_requests").insert({
+      user_id:      user?.id || null,
+      user_email:   user?.email || null,
+      service_name: name.trim(),
+      service_url:  url.trim() || null,
+      comment:      comment.trim() || null,
+    });
+    setLoading(false);
+    if (error) { setErr("Ошибка: " + error.message); return; }
+    setDone(true);
+  };
+
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(12px)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }} onClick={onClose}>
+      <div className="modal-inner" style={{ background:t.dark?"#12121f":"#ffffff",border:`1px solid ${t.border}`,borderRadius:24,padding:28,maxWidth:480,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,0.5)" }} onClick={e=>e.stopPropagation()}>
+        {done ? (
+          <div style={{ textAlign:"center",padding:"16px 0" }}>
+            <div style={{ fontSize:48,marginBottom:16 }}>✅</div>
+            <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:20,color:t.text,marginBottom:8 }}>Запрос отправлен!</div>
+            <div style={{ color:t.sub,fontSize:14,marginBottom:24,lineHeight:1.6 }}>Мы рассмотрим его и добавим сервис в каталог.</div>
+            <button onClick={onClose} style={{ padding:"12px 28px",borderRadius:12,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:14,cursor:"pointer" }}>Отлично</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
+              <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:20,color:t.text }}>💡 Запросить сервис</div>
+              <button onClick={onClose} style={{ background:"none",border:"none",cursor:"pointer",color:t.muted,fontSize:20,lineHeight:1 }}>×</button>
+            </div>
+            <div style={{ color:t.sub,fontSize:13,marginBottom:20 }}>Не нашли нужный сервис? Оставьте запрос — мы добавим его в каталог.</div>
+            {err && <Alert type="error" t={t}>{err}</Alert>}
+            <div style={{ marginBottom:12 }}>
+              <FieldLabel t={t}>Название сервиса *</FieldLabel>
+              <input value={name} onChange={e=>setName(e.target.value)} placeholder="Например: Notion AI" style={{ width:"100%",background:t.inp,border:`1px solid ${t.border}`,borderRadius:10,padding:"12px 14px",color:t.text,fontSize:14,outline:"none",boxSizing:"border-box" }}/>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <FieldLabel t={t}>Ссылка на сайт (необязательно)</FieldLabel>
+              <input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://notion.so" style={{ width:"100%",background:t.inp,border:`1px solid ${t.border}`,borderRadius:10,padding:"12px 14px",color:t.text,fontSize:14,outline:"none",boxSizing:"border-box" }}/>
+            </div>
+            <div style={{ marginBottom:20 }}>
+              <FieldLabel t={t}>Комментарий (необязательно)</FieldLabel>
+              <textarea value={comment} onChange={e=>setComment(e.target.value)} placeholder="Какой тариф нужен? Для чего используете?" rows={3} style={{ width:"100%",background:t.inp,border:`1px solid ${t.border}`,borderRadius:10,padding:"12px 14px",color:t.text,fontSize:14,outline:"none",resize:"vertical",boxSizing:"border-box" }}/>
+            </div>
+            <button onClick={submit} disabled={loading||!name.trim()} style={{ width:"100%",padding:"14px",borderRadius:12,background:loading||!name.trim()?"rgba(251,191,36,0.3)":"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:15,cursor:loading||!name.trim()?"not-allowed":"pointer" }}>
+              {loading ? "Отправляем..." : "Отправить запрос"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FAQ SECTION
+// ══════════════════════════════════════════════════════════════
+function FaqSection({ t }) {
+  const [open, setOpen] = useState(null);
+  const items = [
+    {q:"Как оплатить ChatGPT Plus в России?",a:"Выберите ChatGPT Plus в каталоге, оформите заявку и оплатите в рублях через СБП или перевод на карту. Активируем в течение 1 часа в рабочее время."},
+    {q:"Безопасно ли передавать данные от аккаунта?",a:"Да. Данные хранятся в вашем личном кабинете и не передаются третьим лицам. При наличии 2FA можно выбрать активацию через подарочный код или добавление в семейный план."},
+    {q:"Сколько ждать активации?",a:"В рабочее время — до 1 часа. В ночное время или выходные — до 24 часов. После активации придёт уведомление в кабинете."},
+    {q:"Можно ли оплатить без регистрации?",a:"Нет. Регистрация нужна для отслеживания статуса заказа и хранения данных доступа в личном кабинете."},
+    {q:"Что делать, если включена двухфакторная аутентификация (2FA)?",a:"Для сервисов с 2FA активируем через подарочный код (gift card) или добавление в семейный/командный план — без доступа к вашему аккаунту."},
+    {q:"Какие банки поддерживаются для оплаты?",a:"Принимаем оплату через СБП и переводом на карту. Поддерживаются Тинькофф, Сбербанк, ВТБ и большинство российских банков."},
+  ];
+  return (
+    <div style={{ padding:"0 24px 100px",maxWidth:740,margin:"0 auto" }}>
+      <div style={{ textAlign:"center",marginBottom:36 }}>
+        <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>FAQ</div>
+        <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:30,color:t.text }}>Частые вопросы</h2>
+      </div>
+      <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+        {items.map((item,i)=>(
+          <div key={i} style={{ background:t.card2,border:`1px solid ${open===i?t.borderH:t.border}`,borderRadius:14,overflow:"hidden",transition:"border-color 200ms" }}>
+            <button onClick={()=>setOpen(open===i?null:i)} style={{ width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px",background:"none",border:"none",color:t.text,cursor:"pointer",textAlign:"left",gap:12 }}>
+              <span style={{ fontWeight:600,fontSize:14,lineHeight:1.4 }}>{item.q}</span>
+              <span style={{ flexShrink:0,color:t.gold,transform:open===i?"rotate(180deg)":"none",transition:"transform 200ms",display:"inline-block" }}><IconChevronDown size={16} color={t.gold}/></span>
+            </button>
+            {open===i && (
+              <div style={{ padding:"0 20px 18px",color:t.sub,fontSize:14,lineHeight:1.65 }}>{item.a}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
 //  MAIN APP
 // ══════════════════════════════════════════════════════════════
 export default function App() {
@@ -1471,10 +1644,12 @@ export default function App() {
   const [cat, setCat]                 = useState("Все");
   const [selSvc, setSelSvc]           = useState(null);
   const [showAuth, setShowAuth]       = useState(false);
+  const [showReqSvc, setShowReqSvc]   = useState(false);
   const [mounted, setMounted]         = useState(false);
   const howRef = useRef(null);
 
   const { notifs, unread } = useNotifications(session?.user?.id);
+  const { ordersCount } = usePublicStats();
 
   const page = hash.split("?")[0];
 
@@ -1783,7 +1958,7 @@ export default function App() {
                 {[
                   {v:"50 ",suf:"+",l:"сервисов",ic:"🌍"},
                   {v:"10" ,suf:"%",l:"комиссия",ic:"💸"},
-                  {v:"0  ",suf:" скрытых",l:"доплат",ic:"✅"},
+                  {v:ordersCount !== null ? String(ordersCount) : "...", suf:"+",l:"заявок выполнено",ic:"✅"},
                   {v:"1 ",suf:" час",l:"среднее время",ic:"⚡"}
                 ].map(({v,suf,l,ic},i)=>(
                   <div key={l} className={`stagger-${i+2}`} style={{ textAlign:"center",background:t.dark?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.9)",border:`1px solid ${t.border}`,borderRadius:18,padding:"18px 24px",backdropFilter:"blur(12px)",boxShadow:t.shadow,transition:"transform 200ms cubic-bezier(0,0,.2,1),box-shadow 200ms" }}
@@ -1885,6 +2060,60 @@ export default function App() {
               ))}
             </div>
           </div>
+
+          {/* TRUST BADGES */}
+          <div style={{ padding:"0 24px 80px",maxWidth:940,margin:"0 auto" }}>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:14 }}>
+              {[
+                {icon:"📊",title:"Курс ЦБ РФ",desc:"Конвертируем по официальному курсу без накрутки на курс"},
+                {icon:"⚡",title:"Оплата по СБП",desc:"Мгновенный перевод через систему быстрых платежей"},
+                {icon:"🔐",title:"Данные в кабинете",desc:"Доступ к сервису появляется в личном кабинете, не в Telegram"},
+                {icon:"🛡️",title:"Возврат за 24 часа",desc:"Если не активировали — полный возврат средств"},
+              ].map((b,i)=>(
+                <div key={i} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:18,padding:"22px 20px",display:"flex",alignItems:"flex-start",gap:14 }}>
+                  <div style={{ width:42,height:42,borderRadius:12,background:t.goldDim,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>{b.icon}</div>
+                  <div>
+                    <div style={{ fontWeight:700,fontSize:14,color:t.text,marginBottom:4 }}>{b.title}</div>
+                    <div style={{ color:t.sub,fontSize:13,lineHeight:1.55 }}>{b.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* REVIEWS */}
+          <div style={{ padding:"0 24px 80px",maxWidth:940,margin:"0 auto" }}>
+            <div style={{ textAlign:"center",marginBottom:36 }}>
+              <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Отзывы</div>
+              <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:30,color:t.text }}>Что говорят пользователи</h2>
+            </div>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14 }}>
+              {[
+                {name:"Алексей М.",svc:"ChatGPT Plus",rating:5,text:"Оформил за 20 минут, всё чётко. Уже 3-й раз покупаю — каждый раз быстро и без проблем.",date:"март 2026"},
+                {name:"Дарья К.",svc:"Midjourney",rating:5,text:"Искала где купить Midjourney в России — нашла здесь. Активировали за полчаса, всё работает.",date:"март 2026"},
+                {name:"Игорь В.",svc:"Cursor Pro",rating:5,text:"Удобно, что цена сразу в рублях. Оплатил по СБП, через 40 минут пришли данные в кабинет.",date:"апрель 2026"},
+              ].map((r,i)=>(
+                <div key={i} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:18,padding:"22px 20px" }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12 }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                      <div style={{ width:36,height:36,borderRadius:"50%",background:`linear-gradient(135deg,${t.gold},#f97316)`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:"#0a0a14",flexShrink:0 }}>{r.name[0]}</div>
+                      <div>
+                        <div style={{ fontWeight:700,fontSize:13,color:t.text }}>{r.name}</div>
+                        <div style={{ color:t.muted,fontSize:11 }}>{r.svc}</div>
+                      </div>
+                    </div>
+                    <div style={{ color:t.gold,fontSize:13,letterSpacing:1 }}>{"★".repeat(r.rating)}</div>
+                  </div>
+                  <p style={{ color:t.sub,fontSize:13,lineHeight:1.65,marginBottom:10 }}>{r.text}</p>
+                  <div style={{ color:t.muted,fontSize:11 }}>{r.date}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* FAQ */}
+          <FaqSection t={t}/>
+
         </div>
       )}
 
@@ -1911,12 +2140,24 @@ export default function App() {
             {filteredSvc.map(s=><div key={s.id} className="ci"><SCard s={s} rate={rate} onSelect={setSelSvc} t={t}/></div>)}
           </div>
           {filteredSvc.length===0 && <div style={{ textAlign:"center",padding:"80px 0",color:t.muted }}><div style={{ fontSize:48,marginBottom:12 }}>🔍</div>Ничего не найдено</div>}
+
+          {/* Баннер запроса сервиса */}
+          <div style={{ marginTop:40,background:t.dark?"rgba(251,191,36,0.06)":"rgba(251,191,36,0.08)",border:`1px solid ${t.goldB}`,borderRadius:18,padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap" }}>
+            <div>
+              <div style={{ fontWeight:700,fontSize:15,color:t.text,marginBottom:4 }}>Не нашли нужный сервис?</div>
+              <div style={{ color:t.sub,fontSize:13 }}>Оставьте запрос — добавим в каталог в течение нескольких дней.</div>
+            </div>
+            <button onClick={()=>session?setShowReqSvc(true):setShowAuth(true)} style={{ padding:"11px 22px",borderRadius:12,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:13,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0 }}>
+              💡 Запросить сервис
+            </button>
+          </div>
         </div>
       )}
 
       {/* Modals */}
-      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const {data,error}=await sbOrders.insert(order); return {data,error}; }} go={go} t={t}/>}
+      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const {data,error}=await sbOrders.insert(order); if(!error&&data){ fetch("/api/tg-notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`🆕 <b>Новая заявка</b> ${data.id}\n📦 ${data.service} · ${data.tier}\n💰 ${data.price_rub?.toLocaleString("ru-RU")} ₽\n👤 ${data.user_email}`})}).catch(()=>{}); } return {data,error}; }} go={go} t={t}/>}
       {showAuth && <AuthModal onClose={()=>setShowAuth(false)} userHook={userHook} t={t}/>}
+      {showReqSvc && <RequestServiceModal onClose={()=>setShowReqSvc(false)} user={session?.user} t={t}/>}
 
       {/* Footer */}
       <div style={{ borderTop:`1px solid ${t.border}`,padding:"32px",background:t.dark?"rgba(0,0,0,0.3)":"rgba(0,0,0,0.02)" }}>
