@@ -75,12 +75,11 @@ const IconRefund   = ({size=20,color="currentColor"}) => <svg width={size} heigh
 //  КОНФИГ
 // ══════════════════════════════════════════════════════════════
 const CFG = {
-  MARGIN:       0.10,
+  MARGIN:       0.15,
   ADMIN_EMAIL:  "admin@payflow.ru",   // ← замени на свой email
   REQUISITES: [
-    { label:"Тинькофф", sbp:"+7 (900) 000-00-00", card:"2200 0000 0000 0001", holder:"Иван И." },
-    { label:"Сбербанк",  sbp:"+7 (900) 000-00-01", card:"2202 0000 0000 0002", holder:"Иван И." },
-    { label:"ВТБ",       sbp:"+7 (900) 000-00-02", card:"2200 0000 0000 0003", holder:"Иван И." },
+    { label:"ВТБ", sbp:"+7 (904) 116-35-62", card:"2200 2414 2610 8027", holder:"Александр В." },
+    { label:"МТС Деньги",  sbp:"+7 (950) 136-52-14", card:"2203 8303 2362 4420", holder:"Владислав Л." },
   ],
 };
 
@@ -621,11 +620,11 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
             <div style={{ display:"flex", gap:8 }}>
               <input value={promoInput} onChange={e=>{ setPromoInput(e.target.value.toUpperCase()); setPromoResult(null); setPromoError(""); }}
                 placeholder="XXXXXXXX"
-                style={{ flex:1, background:"rgba(255,255,255,0.07)", border:`1px solid ${promoResult?"rgba(52,211,153,0.5)":promoError?"rgba(248,113,113,0.5)":"rgba(255,255,255,0.12)"}`, borderRadius:10, padding:"11px 14px", color:"white", fontSize:14, outline:"none", textTransform:"uppercase", letterSpacing:2 }}/>
+                style={{ flex:1, minWidth:0, background:"rgba(255,255,255,0.07)", border:`1px solid ${promoResult?"rgba(52,211,153,0.5)":promoError?"rgba(248,113,113,0.5)":"rgba(255,255,255,0.12)"}`, borderRadius:10, padding:"11px 14px", color:"white", fontSize:14, outline:"none", textTransform:"uppercase", letterSpacing:2 }}/>
               <button onClick={async()=>{ if(!promoInput.trim()) return; setPromoChecking(true); setPromoError(""); const r=await checkPromocode(promoInput); setPromoChecking(false); if(r.ok){setPromoResult(r);}else{setPromoError(r.error||"Промокод недействителен");setPromoResult(null);} }}
                 disabled={promoChecking || !promoInput.trim()}
-                style={{ padding:"11px 16px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.7)", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap" }}>
-                {promoChecking ? "..." : "Применить"}
+                style={{ padding:"11px 14px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.7)", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", flexShrink:0 }}>
+                {promoChecking ? "..." : "OK →"}
               </button>
             </div>
             {promoResult && <div style={{ color:"#6ee7b7", fontSize:12, marginTop:5 }}>✅ Скидка: {promoResult.type==="percent"?promoResult.value+"%":promoResult.type==="fixed"?promoResult.value+"₽":"комиссия снята"}</div>}
@@ -1347,7 +1346,7 @@ function AdminPanel({ userHook, go, t }) {
             <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:24 }}>
               <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:700, fontSize:18, color:t.text, marginBottom:6 }}>💸 Комиссия</div>
               <div style={{ color:t.sub, fontSize:13, lineHeight:1.6, marginBottom:12 }}>
-                Текущая комиссия задана в коде: <strong style={{ color:t.gold }}>10%</strong>. Чтобы изменить — поправь константу <code style={{ background:t.inp, padding:"2px 6px", borderRadius:4, fontSize:12 }}>CFG.MARGIN</code> в файле <code style={{ background:t.inp, padding:"2px 6px", borderRadius:4, fontSize:12 }}>src/App.jsx</code>.
+                Текущая комиссия задана в коде: <strong style={{ color:t.gold }}>15%</strong>. Чтобы изменить — поправь константу <code style={{ background:t.inp, padding:"2px 6px", borderRadius:4, fontSize:12 }}>CFG.MARGIN</code> в файле <code style={{ background:t.inp, padding:"2px 6px", borderRadius:4, fontSize:12 }}>src/App.jsx</code>.
               </div>
             </div>
           </div>
@@ -1458,6 +1457,19 @@ function AdminPanel({ userHook, go, t }) {
                             ))}
                           </div>
                         </div>
+
+                        {/* Чек клиента */}
+                        {o.receipt_url ? (
+                          <div style={{ marginBottom:16 }}>
+                            <button onClick={()=>openReceipt(o)} style={{ display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:10,background:"rgba(52,211,153,0.12)",border:"1px solid rgba(52,211,153,0.3)",color:"#6ee7b7",cursor:"pointer",fontSize:13,fontWeight:600 }}>
+                              <IconDownload size={14} color="#6ee7b7"/>Посмотреть чек клиента
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(248,113,113,0.07)",border:"1px solid rgba(248,113,113,0.2)",color:"#f87171",fontSize:12 }}>
+                            Чек не загружен
+                          </div>
+                        )}
 
                         {/* Сообщение клиенту */}
                         <div>
@@ -1973,7 +1985,6 @@ export default function App() {
                       </div>
                     </div>
                   ))}
-                  <div style={{ position:"absolute",bottom:"8%",right:"8%",width:64,height:64,borderRadius:"50%",background:`linear-gradient(135deg,rgba(251,191,36,0.9),rgba(245,158,11,0.7))`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,animation:"float 5s ease-in-out infinite",boxShadow:"0 8px 24px rgba(251,191,36,0.25)" }}>✅</div>
                 </div>
               </div>
 
@@ -1981,9 +1992,9 @@ export default function App() {
               <div className="a5 stats-row" style={{ display:isMobile?"grid":"flex",gridTemplateColumns:isMobile?"1fr 1fr":undefined,gap:isMobile?8:10,flexWrap:"wrap",justifyContent:"flex-start",marginTop:isMobile?28:52,maxWidth:1100,width:"100%" }}>
                 {[
                   {v:"50",suf:"+",l:"сервисов"},
-                  {v:"10",suf:"%",l:"комиссия"},
-                  {v:ordersCount !== null ? String(ordersCount) : "—",suf:"+",l:"выполнено"},
-                  {v:"<1",suf:" ч",l:"активация"},
+                  {v:"15",suf:"%",l:"комиссия"},
+                  {v:ordersCount !== null ? String(ordersCount) : "—",suf:"+",l:"за сегодня"},
+                  {v:"~1",suf:" ч",l:"активация"},
                 ].map(({v,suf,l},i)=>(
                   <div key={l} className={`stagger-${i+2}`} style={{ textAlign:"center",background:t.dark?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.92)",border:`1px solid ${t.border}`,borderRadius:20,padding:isMobile?"14px 16px":"20px 28px",backdropFilter:"blur(16px)",boxShadow:t.shadow,transition:"transform 250ms cubic-bezier(0.23,1,0.32,1),box-shadow 250ms",minWidth:isMobile?undefined:100 }}
                     onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-5px)";e.currentTarget.style.boxShadow=t.shadowG;e.currentTarget.style.borderColor=t.borderH}}
