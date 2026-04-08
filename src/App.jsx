@@ -76,7 +76,7 @@ const IconRefund   = ({size=20,color="currentColor"}) => <svg width={size} heigh
 // ══════════════════════════════════════════════════════════════
 const CFG = {
   MARGIN:       0.15,
-  ADMIN_EMAIL:  "admin@payflow.ru",   // ← замени на свой email
+  ADMIN_EMAIL:  "felixandterror@gmail.com",
   REQUISITES: [
     { label:"ВТБ", sbp:"+7 (904) 116-35-62", card:"2200 2414 2610 8027", holder:"Александр В." },
     { label:"МТС Деньги",  sbp:"+7 (950) 136-52-14", card:"2203 8303 2362 4420", holder:"Владислав Л." },
@@ -308,10 +308,16 @@ function useUser() {
     });
 
     // Получаем текущую сессию (если уже залогинен)
+    // Таймаут-fallback на мобильных: если Supabase не ответил за 5с — снимаем заставку
+    const sessionTimeout = setTimeout(() => setLoading(false), 5000);
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(sessionTimeout);
       setSession(session);
       if (session) loadProfile(session.user.id);
       else setLoading(false);
+    }).catch(() => {
+      clearTimeout(sessionTimeout);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -339,13 +345,17 @@ function useUser() {
     const { data, error } = await sbAuth.signUp(email, password, name);
     if (error) return { error: error.message };
 
-    // Если пришёл по реферальной ссылке — сохраняем код в профиле
+    // Ждём 1.5с чтобы DB-триггер успел создать профиль, затем явно прописываем имя
+    // (на случай если raw_user_meta_data не дошёл до триггера)
     const refCode = localStorage.getItem("pf_ref");
-    if (refCode && data.user) {
-      // Ждём 1.5с чтобы DB-триггер успел создать профиль
+    if (data.user) {
       setTimeout(async () => {
-        await profiles.update(data.user.id, { referred_by_code: refCode });
-        localStorage.removeItem("pf_ref");
+        const updates = { name: name.trim() };
+        if (refCode) {
+          updates.referred_by_code = refCode;
+          localStorage.removeItem("pf_ref");
+        }
+        await profiles.update(data.user.id, updates);
       }, 1500);
     }
     return { ok: true };
