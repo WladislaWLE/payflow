@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://payflow.ru/sitemap.xml
+Sitemap: https://pay-flow.ru/sitemap.xml

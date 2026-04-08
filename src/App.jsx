@@ -110,7 +110,7 @@ const SVC = [
   {id:1,  name:"ChatGPT Plus",          cat:"AI",            icon:"🤖", tiers:[{n:"Plus",p:20},{n:"Team",p:25},{n:"Pro",p:200}],        login:true, gift:false,family:true, newAcc:true},
   {id:2,  name:"Claude Pro",            cat:"AI",            icon:"🧠", tiers:[{n:"Pro",p:20},{n:"Team",p:30}],                         login:true, gift:false,family:true, newAcc:true},
   {id:3,  name:"Perplexity Pro",        cat:"AI",            icon:"🔍", tiers:[{n:"Pro",p:20}],                                         login:true, gift:false,family:false,newAcc:true},
-  {id:4,  name:"Grok Premium",          cat:"AI",            icon:"🐦", tiers:[{n:"Premium",p:8},{n:"Premium+",p:16}],                  login:true, gift:false,family:false,newAcc:false},
+  {id:4,  name:"Grok (xAI)",             cat:"AI",            icon:"🐦", tiers:[{n:"SuperGrok Lite",p:10},{n:"SuperGrok",p:30}],          login:true, gift:false,family:false,newAcc:true},
   {id:5,  name:"Gemini Advanced",       cat:"AI",            icon:"💎", tiers:[{n:"Google One",p:19.99}],                              login:true, gift:true, family:true, newAcc:false},
   {id:6,  name:"Midjourney",            cat:"AI",            icon:"🎨", tiers:[{n:"Basic",p:10},{n:"Standard",p:30},{n:"Pro",p:60},{n:"Mega",p:120}],login:true,gift:false,family:false,newAcc:true},
   {id:7,  name:"Leonardo AI",           cat:"AI",            icon:"🖼️", tiers:[{n:"Apprentice",p:10},{n:"Artisan",p:24},{n:"Maestro",p:48}],login:true,gift:false,family:false,newAcc:true},
@@ -154,9 +154,12 @@ const SVC = [
   {id:45, name:"Xbox Game Pass",    cat:"Игры",               icon:"🎮", tiers:[{n:"Ultimate",p:19.99}],                                login:true,gift:true, family:false,newAcc:false},
   {id:46, name:"PlayStation Plus",  cat:"Игры",               icon:"🕹️", tiers:[{n:"Essential",p:9.99},{n:"Extra",p:14.99},{n:"Premium",p:17.99}],login:true,gift:true,family:false,newAcc:false},
   {id:47, name:"Steam (пополнение)",cat:"Игры",               icon:"🚂", tiers:[{n:"$20",p:20},{n:"$50",p:50},{n:"$100",p:100}],       login:false,gift:true,family:false,newAcc:false},
-  {id:48, name:"ElevenLabs",        cat:"AI",                 icon:"🎙️", tiers:[{n:"Starter",p:5},{n:"Creator",p:22},{n:"Pro",p:99}],  login:true,gift:false,family:false,newAcc:true},
-  {id:49, name:"Murf AI",           cat:"AI",                 icon:"🔊", tiers:[{n:"Creator",p:29},{n:"Business",p:99}],                login:true,gift:false,family:false,newAcc:true},
-  {id:50, name:"Otter.ai",          cat:"Продуктивность",     icon:"🦦", tiers:[{n:"Pro",p:16.99},{n:"Business",p:30}],                login:true,gift:false,family:false,newAcc:true},
+  {id:48, name:"Murf AI",           cat:"AI",                 icon:"🔊", tiers:[{n:"Creator",p:29},{n:"Business",p:99}],                login:true,gift:false,family:false,newAcc:true},
+  {id:49, name:"Otter.ai",          cat:"Продуктивность",     icon:"🦦", tiers:[{n:"Pro",p:16.99},{n:"Business",p:30}],                login:true,gift:false,family:false,newAcc:true},
+  {id:50, name:"Lovable",           cat:"Разработка",         icon:"💡", tiers:[{n:"Starter",p:25},{n:"Launch",p:50},{n:"Scale",p:100}],login:true,gift:false,family:false,newAcc:true},
+  {id:51, name:"Hailuo AI",         cat:"AI",                 icon:"🎞️", tiers:[{n:"Basic",p:9},{n:"Standard",p:29},{n:"Pro",p:79}],    login:true,gift:false,family:false,newAcc:true},
+  {id:52, name:"Notion AI",         cat:"Продуктивность",     icon:"🧩", tiers:[{n:"AI Add-on",p:10},{n:"Plus+AI",p:16}],              login:true,gift:false,family:false,newAcc:false},
+  {id:53, name:"Make",              cat:"Инструменты",        icon:"⚙️", tiers:[{n:"Core",p:9},{n:"Pro",p:16},{n:"Teams",p:29}],       login:true,gift:false,family:false,newAcc:true},
 ];
 
 const CATS = ["Все","AI","Разработка","Дизайн","Стриминг","Музыка","Продуктивность","Инструменты","Обучение","Игры"];
@@ -795,6 +798,153 @@ function AuthModal({ onClose, userHook, t }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  ACTIVATION TIMER — 60-min countdown for paid/processing orders
+// ══════════════════════════════════════════════════════════════
+function ActivationTimer({ createdAt, status }) {
+  const GUARANTEE_MIN = 60;
+  const [remaining, setRemaining] = useState(null);
+
+  useEffect(() => {
+    if (!["paid","processing"].includes(status)) return;
+    const created = new Date(createdAt).getTime();
+    const deadline = created + GUARANTEE_MIN * 60 * 1000;
+    const tick = () => {
+      const diff = deadline - Date.now();
+      setRemaining(diff > 0 ? diff : 0);
+    };
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, [createdAt, status]);
+
+  if (!["paid","processing"].includes(status) || remaining === null) return null;
+
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  const elapsed = remaining === 0;
+  const pct = Math.max(0, Math.min(100, (remaining / (GUARANTEE_MIN * 60000)) * 100));
+
+  return (
+    <div style={{ background: elapsed ? "rgba(52,211,153,0.08)" : "rgba(251,191,36,0.07)", border: `1px solid ${elapsed ? "rgba(52,211,153,0.3)" : "rgba(251,191,36,0.25)"}`, borderRadius:12, padding:"12px 14px", marginBottom:12 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+          <span style={{ fontSize:14 }}>{elapsed ? "🎯" : "⏱"}</span>
+          <span style={{ fontSize:12, fontWeight:700, color: elapsed ? "#34d399" : "#fbbf24" }}>
+            {elapsed ? "Активация задерживается — обрабатываем" : `Гарантия активации`}
+          </span>
+        </div>
+        {!elapsed && (
+          <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:900, fontSize:18, color:"#fbbf24", fontVariantNumeric:"tabular-nums", letterSpacing:-0.5 }}>
+            {String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}
+          </div>
+        )}
+      </div>
+      {!elapsed && (
+        <div style={{ height:4, borderRadius:2, background:"rgba(251,191,36,0.15)", overflow:"hidden" }}>
+          <div style={{ height:"100%", width:`${100-pct}%`, background:"linear-gradient(90deg,#f59e0b,#fbbf24)", borderRadius:2, transition:"width 1s linear" }}/>
+        </div>
+      )}
+      {!elapsed && <div style={{ color:"rgba(251,191,36,0.6)", fontSize:11, marginTop:6 }}>Обязуемся активировать в течение 60 минут или вернём деньги</div>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ORDER PROGRESS — visual step tracker
+// ══════════════════════════════════════════════════════════════
+function OrderProgress({ status }) {
+  const steps = [
+    { key:"new",        label:"Оплата",     icon:"💳" },
+    { key:"processing", label:"Обработка",  icon:"⚙️" },
+    { key:"done",       label:"Активирован",icon:"✅" },
+  ];
+  const order = ["new","paid","processing","done","cancelled"];
+  const cur = order.indexOf(status);
+  const cancelled = status === "cancelled";
+
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:0, marginBottom:12 }}>
+      {steps.map((s, i) => {
+        const stepIdx = order.indexOf(s.key);
+        const done_ = !cancelled && cur >= stepIdx;
+        const active = !cancelled && (
+          (s.key === "new" && ["new","paid"].includes(status)) ||
+          (s.key === "processing" && status === "processing") ||
+          (s.key === "done" && status === "done")
+        );
+        return (
+          <div key={s.key} style={{ display:"flex", alignItems:"center", flex: i < steps.length-1 ? 1 : undefined }}>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+              <div style={{ width:30, height:30, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, background: done_ ? (active ? "linear-gradient(135deg,#f59e0b,#fbbf24)" : "rgba(251,191,36,0.2)") : "rgba(255,255,255,0.06)", border: `1.5px solid ${done_ ? (active?"#fbbf24":"rgba(251,191,36,0.4)") : "rgba(255,255,255,0.12)"}`, transition:"all .3s", flexShrink:0 }}>
+                {done_ ? (active ? <span style={{ fontSize:11 }}>{s.icon}</span> : <span style={{ color:"#fbbf24", fontSize:11 }}>✓</span>) : <span style={{ color:"rgba(255,255,255,0.2)", fontSize:10 }}>{i+1}</span>}
+              </div>
+              <span style={{ fontSize:10, color: done_ ? (active?"#fbbf24":"rgba(251,191,36,0.6)") : "rgba(255,255,255,0.25)", fontWeight: active?700:400, whiteSpace:"nowrap" }}>{s.label}</span>
+            </div>
+            {i < steps.length-1 && (
+              <div style={{ flex:1, height:1.5, background: done_ && cur > stepIdx ? "linear-gradient(90deg,rgba(251,191,36,0.5),rgba(251,191,36,0.2))" : "rgba(255,255,255,0.08)", margin:"0 6px", marginBottom:20, transition:"background .3s" }}/>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+//  REFERRAL BLOCK — "Приведи друга"
+// ══════════════════════════════════════════════════════════════
+function ReferralBlock({ userId, t }) {
+  const [copied, setCopied] = useState(false);
+  const refCode = userId ? userId.slice(0,8).toUpperCase() : "--------";
+  const refLink = `https://pay-flow.ru/#home?ref=${refCode}`;
+
+  const copy = () => {
+    navigator.clipboard.writeText(refLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    });
+  };
+
+  return (
+    <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:24, position:"relative", overflow:"hidden" }}>
+      {/* bg glow */}
+      <div style={{ position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,0.08) 0%,transparent 70%)",pointerEvents:"none" }}/>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+        <div style={{ width:40,height:40,borderRadius:12,background:t.goldDim,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>🎁</div>
+        <div>
+          <div style={{ fontWeight:700, fontSize:15, color:t.text }}>Приведи друга</div>
+          <div style={{ color:t.muted, fontSize:12, marginTop:2 }}>Поделись ссылкой — получи бонус за каждого нового пользователя</div>
+        </div>
+      </div>
+      <div style={{ background:t.goldDim, border:`1px solid ${t.goldB}`, borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
+        <div style={{ color:t.muted, fontSize:11, marginBottom:6, textTransform:"uppercase", letterSpacing:1, fontWeight:600 }}>Твоя реферальная ссылка</div>
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          <div style={{ flex:1, color:t.text, fontSize:13, fontFamily:"monospace", wordBreak:"break-all" }}>{refLink}</div>
+          <button onClick={copy} style={{ padding:"8px 14px", borderRadius:10, background:copied?"rgba(52,211,153,0.15)":"rgba(251,191,36,0.15)", border:`1px solid ${copied?"rgba(52,211,153,0.4)":"rgba(251,191,36,0.4)"}`, color:copied?"#34d399":"#fbbf24", cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap", flexShrink:0, transition:"all .2s" }}>
+            {copied ? "✓ Скопировано" : "Копировать"}
+          </button>
+        </div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
+        {[
+          { n:"1", desc:"Поделись ссылкой с другом" },
+          { n:"2", desc:"Друг регистрируется и делает заказ" },
+          { n:"3", desc:"Ты получаешь бонус на счёт" },
+        ].map(s => (
+          <div key={s.n} style={{ textAlign:"center", padding:"12px 8px", borderRadius:12, background:"rgba(255,255,255,0.03)", border:`1px solid ${t.border}` }}>
+            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:900, fontSize:20, color:t.gold, marginBottom:6 }}>{s.n}</div>
+            <div style={{ color:t.sub, fontSize:11, lineHeight:1.5 }}>{s.desc}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop:12, padding:"10px 14px", borderRadius:10, background:"rgba(96,165,250,0.08)", border:"1px solid rgba(96,165,250,0.2)", color:"#93c5fd", fontSize:12 }}>
+        ℹ️ Бонусная программа в разработке. Ваши рефералы уже сохраняются — они будут учтены при запуске.
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
 //  PERSONAL CABINET
 // ══════════════════════════════════════════════════════════════
 function Cabinet({ userHook, go, t }) {
@@ -958,16 +1108,11 @@ function Cabinet({ userHook, go, t }) {
                         </div>
                       )}
 
-                      {/* Таймлайн */}
-                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                        {["new","paid","processing","done"].map(st => {
-                          const idx = ["new","paid","processing","done"].indexOf(o.status);
-                          const sIdx = ["new","paid","processing","done"].indexOf(st);
-                          const done_ = sIdx <= idx && o.status !== "cancelled";
-                          const cur = st === o.status;
-                          return <div key={st} style={{ padding:"5px 10px", borderRadius:100, background:cur?SC[st]+"22":"rgba(128,128,128,0.08)", border:`1px solid ${cur?SC[st]+"55":"rgba(128,128,128,0.15)"}`, fontSize:11, color:done_?(SC[st]||"#34d399"):"rgba(128,128,128,0.4)", fontWeight:cur?700:400 }}>{done_?"✓":""} {SL[st]}</div>;
-                        })}
-                      </div>
+                      {/* Таймер гарантии активации */}
+                      <ActivationTimer createdAt={o.created_at} status={o.status}/>
+
+                      {/* Прогресс заказа */}
+                      <OrderProgress status={o.status}/>
                     </div>
                   )}
                 </div>
@@ -996,18 +1141,23 @@ function Cabinet({ userHook, go, t }) {
 
       {/* Profile */}
       {tab==="profile" && (
-        <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:28 }}>
-          <div style={{ textAlign:"center", marginBottom:24 }}>
-            <div style={{ width:80, height:80, borderRadius:"50%", background:t.goldDim, border:`2px solid ${t.goldB}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32, margin:"0 auto 12px" }}>👤</div>
-            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:700, fontSize:22, color:t.text }}>{profile?.name}</div>
-            <div style={{ color:t.muted, fontSize:14, marginTop:4 }}>{session?.user?.email}</div>
-            <div style={{ color:t.muted, fontSize:12, marginTop:2 }}>Зарегистрирован: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString("ru-RU") : ""}</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:28 }}>
+            <div style={{ textAlign:"center", marginBottom:24 }}>
+              <div style={{ width:80, height:80, borderRadius:"50%", background:t.goldDim, border:`2px solid ${t.goldB}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32, margin:"0 auto 12px" }}>👤</div>
+              <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:700, fontSize:22, color:t.text }}>{profile?.name}</div>
+              <div style={{ color:t.muted, fontSize:14, marginTop:4 }}>{session?.user?.email}</div>
+              <div style={{ color:t.muted, fontSize:12, marginTop:2 }}>Зарегистрирован: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString("ru-RU") : ""}</div>
+            </div>
+            <div style={{ borderTop:`1px solid ${t.border}`, paddingTop:20, textAlign:"center" }}>
+              <button onClick={async()=>{ await logout(); go("#home"); }} style={{ padding:"10px 24px", borderRadius:12, background:"rgba(248,113,113,0.15)", border:"1px solid rgba(248,113,113,0.3)", color:"#f87171", cursor:"pointer", fontSize:14, fontWeight:600 }}>
+                Выйти из аккаунта
+              </button>
+            </div>
           </div>
-          <div style={{ borderTop:`1px solid ${t.border}`, paddingTop:20, textAlign:"center" }}>
-            <button onClick={async()=>{ await logout(); go("#home"); }} style={{ padding:"10px 24px", borderRadius:12, background:"rgba(248,113,113,0.15)", border:"1px solid rgba(248,113,113,0.3)", color:"#f87171", cursor:"pointer", fontSize:14, fontWeight:600 }}>
-              Выйти из аккаунта
-            </button>
-          </div>
+
+          {/* Referral Program */}
+          <ReferralBlock userId={session?.user?.id} t={t}/>
         </div>
       )}
 
@@ -2096,6 +2246,51 @@ export default function App() {
                   <div style={{ position:"absolute",bottom:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${t.gold},rgba(251,191,36,0))`,borderRadius:"0 0 20px 20px",opacity:0.6 }}/>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* GUARANTEE BANNER */}
+          <div style={{ padding:"0 24px 80px", maxWidth:940, margin:"0 auto" }}>
+            <div style={{ background:"linear-gradient(135deg,rgba(251,191,36,0.08) 0%,rgba(249,115,22,0.05) 100%)", border:"1px solid rgba(251,191,36,0.2)", borderRadius:24, padding:isMobile?"28px 20px":"40px 48px", position:"relative", overflow:"hidden" }}>
+              {/* bg glow */}
+              <div style={{ position:"absolute",top:-60,right:-60,width:250,height:250,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,0.12) 0%,transparent 70%)",pointerEvents:"none" }}/>
+              <div style={{ display:"flex", flexDirection:isMobile?"column":"row", alignItems:isMobile?"flex-start":"center", gap:isMobile?24:40 }}>
+                {/* Left: main promise */}
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"inline-flex",alignItems:"center",gap:7,padding:"5px 14px",borderRadius:100,background:"rgba(251,191,36,0.12)",border:"1px solid rgba(251,191,36,0.3)",marginBottom:16 }}>
+                    <span style={{ width:6,height:6,borderRadius:"50%",background:"#22c55e",display:"inline-block",animation:"pulse 2s infinite",boxShadow:"0 0 6px rgba(34,197,94,0.6)" }}/>
+                    <span style={{ color:"#fbbf24",fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:2 }}>Гарантия активации</span>
+                  </div>
+                  <h3 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:isMobile?26:32,color:"#f8fafc",marginBottom:12,letterSpacing:-0.8,lineHeight:1.1 }}>
+                    Активируем за <span style={{ background:"linear-gradient(135deg,#fbbf24,#f97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text" }}>60 минут</span>
+                  </h3>
+                  <p style={{ color:"#94a3b8",fontSize:14,lineHeight:1.65,marginBottom:20 }}>
+                    После оплаты и загрузки чека оператор активирует подписку в течение часа. Не успели — полный возврат без вопросов.
+                  </p>
+                  <div style={{ display:"flex",gap:10,flexWrap:"wrap" }}>
+                    {[
+                      {icon:"⚡",text:"Оплата по СБП"},
+                      {icon:"🔒",text:"Безопасно"},
+                      {icon:"↩️",text:"Возврат 24ч"},
+                    ].map(b => (
+                      <div key={b.text} style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:100,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",fontSize:12,color:"#94a3b8",fontWeight:500 }}>
+                        <span style={{ fontSize:13 }}>{b.icon}</span>{b.text}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Right: live counter */}
+                <div style={{ flexShrink:0, textAlign:"center", background:"rgba(15,23,42,0.6)", border:"1px solid rgba(251,191,36,0.2)", borderRadius:20, padding:"24px 32px", minWidth:160 }}>
+                  <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:48,background:"linear-gradient(135deg,#fbbf24,#f97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",lineHeight:1,fontVariantNumeric:"tabular-nums" }}>
+                    {ordersCount !== null ? ordersCount : "—"}
+                  </div>
+                  <div style={{ color:"#64748b",fontSize:11,marginTop:6,textTransform:"uppercase",letterSpacing:1.5,fontWeight:600 }}>активаций сегодня</div>
+                  <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginTop:10,color:"#22c55e",fontSize:11,fontWeight:600 }}>
+                    <span style={{ width:5,height:5,borderRadius:"50%",background:"#22c55e",display:"inline-block",animation:"pulse 2s infinite" }}/>
+                    Работаем сейчас
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
