@@ -1,3 +1,6 @@
+// ── Настройки ──────────────────────────────────
+
+
 import LegalPage from "./pages/LegalPage";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase, auth as sbAuth, profiles, orders as sbOrders, notifications as sbNotifs, storage as sbStorage, referrals as sbReferrals } from "./lib/supabase";
