@@ -8,7 +8,7 @@ import { useState } from "react";
 const LEGAL_RU = `
 ## 1. Общие положения
 
-**1.1.** Настоящий документ является публичной офертой в соответствии со ст. 435 и 437 ГК РФ и содержит условия договора об оказании посреднических услуг между сервисом **payflow** (далее — «Исполнитель») и пользователем (далее — «Пользователь»).
+**1.1.** Настоящий документ является публичной офертой в соответствии со ст. 435 и 437 ГК РФ и содержит условия договора об оказании посреднических услуг между сервисом **pay-flow** (далее — «Исполнитель») и пользователем (далее — «Пользователь»).
 
 **1.2.** Акцептом оферты является регистрация на Сайте и/или оформление Заявки.
 
@@ -26,65 +26,87 @@ const LEGAL_RU = `
 
 ## 3. Стоимость и порядок оплаты
 
-**3.1.** Стоимость Услуг = стоимость подписки по курсу ЦБ РФ + вознаграждение Исполнителя **10%**.
+**3.1.** Стоимость Услуг = стоимость подписки по актуальному курсу ЦБ РФ + вознаграждение Исполнителя **15%**.
 
 **3.2.** Итоговая стоимость в рублях отображается до подтверждения Заявки.
 
-**3.3.** Оплата производится банковским переводом по реквизитам на Сайте. Пользователь обязан указать номер Заявки в назначении платежа.
+**3.3.** Оплата производится банковским переводом (СБП или по номеру карты) по реквизитам, указанным в Заявке. Пользователь обязан указать номер Заявки в комментарии к переводу.
 
-**3.4.** Возврат средств возможен только при неисполнении Заявки по вине Исполнителя в течение 24 часов — в течение 5 рабочих дней в полном объёме.
+**3.4.** Возврат средств осуществляется в полном объёме в течение 5 рабочих дней в случае неисполнения Заявки по вине Исполнителя в течение 24 часов с момента подтверждения оплаты.
 
 ---
 
-## 4. Сроки оказания услуг
+## 4. Гарантия активации
 
-**4.1.** Выполнение Заявки: **до 1 часа** в рабочее время (пн–пт, 9:00–21:00 МСК), **до 24 часов** — в иное время.
+**4.1.** Исполнитель гарантирует активацию Заявки в течение **60 минут** с момента подтверждения поступления оплаты и загрузки чека.
 
-**4.2.** Результат передаётся Пользователю в Личном кабинете на Сайте.
+**4.2.** В случае нарушения срока, указанного в п. 4.1, по вине Исполнителя, Пользователь вправе потребовать полного возврата средств.
+
+**4.3.** Результат передаётся Пользователю в Личном кабинете на Сайте. При необходимости — через уведомление.
+
+**4.4.** В нерабочее время (пн–пт 21:00–9:00 МСК, выходные и праздники) срок активации может составлять **до 24 часов**.
 
 ---
 
 ## 5. Права и обязанности сторон
 
-**Исполнитель обязуется:** добросовестно исполнять Заявки; обеспечивать конфиденциальность данных; уведомлять об изменениях условий за 3 дня.
+**Исполнитель обязуется:** добросовестно исполнять Заявки в установленные сроки; обеспечивать конфиденциальность данных Пользователя; уведомлять об изменениях условий не менее чем за 3 дня.
 
-**Исполнитель вправе:** отказать в исполнении Заявки с возвратом оплаты; изменять тарифы и перечень Сервисов.
+**Исполнитель вправе:** отказать в исполнении Заявки с полным возвратом оплаты; изменять тарифы и перечень Сервисов; прекратить доступ к Сайту при нарушении условий Пользователем.
 
-**Пользователь обязуется:** предоставлять достоверные данные; использовать подписки в личных целях; соблюдать условия использования приобретённых Сервисов.
-
----
-
-## 6. Ответственность
-
-**6.1.** Исполнитель не несёт ответственности за изменение правил и тарифов Сервисов третьих лиц; блокировку аккаунта по вине Пользователя; недоступность Сервисов по техническим причинам.
-
-**6.2.** Совокупная ответственность Исполнителя не превышает стоимость конкретной Заявки.
+**Пользователь обязуется:** предоставлять достоверные данные; использовать подписки исключительно в личных некоммерческих целях; соблюдать условия использования приобретённых Сервисов третьих лиц.
 
 ---
 
-## 7. Персональные данные
+## 6. Реферальная программа
 
-**7.1.** Регистрируясь на Сайте, Пользователь даёт согласие на обработку персональных данных (имя, email, данные о заявках) в соответствии с ФЗ № 152-ФЗ «О персональных данных».
+**6.1.** Исполнитель предоставляет Пользователю возможность участвовать в реферальной программе «Приведи друга».
 
-**7.2.** Исполнитель не передаёт данные третьим лицам, за исключением случаев, предусмотренных законодательством РФ.
+**6.2.** Условия начисления бонусов:
+— Пользователь получает уникальную реферальную ссылку в Личном кабинете.
+— За каждого нового Пользователя, прошедшего регистрацию по реферальной ссылке и выполнившего **первую оплаченную Заявку**, реферер получает бонус в размере **200 ₽** на внутренний счёт.
+— Реферальный бонус начисляется не позднее 3 рабочих дней после выполнения условий.
 
-**7.3.** Отзыв согласия: legal@payflow.ru
+**6.3.** Начисленный бонус применяется автоматически при оформлении следующей Заявки в качестве скидки и не может быть выведен денежными средствами.
+
+**6.4.** Исполнитель вправе изменить условия реферальной программы с уведомлением за 7 дней. Ранее начисленные бонусы сохраняются.
+
+**6.5.** Реферальная программа не распространяется на самореферирование (регистрацию с собственной ссылки).
 
 ---
 
-## 8. Разрешение споров
+## 7. Ответственность
 
-**8.1.** Претензии направляются на **legal@payflow.ru** и рассматриваются в течение 10 рабочих дней.
+**7.1.** Исполнитель не несёт ответственности за: изменение правил, тарифов и доступности Сервисов третьих лиц; блокировку аккаунта по вине Пользователя; недоступность Сервисов по техническим причинам, не зависящим от Исполнителя.
 
-**8.2.** При недостижении согласия — споры рассматриваются в суде по месту нахождения Исполнителя согласно законодательству РФ.
+**7.2.** Совокупная ответственность Исполнителя не превышает стоимость конкретной Заявки.
 
 ---
 
-## 9. Реквизиты
+## 8. Персональные данные
 
-**Исполнитель:** Людвиг Владислав Евгеньевич 
-**Email:** legal@payflow.ru  
-**Сайт:** payflow.ru
+**8.1.** Регистрируясь на Сайте, Пользователь даёт согласие на обработку персональных данных (имя, email, данные о заявках, реферальная активность) в соответствии с ФЗ № 152-ФЗ «О персональных данных».
+
+**8.2.** Исполнитель не передаёт данные третьим лицам, за исключением случаев, предусмотренных законодательством РФ.
+
+**8.3.** Отзыв согласия: legal@pay-flow.ru
+
+---
+
+## 9. Разрешение споров
+
+**9.1.** Претензии направляются на **legal@pay-flow.ru** и рассматриваются в течение 10 рабочих дней.
+
+**9.2.** При недостижении согласия — споры рассматриваются в суде по месту нахождения Исполнителя согласно законодательству РФ.
+
+---
+
+## 10. Реквизиты
+
+**Исполнитель:** Людвиг Владислав Евгеньевич
+**Email:** legal@pay-flow.ru
+**Поддержка:** support@pay-flow.ru
+**Сайт:** pay-flow.ru
 
 *Дата вступления в силу: 1 апреля 2026 г.*
 `;
@@ -92,11 +114,11 @@ const LEGAL_RU = `
 const LEGAL_EN = `
 ## 1. Introduction
 
-**1.1.** These Terms of Service govern your use of **payflow** ("we", "Service Provider") and constitute a binding agreement between you ("User") and payflow.
+**1.1.** These Terms of Service govern your use of **pay-flow** ("we", "Service Provider") and constitute a binding agreement between you ("User") and pay-flow.
 
 **1.2.** By registering or placing an Order, you confirm acceptance of these Terms.
 
-**1.3.** payflow provides **intermediary payment services** to help users access international digital subscriptions unavailable for direct payment. We are **not** the publisher or official distributor of any third-party service.
+**1.3.** pay-flow provides **intermediary payment services** to help users access international digital subscriptions unavailable for direct payment. We are **not** the publisher or official distributor of any third-party service.
 
 ---
 
@@ -110,71 +132,92 @@ const LEGAL_EN = `
 
 ## 3. Pricing and Payment
 
-**3.1.** Total cost = subscription price at CBR exchange rate + our fee of **10%**.
+**3.1.** Total cost = subscription price at current CBR exchange rate + our service fee of **15%**.
 
 **3.2.** The final price in Russian Rubles is shown before order confirmation.
 
-**3.3.** Payment is made by bank transfer with your Order ID in the payment reference.
+**3.3.** Payment is made by bank transfer (SBP or card) with your Order ID in the payment reference.
 
-**3.4.** Refunds are available if we fail to fulfill an Order within 24 hours due to our fault, processed within 5 business days.
-
----
-
-## 4. Order Fulfillment
-
-**4.1.** Orders are fulfilled within **1 hour** (business hours: Mon–Fri 9:00–21:00 Moscow) or **24 hours** otherwise.
-
-**4.2.** Access credentials are delivered to your personal account on the website.
+**3.4.** Refunds are available in full within 5 business days if we fail to fulfill an Order within 24 hours due to our fault.
 
 ---
 
-## 5. User Obligations
+## 4. Activation Guarantee
 
-You agree to: provide accurate information; use subscriptions for personal purposes; comply with third-party services' terms of use.
+**4.1.** We guarantee activation within **60 minutes** from the moment payment is confirmed and receipt is uploaded.
 
----
+**4.2.** If this deadline is missed due to our fault, you are entitled to a full refund.
 
-## 6. Limitation of Liability
+**4.3.** Access credentials are delivered to your personal account on the website.
 
-**6.1.** We are not liable for: changes to third-party services; account suspension due to your actions; third-party service unavailability.
-
-**6.2.** Our total liability shall not exceed the amount paid for the specific Order.
-
-**6.3. EU Consumer Rights:** Nothing in these Terms affects your statutory rights as a consumer under EU law, including rights under Directive 2011/83/EU.
+**4.4.** Outside business hours (Mon–Fri 21:00–09:00 Moscow, weekends and holidays), fulfillment time may extend to **24 hours**.
 
 ---
 
-## 7. Right of Withdrawal (EU Users)
+## 5. Referral Program
 
-**7.1.** EU consumers have a 14-day right of withdrawal. However, by placing an order for immediate digital activation, you expressly consent to immediate performance and acknowledge that you waive your right of withdrawal once activation begins.
+**5.1.** Users may participate in the "Refer a Friend" referral program.
 
----
+**5.2.** Referral bonus conditions:
+— You receive a unique referral link in your personal account.
+— For each new user who registers via your link and completes their **first paid order**, you receive a bonus of **200 RUB** to your internal account.
+— Bonuses are credited within 3 business days after conditions are met.
 
-## 8. Privacy and GDPR
+**5.3.** Credited bonuses are applied automatically as a discount on your next order and cannot be withdrawn as cash.
 
-**8.1.** We process: name, email, order data. Legal basis: contract performance (Art. 6(1)(b) GDPR).
+**5.4.** We may modify referral program terms with 7 days' notice. Previously credited bonuses are preserved.
 
-**8.2.** We do **not** sell your data. Data is retained for 5 years for legal compliance.
-
-**8.3. Your GDPR rights:** access, rectification, erasure, portability, objection. Contact: legal@payflow.ru
-
----
-
-## 9. Dispute Resolution
-
-**9.1.** Contact **legal@payflow.ru** first — we resolve disputes within 10 business days.
-
-**9.2. EU Users:** You may use the EU ODR platform: https://ec.europa.eu/consumers/odr
-
-**9.3.** Governing law: Russian Federation law, with mandatory consumer protection rights preserved in your jurisdiction.
+**5.5.** Self-referral (registering using your own link) is prohibited.
 
 ---
 
-## 10. Contact
+## 6. User Obligations
 
-**Legal:** legal@payflow.ru  
-**Support:** support@payflow.ru  
-**Website:** payflow.ru
+You agree to: provide accurate information; use subscriptions for personal, non-commercial purposes; comply with third-party services' terms of use.
+
+---
+
+## 7. Limitation of Liability
+
+**7.1.** We are not liable for: changes to third-party services; account suspension due to your actions; third-party service unavailability beyond our control.
+
+**7.2.** Our total liability shall not exceed the amount paid for the specific Order.
+
+**7.3. EU Consumer Rights:** Nothing in these Terms affects your statutory rights as a consumer under EU law, including rights under Directive 2011/83/EU.
+
+---
+
+## 8. Right of Withdrawal (EU Users)
+
+**8.1.** EU consumers have a 14-day right of withdrawal. However, by placing an order for immediate digital activation, you expressly consent to immediate performance and acknowledge that you waive your right of withdrawal once activation begins.
+
+---
+
+## 9. Privacy and GDPR
+
+**9.1.** We process: name, email, order data, referral activity. Legal basis: contract performance (Art. 6(1)(b) GDPR).
+
+**9.2.** We do **not** sell your data. Data is retained for 5 years for legal compliance.
+
+**9.3. Your GDPR rights:** access, rectification, erasure, portability, objection. Contact: legal@pay-flow.ru
+
+---
+
+## 10. Dispute Resolution
+
+**10.1.** Contact **legal@pay-flow.ru** first — we resolve disputes within 10 business days.
+
+**10.2. EU Users:** You may use the EU ODR platform: https://ec.europa.eu/consumers/odr
+
+**10.3.** Governing law: Russian Federation law, with mandatory consumer protection rights preserved in your jurisdiction.
+
+---
+
+## 11. Contact
+
+**Legal:** legal@pay-flow.ru
+**Support:** support@pay-flow.ru
+**Website:** pay-flow.ru
 
 *Effective: April 1, 2026*
 `;
@@ -239,8 +282,8 @@ export default function LegalPage({ go, t }) {
           </h1>
           <div style={{ display:"flex", flexWrap:"wrap", gap:16, color:t.muted, fontSize:13 }}>
             <span>📅 {lang === "ru" ? "Вступает в силу:" : "Effective:"} 1 апреля 2026</span>
-            <span>🌐 payflow.ru</span>
-            <span>✉️ legal@payflow.ru</span>
+            <span>🌐 pay-flow.ru</span>
+            <span>✉️ legal@pay-flow.ru</span>
           </div>
         </div>
 

@@ -653,51 +653,79 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
         </>}
 
         {step === 2 && <>
-          <div style={{ textAlign:"center", marginBottom:22 }}>
-            <div style={{ fontSize:52, marginBottom:12, animation:"bounceIn .4s cubic-bezier(0.175,0.885,0.32,1.275)" }}>✅</div>
-            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:22, color:"white", marginBottom:8 }}>Заявка создана!</div>
-            <div style={{ background:"rgba(251,191,36,0.1)", border:"1px solid rgba(251,191,36,0.3)", borderRadius:12, padding:"10px 24px", display:"inline-block", color:"#fbbf24", fontWeight:800, fontSize:28 }}>{orderId}</div>
-          </div>
-
-          <div style={{ color:"rgba(255,255,255,0.55)", fontSize:14, marginBottom:20, textAlign:"center", lineHeight:1.7 }}>
-            Переведите <strong style={{ color:"white", fontSize:16 }}>{total.toLocaleString("ru-RU")} ₽</strong><br/>
-            и укажи номер заявки в комментарии к переводу
-          </div>
-
-          {/* Реквизиты */}
-          <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:16, padding:20, marginBottom:16 }}>
-            <div style={{ color:"rgba(255,255,255,0.3)", fontSize:10, marginBottom:12, textTransform:"uppercase", letterSpacing:1, fontWeight:600 }}>💳 Реквизиты · {req.label}</div>
-            <div style={{ marginBottom:12 }}>
-              <div style={{ color:"rgba(255,255,255,0.35)", fontSize:11, marginBottom:4 }}>По СБП</div>
-              <div style={{ color:"white", fontWeight:700, fontSize:18 }}>{req.sbp}</div>
-              <div style={{ color:"rgba(255,255,255,0.35)", fontSize:12 }}>{req.holder}</div>
-            </div>
-            <div style={{ paddingTop:12, borderTop:"1px solid rgba(255,255,255,0.08)", marginBottom:12 }}>
-              <div style={{ color:"rgba(255,255,255,0.35)", fontSize:11, marginBottom:4 }}>По номеру карты</div>
-              <div style={{ color:"white", fontWeight:700, fontSize:18 }}>{req.card}</div>
-              <div style={{ color:"rgba(255,255,255,0.35)", fontSize:12 }}>{req.label} · {req.holder}</div>
-            </div>
-            <div style={{ paddingTop:12, borderTop:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <span style={{ color:"rgba(255,255,255,0.35)", fontSize:12 }}>Комментарий:</span>
-              <strong style={{ color:"#fbbf24", fontSize:18 }}>{orderId}</strong>
+          {/* ── Celebration header ── */}
+          <div style={{ margin:"-28px -28px 20px", padding:"28px 28px 22px", background:"linear-gradient(135deg,rgba(251,191,36,0.12) 0%,rgba(249,115,22,0.07) 100%)", borderBottom:"1px solid rgba(251,191,36,0.18)", borderRadius:"24px 24px 0 0", textAlign:"center", position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute",top:-30,right:-30,width:130,height:130,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,0.15) 0%,transparent 70%)",pointerEvents:"none" }}/>
+            <div style={{ fontSize:48, marginBottom:10, animation:"bounceIn .45s cubic-bezier(0.175,0.885,0.32,1.275)" }}>🎉</div>
+            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:900, fontSize:22, color:"white", marginBottom:6 }}>Заявка принята!</div>
+            <div style={{ color:"rgba(255,255,255,0.5)", fontSize:13, marginBottom:14 }}>{s.icon} {s.name} · {tier.n}</div>
+            {/* Order ID badge */}
+            <div style={{ display:"inline-flex", alignItems:"center", gap:8, background:"rgba(251,191,36,0.12)", border:"1px solid rgba(251,191,36,0.35)", borderRadius:12, padding:"10px 20px" }}>
+              <span style={{ color:"rgba(255,255,255,0.45)", fontSize:12 }}>Номер заявки</span>
+              <span style={{ color:"#fbbf24", fontWeight:900, fontSize:22, fontFamily:"'Clash Display',sans-serif", letterSpacing:1 }}>{orderId}</span>
             </div>
           </div>
 
-          <div style={{ background:"rgba(52,211,153,0.08)", border:"1px solid rgba(52,211,153,0.25)", borderRadius:12, padding:14, marginBottom:16 }}>
-            <div style={{ color:"#6ee7b7", fontSize:13, fontWeight:600, marginBottom:4 }}>📋 Что дальше?</div>
-            <div style={{ color:"rgba(255,255,255,0.5)", fontSize:13, lineHeight:1.7 }}>
-              • Переведите деньги по реквизитам выше<br/>
-              • Обязательно загрузите скриншот чека в личном кабинете<br/>
-              • Данные аккаунта придут в личный кабинет → Мои заявки<br/>
-              • Если включена 2FA — будьте онлайн, мы свяжемся через кабинет
+          {/* ── Amount to pay ── */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"rgba(251,191,36,0.07)", border:"1px solid rgba(251,191,36,0.2)", borderRadius:14, padding:"14px 18px", marginBottom:14 }}>
+            <div>
+              <div style={{ color:"rgba(255,255,255,0.4)", fontSize:11, textTransform:"uppercase", letterSpacing:1, fontWeight:600, marginBottom:3 }}>К оплате</div>
+              <div style={{ color:"#fbbf24", fontWeight:900, fontSize:30, fontFamily:"'Clash Display',sans-serif", fontVariantNumeric:"tabular-nums" }}>{total.toLocaleString("ru-RU")} ₽</div>
+            </div>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ color:"rgba(255,255,255,0.35)", fontSize:11, marginBottom:2 }}>Укажи в комментарии</div>
+              <div style={{ color:"white", fontWeight:800, fontSize:18, letterSpacing:1 }}>{orderId}</div>
+            </div>
+          </div>
+
+          {/* ── Payment details ── */}
+          <div style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:16, padding:18, marginBottom:14 }}>
+            <div style={{ color:"rgba(255,255,255,0.3)", fontSize:10, marginBottom:14, textTransform:"uppercase", letterSpacing:1.5, fontWeight:600 }}>💳 Реквизиты · {req.label}</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+              <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"12px 14px" }}>
+                <div style={{ color:"rgba(255,255,255,0.3)", fontSize:10, textTransform:"uppercase", letterSpacing:1, fontWeight:600, marginBottom:6 }}>СБП</div>
+                <div style={{ color:"white", fontWeight:700, fontSize:16, fontVariantNumeric:"tabular-nums" }}>{req.sbp}</div>
+                <div style={{ color:"rgba(255,255,255,0.3)", fontSize:11, marginTop:3 }}>{req.holder}</div>
+              </div>
+              <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:12, padding:"12px 14px" }}>
+                <div style={{ color:"rgba(255,255,255,0.3)", fontSize:10, textTransform:"uppercase", letterSpacing:1, fontWeight:600, marginBottom:6 }}>Карта</div>
+                <div style={{ color:"white", fontWeight:700, fontSize:16, fontVariantNumeric:"tabular-nums" }}>{req.card}</div>
+                <div style={{ color:"rgba(255,255,255,0.3)", fontSize:11, marginTop:3 }}>{req.holder}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Activation guarantee ── */}
+          <div style={{ background:"rgba(251,191,36,0.07)", border:"1px solid rgba(251,191,36,0.22)", borderRadius:12, padding:"12px 14px", marginBottom:14, display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:20, flexShrink:0 }}>⏱</span>
+            <div>
+              <div style={{ color:"#fbbf24", fontWeight:700, fontSize:13 }}>Гарантия активации 60 минут</div>
+              <div style={{ color:"rgba(255,255,255,0.4)", fontSize:12, marginTop:2 }}>После подтверждения оплаты активируем в течение часа. Не успели — полный возврат.</div>
+            </div>
+          </div>
+
+          {/* ── Next steps ── */}
+          <div style={{ background:"rgba(52,211,153,0.07)", border:"1px solid rgba(52,211,153,0.22)", borderRadius:12, padding:"12px 14px", marginBottom:16 }}>
+            <div style={{ color:"#6ee7b7", fontSize:12, fontWeight:700, marginBottom:8, textTransform:"uppercase", letterSpacing:0.8 }}>Что сделать сейчас</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+              {[
+                { n:"1", text:"Переведи " + total.toLocaleString("ru-RU") + " ₽ по реквизитам выше" },
+                { n:"2", text:'Укажи "' + orderId + '" в комментарии к переводу' },
+                { n:"3", text:"Загрузи скриншот чека в Личном кабинете → Мои заявки" },
+                { n:"4", text:"Данные аккаунта придут в кабинет — обычно до 60 минут" },
+              ].map(s => (
+                <div key={s.n} style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
+                  <div style={{ width:18, height:18, borderRadius:"50%", background:"rgba(52,211,153,0.2)", border:"1px solid rgba(52,211,153,0.35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"#6ee7b7", fontWeight:700, flexShrink:0, marginTop:1 }}>{s.n}</div>
+                  <div style={{ color:"rgba(255,255,255,0.55)", fontSize:13, lineHeight:1.5 }}>{s.text}</div>
+                </div>
+              ))}
             </div>
           </div>
 
           <div style={{ display:"flex", gap:10 }}>
-            <button onClick={()=>{ onClose(); go("#cabinet"); }} style={{ flex:1, padding:12, borderRadius:10, background:"rgba(251,191,36,0.1)", border:"1px solid rgba(251,191,36,0.3)", color:"#fbbf24", cursor:"pointer", fontSize:13, fontWeight:600 }}>📋 Мои заявки</button>
-            <button onClick={onClose} style={{ flex:1, padding:12, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.5)", cursor:"pointer", fontSize:13 }}>Закрыть</button>
+            <button onClick={()=>{ onClose(); go("#cabinet"); }} style={{ flex:1, padding:13, borderRadius:12, background:"linear-gradient(135deg,rgba(251,191,36,0.15),rgba(249,115,22,0.1))", border:"1px solid rgba(251,191,36,0.35)", color:"#fbbf24", cursor:"pointer", fontSize:13, fontWeight:700 }}>📋 Мои заявки</button>
+            <button onClick={onClose} style={{ padding:"13px 18px", borderRadius:12, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.1)", color:"rgba(255,255,255,0.4)", cursor:"pointer", fontSize:13 }}>✕</button>
           </div>
-          <div style={{ color:"rgba(255,255,255,0.25)", fontSize:11, marginTop:12, textAlign:"center" }}>⏱ Обрабатываем в рабочее время — обычно до 1 часа</div>
         </>}
       </div>
     </div>
@@ -893,7 +921,7 @@ function OrderProgress({ status }) {
 // ══════════════════════════════════════════════════════════════
 //  REFERRAL BLOCK — "Приведи друга"
 // ══════════════════════════════════════════════════════════════
-function ReferralBlock({ userId, t }) {
+function ReferralBlock({ userId, t, go }) {
   const [copied, setCopied] = useState(false);
   const refCode = userId ? userId.slice(0,8).toUpperCase() : "--------";
   const refLink = `https://pay-flow.ru/#home?ref=${refCode}`;
@@ -901,44 +929,75 @@ function ReferralBlock({ userId, t }) {
   const copy = () => {
     navigator.clipboard.writeText(refLink).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2200);
+      setTimeout(() => setCopied(false), 2500);
     });
   };
 
   return (
     <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:24, position:"relative", overflow:"hidden" }}>
       {/* bg glow */}
-      <div style={{ position:"absolute",top:-30,right:-30,width:120,height:120,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,0.08) 0%,transparent 70%)",pointerEvents:"none" }}/>
-      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
-        <div style={{ width:40,height:40,borderRadius:12,background:t.goldDim,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>🎁</div>
+      <div style={{ position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,0.07) 0%,transparent 70%)",pointerEvents:"none" }}/>
+
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
+        <div style={{ width:44,height:44,borderRadius:14,background:t.goldDim,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0 }}>🎁</div>
         <div>
-          <div style={{ fontWeight:700, fontSize:15, color:t.text }}>Приведи друга</div>
-          <div style={{ color:t.muted, fontSize:12, marginTop:2 }}>Поделись ссылкой — получи бонус за каждого нового пользователя</div>
+          <div style={{ fontWeight:800, fontSize:16, color:t.text, letterSpacing:-0.3 }}>Реферальная программа</div>
+          <div style={{ color:t.muted, fontSize:12, marginTop:2 }}>Получай 200 ₽ за каждого приглашённого друга</div>
         </div>
       </div>
-      <div style={{ background:t.goldDim, border:`1px solid ${t.goldB}`, borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
-        <div style={{ color:t.muted, fontSize:11, marginBottom:6, textTransform:"uppercase", letterSpacing:1, fontWeight:600 }}>Твоя реферальная ссылка</div>
+
+      {/* Bonus card */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:18 }}>
+        {[
+          { icon:"👥", val:"200 ₽", desc:"за каждого реферала" },
+          { icon:"🎯", val:"без лимита", desc:"рефералов у вас" },
+          { icon:"⚡", val:"3 дня", desc:"до начисления бонуса" },
+        ].map(b => (
+          <div key={b.val} style={{ textAlign:"center", padding:"14px 8px", borderRadius:14, background:t.goldDim, border:`1px solid ${t.goldB}` }}>
+            <div style={{ fontSize:18, marginBottom:5 }}>{b.icon}</div>
+            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:13, color:t.gold, marginBottom:3 }}>{b.val}</div>
+            <div style={{ color:t.muted, fontSize:10, lineHeight:1.4 }}>{b.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* How it works */}
+      <div style={{ marginBottom:18 }}>
+        <div style={{ color:t.muted, fontSize:11, textTransform:"uppercase", letterSpacing:1.5, fontWeight:600, marginBottom:12 }}>Как работает</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {[
+            { n:"1", title:"Поделись ссылкой", desc:"Скопируй реферальную ссылку ниже и отправь другу" },
+            { n:"2", title:"Друг делает заказ", desc:"Он регистрируется и оформляет первую оплаченную заявку" },
+            { n:"3", title:"Бонус 200 ₽", desc:"Зачисляем на твой счёт — применяется как скидка на следующий заказ" },
+          ].map(s => (
+            <div key={s.n} style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+              <div style={{ width:24,height:24,borderRadius:"50%",background:t.goldDim,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:11,color:t.gold }}>{s.n}</div>
+              <div>
+                <div style={{ color:t.text, fontWeight:600, fontSize:13 }}>{s.title}</div>
+                <div style={{ color:t.sub, fontSize:12, marginTop:1, lineHeight:1.5 }}>{s.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Ref link */}
+      <div style={{ background:`rgba(15,23,42,0.6)`, border:`1px solid ${t.border}`, borderRadius:14, padding:"14px 16px", marginBottom:14 }}>
+        <div style={{ color:t.muted, fontSize:11, marginBottom:8, textTransform:"uppercase", letterSpacing:1, fontWeight:600 }}>Твоя ссылка · код {refCode}</div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          <div style={{ flex:1, color:t.text, fontSize:13, fontFamily:"monospace", wordBreak:"break-all" }}>{refLink}</div>
-          <button onClick={copy} style={{ padding:"8px 14px", borderRadius:10, background:copied?"rgba(52,211,153,0.15)":"rgba(251,191,36,0.15)", border:`1px solid ${copied?"rgba(52,211,153,0.4)":"rgba(251,191,36,0.4)"}`, color:copied?"#34d399":"#fbbf24", cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap", flexShrink:0, transition:"all .2s" }}>
+          <div style={{ flex:1, color:t.sub, fontSize:12, fontFamily:"monospace", wordBreak:"break-all", lineHeight:1.5 }}>{refLink}</div>
+          <button onClick={copy} style={{ padding:"9px 16px", borderRadius:10, background:copied?"rgba(52,211,153,0.15)":"rgba(251,191,36,0.12)", border:`1px solid ${copied?"rgba(52,211,153,0.4)":t.goldB}`, color:copied?"#34d399":t.gold, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap", flexShrink:0, transition:"all .2s" }}>
             {copied ? "✓ Скопировано" : "Копировать"}
           </button>
         </div>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
-        {[
-          { n:"1", desc:"Поделись ссылкой с другом" },
-          { n:"2", desc:"Друг регистрируется и делает заказ" },
-          { n:"3", desc:"Ты получаешь бонус на счёт" },
-        ].map(s => (
-          <div key={s.n} style={{ textAlign:"center", padding:"12px 8px", borderRadius:12, background:"rgba(255,255,255,0.03)", border:`1px solid ${t.border}` }}>
-            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:900, fontSize:20, color:t.gold, marginBottom:6 }}>{s.n}</div>
-            <div style={{ color:t.sub, fontSize:11, lineHeight:1.5 }}>{s.desc}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ marginTop:12, padding:"10px 14px", borderRadius:10, background:"rgba(96,165,250,0.08)", border:"1px solid rgba(96,165,250,0.2)", color:"#93c5fd", fontSize:12 }}>
-        ℹ️ Бонусная программа в разработке. Ваши рефералы уже сохраняются — они будут учтены при запуске.
+
+      {/* Conditions note */}
+      <div style={{ padding:"10px 14px", borderRadius:10, background:"rgba(96,165,250,0.07)", border:"1px solid rgba(96,165,250,0.18)" }}>
+        <div style={{ color:"#93c5fd", fontSize:12, lineHeight:1.6 }}>
+          <strong>Условия:</strong> бонус начисляется после первой <em>выполненной</em> заявки реферала. Самореферирование не засчитывается. Бонус действует как скидка — на вывод не предназначен. Подробнее в <button onClick={()=>go&&go("#legal")} style={{ background:"none", border:"none", color:"#60a5fa", cursor:"pointer", fontSize:12, padding:0, textDecoration:"underline" }}>Оферте (п. 6)</button>.
+        </div>
       </div>
     </div>
   );
@@ -1157,7 +1216,7 @@ function Cabinet({ userHook, go, t }) {
           </div>
 
           {/* Referral Program */}
-          <ReferralBlock userId={session?.user?.id} t={t}/>
+          <ReferralBlock userId={session?.user?.id} t={t} go={go}/>
         </div>
       )}
 
