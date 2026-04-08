@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .env
 .env.local
+email-templates/reset-password.html
+email-templates/confirm-signup.html
+email-templates/magic-link.html
