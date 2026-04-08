@@ -285,25 +285,47 @@ function useUser() {
   }, []);
 
   useEffect(() => {
-    // Получаем текущую сессию
+    // Подписываемся до getSession — чтобы не пропустить SIGNED_IN от email confirmation
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      if (session) {
+        loadProfile(session.user.id);
+        // После подтверждения почты или входа по magic link — редиректим на главную
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+          const params = new URLSearchParams(window.location.search);
+          const isAuthCallback = params.has("token_hash") || params.has("code") ||
+            window.location.hash.includes("access_token");
+          if (isAuthCallback) {
+            // Очищаем auth-параметры из URL и показываем главную
+            window.history.replaceState(null, "", window.location.pathname);
+            window.location.hash = "#home";
+          }
+        }
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    // Получаем текущую сессию (если уже залогинен)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) loadProfile(session.user.id);
       else setLoading(false);
     });
-    // Подписываемся на изменения
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) loadProfile(session.user.id);
-      else { setProfile(null); setLoading(false); }
-    });
+
     return () => subscription.unsubscribe();
   }, []);
 
   const loadProfile = async (userId) => {
-    const { data } = await profiles.get(userId);
-    setProfile(data);
-    setLoading(false);
+    try {
+      const { data } = await profiles.get(userId);
+      setProfile(data);
+    } catch (e) {
+      console.error("loadProfile error:", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const reloadProfile = async (userId) => {

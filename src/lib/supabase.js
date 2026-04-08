@@ -15,9 +15,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON) {
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
-    autoRefreshToken: true,
-    persistSession:   true,
+    autoRefreshToken:   true,
+    persistSession:     true,
     detectSessionInUrl: true,
+    flowType:           'pkce', // токены идут в query-params, а не в hash — нет конфликта с роутером
   },
 });
 
@@ -102,7 +103,7 @@ export const storage = {
   uploadReceipt: async (userId, orderId, file) => {
     const ext  = file.name.split(".").pop();
     const path = `${userId}/${orderId}.${ext}`;
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from("receipts")
       .upload(path, file, { upsert: true, contentType: file.type });
     if (error) throw error;
