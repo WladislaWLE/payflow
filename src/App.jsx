@@ -290,13 +290,24 @@ function useUser() {
       setSession(session);
       if (session) {
         loadProfile(session.user.id);
-        // После подтверждения почты или входа по magic link — редиректим на главную
-        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        if (event === "SIGNED_IN") {
+          // Сохраняем реф-код и имя сразу при наличии сессии
+          // (корректно работает и при обычном входе, и после подтверждения email)
+          const refCode = localStorage.getItem("pf_ref");
+          const pendingName = localStorage.getItem("pf_pending_name");
+          if (refCode || pendingName) {
+            setTimeout(async () => {
+              const updates = {};
+              if (pendingName) { updates.name = pendingName; localStorage.removeItem("pf_pending_name"); }
+              if (refCode)     { updates.referred_by_code = refCode; localStorage.removeItem("pf_ref"); }
+              await profiles.update(session.user.id, updates);
+            }, 800);
+          }
+          // После подтверждения почты или входа по magic link — редиректим на главную
           const params = new URLSearchParams(window.location.search);
           const isAuthCallback = params.has("token_hash") || params.has("code") ||
             window.location.hash.includes("access_token");
           if (isAuthCallback) {
-            // Очищаем auth-параметры из URL и показываем главную
             window.history.replaceState(null, "", window.location.pathname);
             window.location.hash = "#home";
           }
@@ -342,21 +353,12 @@ function useUser() {
   const isAdmin = profile?.is_admin || session?.user?.email === CFG.ADMIN_EMAIL;
 
   const register = async (name, email, password) => {
+    // Сохраняем имя в localStorage — применим при SIGNED_IN (после подтверждения email)
+    localStorage.setItem("pf_pending_name", name.trim());
     const { data, error } = await sbAuth.signUp(email, password, name);
-    if (error) return { error: error.message };
-
-    // Ждём 1.5с чтобы DB-триггер успел создать профиль, затем явно прописываем имя
-    // (на случай если raw_user_meta_data не дошёл до триггера)
-    const refCode = localStorage.getItem("pf_ref");
-    if (data.user) {
-      setTimeout(async () => {
-        const updates = { name: name.trim() };
-        if (refCode) {
-          updates.referred_by_code = refCode;
-          localStorage.removeItem("pf_ref");
-        }
-        await profiles.update(data.user.id, updates);
-      }, 1500);
+    if (error) {
+      localStorage.removeItem("pf_pending_name");
+      return { error: error.message };
     }
     return { ok: true };
   };
