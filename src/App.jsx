@@ -1,6 +1,6 @@
 import LegalPage from "./pages/LegalPage";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { supabase, auth as sbAuth, profiles, orders as sbOrders, notifications as sbNotifs, storage as sbStorage } from "./lib/supabase";
+import { supabase, auth as sbAuth, profiles, orders as sbOrders, notifications as sbNotifs, storage as sbStorage, referrals as sbReferrals } from "./lib/supabase";
 
 // ══════════════════════════════════════════════════════════════
 //  ПРОМОКОДЫ — helper
@@ -273,6 +273,17 @@ function useUser() {
   const [profile, setProfile]   = useState(null);
   const [loading, setLoading]   = useState(true);
 
+  // Захватываем реф-код из URL (?ref=XXXXXX) при открытии сайта
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search || window.location.hash.split("?")[1] || "");
+      const ref = params.get("ref");
+      if (ref && ref.length >= 4) {
+        localStorage.setItem("pf_ref", ref.toUpperCase());
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     // Получаем текущую сессию
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -295,11 +306,26 @@ function useUser() {
     setLoading(false);
   };
 
+  const reloadProfile = async (userId) => {
+    const { data } = await profiles.get(userId);
+    setProfile(data);
+  };
+
   const isAdmin = profile?.is_admin || session?.user?.email === CFG.ADMIN_EMAIL;
 
   const register = async (name, email, password) => {
     const { data, error } = await sbAuth.signUp(email, password, name);
     if (error) return { error: error.message };
+
+    // Если пришёл по реферальной ссылке — сохраняем код в профиле
+    const refCode = localStorage.getItem("pf_ref");
+    if (refCode && data.user) {
+      // Ждём 1.5с чтобы DB-триггер успел создать профиль
+      setTimeout(async () => {
+        await profiles.update(data.user.id, { referred_by_code: refCode });
+        localStorage.removeItem("pf_ref");
+      }, 1500);
+    }
     return { ok: true };
   };
 
@@ -311,7 +337,7 @@ function useUser() {
 
   const logout = async () => { await sbAuth.signOut(); };
 
-  return { session, profile, loading, isAdmin, register, login, logout };
+  return { session, profile, loading, isAdmin, register, login, logout, reloadProfile };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -465,7 +491,7 @@ function SCard({ s, rate, onSelect, t }) {
 // ══════════════════════════════════════════════════════════════
 //  ORDER MODAL
 // ══════════════════════════════════════════════════════════════
-function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
+function OrderModal({ s, rate, user, profile, onClose, onSave, go, t, onBalanceUsed }) {
   const [tier, setTier]     = useState(s.tiers[0]);
   const [method, setMethod] = useState(s.gift?"gift":s.newAcc?"newAcc":"login");
   const [loginV, setLoginV] = useState("");
@@ -481,6 +507,9 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
   const [promoResult, setPromoResult] = useState(null);
   const [promoError, setPromoError] = useState("");
   const [promoChecking, setPromoChecking] = useState(false);
+  const [useBalance, setUseBalance] = useState(false);
+
+  const userBalance = profile?.referral_bonus_rub || 0;
 
   const fileRef = useRef();
   const req     = useRef(randReq()).current;
@@ -525,8 +554,17 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
         setUploading(false);
       }
 
-      const discount = promoResult ? calcDiscount(total, promoResult) : 0;
-      const finalTotal = Math.max(0, total - discount);
+      const promoDiscount = promoResult ? calcDiscount(total, promoResult) : 0;
+      const balanceApplied = useBalance ? Math.min(userBalance, Math.max(0, total - promoDiscount)) : 0;
+      const discount = promoDiscount;
+      const finalTotal = Math.max(0, total - discount - balanceApplied);
+
+      // Списываем бонусный баланс если используется
+      if (balanceApplied > 0) {
+        const { data: spendResult } = await sbReferrals.spendBalance(user.id, balanceApplied);
+        if (!spendResult?.ok) { setError("Ошибка списания баланса"); setCreating(false); return; }
+        onBalanceUsed && onBalanceUsed();
+      }
       const orderData = {
         id:               orderId,
         user_id:          user.id,
@@ -539,6 +577,7 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
         price_rub:        finalTotal,
         promo_code:       promoResult ? promoInput : '',
         promo_discount:   discount,
+        balance_used:     balanceApplied,
         method,
         login_data:       method === "login" ? loginV : "",
         email_data:       (method === "gift" || method === "family") ? emailV : "",
@@ -634,16 +673,42 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t }) {
             {promoError && <div style={{ color:"#f87171", fontSize:12, marginTop:5 }}>❌ {promoError}</div>}
           </div>
 
-          {/* Итог с учётом промокода */}
-          <div style={{ background:"rgba(251,191,36,0.07)", border:"1px solid rgba(251,191,36,0.25)", borderRadius:14, padding:16, marginBottom:14 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>Курс ЦБ</span><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>1$ = {rate?.toFixed(2)} ₽</span></div>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom: promoResult ? 8 : 10 }}><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>Комиссия {Math.round(CFG.MARGIN*100)}%</span><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>+ {comm.toLocaleString("ru-RU")} ₽</span></div>
-            {promoResult && <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}><span style={{ color:"#6ee7b7", fontSize:13 }}>🎁 Скидка промокода</span><span style={{ color:"#6ee7b7", fontSize:13, fontWeight:600 }}>− {calcDiscount(total,promoResult).toLocaleString("ru-RU")} ₽</span></div>}
-            <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(255,255,255,0.1)", paddingTop:12 }}>
-              <span style={{ color:"white", fontWeight:700, fontSize:15 }}>К оплате</span>
-              <span style={{ color:"#fbbf24", fontWeight:900, fontSize:26, fontFamily:"'Clash Display',sans-serif" }}>{Math.max(0, total - (promoResult ? calcDiscount(total,promoResult) : 0)).toLocaleString("ru-RU")} ₽</span>
+          {/* Бонусный баланс */}
+          {userBalance > 0 && (
+            <div
+              onClick={() => setUseBalance(v => !v)}
+              style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:useBalance?"rgba(251,191,36,0.1)":"rgba(255,255,255,0.04)", border:`1px solid ${useBalance?"rgba(251,191,36,0.4)":"rgba(255,255,255,0.1)"}`, borderRadius:12, padding:"12px 14px", marginBottom:12, cursor:"pointer", transition:"all .2s" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+                <span style={{ fontSize:18 }}>🎁</span>
+                <div>
+                  <div style={{ color:"white", fontWeight:600, fontSize:13 }}>Бонусный баланс: {userBalance.toLocaleString("ru-RU")} ₽</div>
+                  <div style={{ color:"rgba(255,255,255,0.4)", fontSize:11, marginTop:1 }}>Нажми чтобы применить как скидку</div>
+                </div>
+              </div>
+              <div style={{ width:22, height:22, borderRadius:6, background:useBalance?"#fbbf24":"rgba(255,255,255,0.1)", border:`1.5px solid ${useBalance?"#fbbf24":"rgba(255,255,255,0.2)"}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all .2s" }}>
+                {useBalance && <span style={{ color:"#0a0a14", fontSize:13, fontWeight:800 }}>✓</span>}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Итог с учётом промокода и баланса */}
+          {(() => {
+            const promoDiscount = promoResult ? calcDiscount(total, promoResult) : 0;
+            const balanceApplied = useBalance ? Math.min(userBalance, Math.max(0, total - promoDiscount)) : 0;
+            const finalTotal = Math.max(0, total - promoDiscount - balanceApplied);
+            return (
+              <div style={{ background:"rgba(251,191,36,0.07)", border:"1px solid rgba(251,191,36,0.25)", borderRadius:14, padding:16, marginBottom:14 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>Курс ЦБ</span><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>1$ = {rate?.toFixed(2)} ₽</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:(promoResult||balanceApplied)?8:10 }}><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>Комиссия {Math.round(CFG.MARGIN*100)}%</span><span style={{ color:"rgba(255,255,255,0.5)", fontSize:13 }}>+ {comm.toLocaleString("ru-RU")} ₽</span></div>
+                {promoResult && <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><span style={{ color:"#6ee7b7", fontSize:13 }}>🎁 Промокод</span><span style={{ color:"#6ee7b7", fontSize:13, fontWeight:600 }}>− {promoDiscount.toLocaleString("ru-RU")} ₽</span></div>}
+                {balanceApplied > 0 && <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}><span style={{ color:"#fbbf24", fontSize:13 }}>🎁 Бонусный баланс</span><span style={{ color:"#fbbf24", fontSize:13, fontWeight:600 }}>− {balanceApplied.toLocaleString("ru-RU")} ₽</span></div>}
+                <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid rgba(255,255,255,0.1)", paddingTop:12 }}>
+                  <span style={{ color:"white", fontWeight:700, fontSize:15 }}>К оплате</span>
+                  <span style={{ color:"#fbbf24", fontWeight:900, fontSize:26, fontFamily:"'Clash Display',sans-serif" }}>{finalTotal.toLocaleString("ru-RU")} ₽</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {error && <Alert type="error" t={t}>{error}</Alert>}
 
@@ -921,10 +986,17 @@ function OrderProgress({ status }) {
 // ══════════════════════════════════════════════════════════════
 //  REFERRAL BLOCK — "Приведи друга"
 // ══════════════════════════════════════════════════════════════
-function ReferralBlock({ userId, t, go }) {
+function ReferralBlock({ userId, profile, t, go }) {
   const [copied, setCopied] = useState(false);
-  const refCode = userId ? userId.slice(0,8).toUpperCase() : "--------";
+  const [events, setEvents] = useState([]);
+  const refCode = profile?.referral_code || (userId ? userId.slice(0,8).toUpperCase() : "------");
   const refLink = `https://pay-flow.ru/#home?ref=${refCode}`;
+  const balance = profile?.referral_bonus_rub || 0;
+
+  useEffect(() => {
+    if (!userId) return;
+    sbReferrals.getByReferrer(userId).then(({ data }) => setEvents(data || []));
+  }, [userId]);
 
   const copy = () => {
     navigator.clipboard.writeText(refLink).then(() => {
@@ -993,6 +1065,35 @@ function ReferralBlock({ userId, t, go }) {
         </div>
       </div>
 
+      {/* Balance current */}
+      {balance > 0 && (
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:t.goldDim, border:`1px solid ${t.goldB}`, borderRadius:14, padding:"14px 16px", marginBottom:14 }}>
+          <div>
+            <div style={{ color:t.muted, fontSize:11, textTransform:"uppercase", letterSpacing:1, fontWeight:600, marginBottom:3 }}>Твой бонусный баланс</div>
+            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:900, fontSize:26, color:t.gold }}>{balance.toLocaleString("ru-RU")} ₽</div>
+          </div>
+          <div style={{ color:t.sub, fontSize:12, maxWidth:140, textAlign:"right", lineHeight:1.5 }}>Автоматически применяется при следующем заказе</div>
+        </div>
+      )}
+
+      {/* Referral history */}
+      {events.length > 0 && (
+        <div style={{ marginBottom:14 }}>
+          <div style={{ color:t.muted, fontSize:11, textTransform:"uppercase", letterSpacing:1.5, fontWeight:600, marginBottom:10 }}>История начислений</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+            {events.map(e => (
+              <div key={e.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"rgba(255,255,255,0.03)", border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 14px" }}>
+                <div>
+                  <div style={{ color:t.text, fontSize:13, fontWeight:600 }}>Реферал {e.referred?.name || "—"}</div>
+                  <div style={{ color:t.muted, fontSize:11, marginTop:1 }}>{new Date(e.created_at).toLocaleDateString("ru-RU")} · заявка {e.order_id}</div>
+                </div>
+                <div style={{ color:"#34d399", fontWeight:800, fontSize:15 }}>+{e.bonus_amount} ₽</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Conditions note */}
       <div style={{ padding:"10px 14px", borderRadius:10, background:"rgba(96,165,250,0.07)", border:"1px solid rgba(96,165,250,0.18)" }}>
         <div style={{ color:"#93c5fd", fontSize:12, lineHeight:1.6 }}>
@@ -1048,6 +1149,7 @@ function Cabinet({ userHook, go, t }) {
     done:    orders.filter(o=>o.status==="done").length,
     spent:   orders.filter(o=>o.status==="done").reduce((s,o)=>s+(o.price_rub||0),0),
     pending: orders.filter(o=>["new","paid","processing"].includes(o.status)).length,
+    balance: profile?.referral_bonus_rub || 0,
   };
 
   return (
@@ -1057,18 +1159,26 @@ function Cabinet({ userHook, go, t }) {
           <div style={{ color:t.muted, fontSize:13, marginBottom:4 }}>Личный кабинет</div>
           <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:28, color:t.text }}>Привет, {profile?.name || ""}! 👋</div>
         </div>
-        <button onClick={()=>go("#catalog")} style={{ padding:"10px 20px", borderRadius:100, background:t.card, border:`1px solid ${t.border}`, color:t.sub, cursor:"pointer", fontSize:14, fontWeight:600 }}>🛍 Заказать ещё</button>
+        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+          {stats.balance > 0 && (
+            <div style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:100, background:t.goldDim, border:`1px solid ${t.goldB}`, fontSize:13, fontWeight:700, color:t.gold }}>
+              🎁 Баланс: {stats.balance.toLocaleString("ru-RU")} ₽
+            </div>
+          )}
+          <button onClick={()=>go("#catalog")} style={{ padding:"10px 20px", borderRadius:100, background:t.card, border:`1px solid ${t.border}`, color:t.sub, cursor:"pointer", fontSize:14, fontWeight:600 }}>🛍 Заказать ещё</button>
+        </div>
       </div>
 
       {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:10, marginBottom:28 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:10, marginBottom:28 }}>
         {[
           {l:"Всего заявок", v:stats.total,  c:t.gold,   i:"📋"},
           {l:"Выполнено",    v:stats.done,   c:"#34d399",i:"✅"},
           {l:"Потрачено",    v:stats.spent.toLocaleString("ru-RU")+" ₽", c:"#60a5fa",i:"💰"},
           {l:"В обработке",  v:stats.pending,c:"#a78bfa",i:"🔧"},
+          {l:"Бонусный баланс", v:stats.balance.toLocaleString("ru-RU")+" ₽", c:t.gold, i:"🎁"},
         ].map(s => (
-          <div key={s.l} style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, padding:"16px 18px", boxShadow:t.shadow }}>
+          <div key={s.l} style={{ background:s.l==="Бонусный баланс"?t.goldDim:t.card2, border:`1px solid ${s.l==="Бонусный баланс"?t.goldB:t.border}`, borderRadius:16, padding:"16px 18px", boxShadow:t.shadow }}>
             <div style={{ fontSize:22, marginBottom:6 }}>{s.i}</div>
             <div style={{ color:t.muted, fontSize:12, marginBottom:4 }}>{s.l}</div>
             <div style={{ color:s.c, fontWeight:800, fontSize:22, fontFamily:"'Clash Display',sans-serif" }}>{s.v}</div>
@@ -1216,7 +1326,7 @@ function Cabinet({ userHook, go, t }) {
           </div>
 
           {/* Referral Program */}
-          <ReferralBlock userId={session?.user?.id} t={t} go={go}/>
+          <ReferralBlock userId={session?.user?.id} profile={profile} t={t} go={go}/>
         </div>
       )}
 
@@ -1326,9 +1436,32 @@ function AdminPanel({ userHook, go, t }) {
     pending:orders.filter(o=>["new","paid","processing"].includes(o.status)).length,
   };
 
+  const sendTg = (message) =>
+    fetch("/api/tg-notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    }).catch(() => {});
+
   const handleStatusChange = async (orderId, status) => {
     const notifText = `Заявка ${orderId}: статус изменён на "${SL[status]}"`;
     await updateOrder(orderId, { status }, notifText);
+
+    // При выполнении заказа — начисляем реферальный бонус и уведомляем в TG
+    if (status === "done") {
+      const { data } = await sbReferrals.processReferral(orderId);
+      if (data?.ok) {
+        const msg =
+          `🎁 <b>Реферальный бонус начислен!</b>\n\n` +
+          `👤 <b>Пригласил:</b> ${data.referrer_name || "—"} (${data.referrer_email || "—"})\n` +
+          `👥 <b>Друг:</b> ${data.referee_name || "—"} (${data.referee_email || "—"})\n\n` +
+          `📦 <b>Заказал:</b> ${data.service} · ${data.tier}\n` +
+          `💰 <b>Сумма заказа:</b> ${(data.price_rub || 0).toLocaleString("ru-RU")} ₽\n` +
+          `🏆 <b>Бонус начислен:</b> +${data.bonus} ₽ на счёт пригласившего\n\n` +
+          `🔖 Заявка: <code>${data.order_id}</code>`;
+        sendTg(msg);
+      }
+    }
   };
 
   const handleNoteSave = async (orderId, note) => {
@@ -2459,7 +2592,7 @@ export default function App() {
       )}
 
       {/* Modals */}
-      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const {data,error}=await sbOrders.insert(order); if(!error&&data){ fetch("/api/tg-notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`🆕 <b>Новая заявка</b> ${data.id}\n📦 ${data.service} · ${data.tier}\n💰 ${data.price_rub?.toLocaleString("ru-RU")} ₽\n👤 ${data.user_email}`})}).then(r=>r.json()).then(d=>{if(!d.ok)console.warn("TG:",d);}).catch(e=>console.error("TG fetch error:",e)); } return {data,error}; }} go={go} t={t}/>}
+      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const {data,error}=await sbOrders.insert(order); if(!error&&data){ fetch("/api/tg-notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`🆕 <b>Новая заявка</b> ${data.id}\n📦 ${data.service} · ${data.tier}\n💰 ${data.price_rub?.toLocaleString("ru-RU")} ₽\n👤 ${data.user_email}`})}).then(r=>r.json()).then(d=>{if(!d.ok)console.warn("TG:",d);}).catch(e=>console.error("TG fetch error:",e)); } return {data,error}; }} onBalanceUsed={()=>userHook.reloadProfile(session?.user?.id)} go={go} t={t}/>}
       {showAuth && <AuthModal onClose={()=>setShowAuth(false)} userHook={userHook} t={t}/>}
       {showReqSvc && <RequestServiceModal onClose={()=>setShowReqSvc(false)} user={session?.user} t={t}/>}
 

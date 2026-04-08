@@ -105,3 +105,142 @@ DROP TRIGGER IF EXISTS trg_generate_referral_code ON profiles;
 CREATE TRIGGER trg_generate_referral_code
   AFTER INSERT ON profiles
   FOR EACH ROW EXECUTE FUNCTION generate_referral_code_for_user();
+
+
+-- ── Фаза 2.3: Баланс и отслеживание рефералов ────────────────
+
+-- Добавляем колонку referred_by_code: хранит текстовый реф-код реферера
+-- (заполняется фронтендом при регистрации из localStorage)
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS referred_by_code TEXT;
+
+-- Для быстрого поиска по коду
+CREATE INDEX IF NOT EXISTS idx_profiles_referral_code ON profiles(referral_code);
+
+-- Политика: пользователь может видеть свой профиль полностью
+-- (referral_bonus_rub уже есть, используем его как balance)
+
+-- ── RPC: начислить реферальный бонус при выполнении заказа ───
+-- Вызывается из AdminPanel когда статус заявки меняется на "done"
+-- Возвращает детали для Telegram-уведомления
+CREATE OR REPLACE FUNCTION process_referral(p_order_id TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_user_id         UUID;
+  v_ref_code        TEXT;
+  v_referrer_id     UUID;
+  v_done_count      INT;
+  v_already         INT;
+  v_bonus           INT := 200;
+  v_referrer_name   TEXT;
+  v_referrer_email  TEXT;
+  v_referee_name    TEXT;
+  v_referee_email   TEXT;
+  v_service         TEXT;
+  v_tier            TEXT;
+  v_price_rub       INT;
+BEGIN
+  -- 1. Находим пользователя и детали заказа
+  SELECT o.user_id, o.service, o.tier, o.price_rub::INT
+    INTO v_user_id, v_service, v_tier, v_price_rub
+    FROM orders o WHERE o.id = p_order_id;
+  IF NOT FOUND THEN
+    RETURN '{"ok":false,"reason":"order_not_found"}'::JSONB;
+  END IF;
+
+  -- 2. Читаем referred_by_code реферала + его данные
+  SELECT p.referred_by_code, p.name, p.email
+    INTO v_ref_code, v_referee_name, v_referee_email
+    FROM profiles p WHERE p.id = v_user_id;
+  IF v_ref_code IS NULL OR v_ref_code = '' THEN
+    RETURN '{"ok":false,"reason":"not_referred"}'::JSONB;
+  END IF;
+
+  -- 3. Это первый выполненный заказ реферала?
+  SELECT COUNT(*) INTO v_done_count
+    FROM orders
+   WHERE user_id = v_user_id
+     AND status = 'done'
+     AND id != p_order_id;
+  IF v_done_count > 0 THEN
+    RETURN '{"ok":false,"reason":"not_first_order"}'::JSONB;
+  END IF;
+
+  -- 4. Бонус ещё не был начислен по этому рефералу?
+  SELECT COUNT(*) INTO v_already
+    FROM referral_events WHERE referred_id = v_user_id;
+  IF v_already > 0 THEN
+    RETURN '{"ok":false,"reason":"already_credited"}'::JSONB;
+  END IF;
+
+  -- 5. Находим реферера по коду
+  SELECT id, name, email
+    INTO v_referrer_id, v_referrer_name, v_referrer_email
+    FROM profiles WHERE referral_code = v_ref_code;
+  IF NOT FOUND THEN
+    RETURN '{"ok":false,"reason":"referrer_not_found"}'::JSONB;
+  END IF;
+
+  -- 6. Запрещаем самореферирование
+  IF v_referrer_id = v_user_id THEN
+    RETURN '{"ok":false,"reason":"self_referral"}'::JSONB;
+  END IF;
+
+  -- 7. Начисляем бонус рефереру
+  UPDATE profiles
+     SET referral_bonus_rub = referral_bonus_rub + v_bonus
+   WHERE id = v_referrer_id;
+
+  -- 8. Фиксируем событие
+  INSERT INTO referral_events
+    (referrer_id, referred_id, order_id, bonus_amount, status)
+  VALUES
+    (v_referrer_id, v_user_id, p_order_id, v_bonus, 'credited');
+
+  -- 9. Возвращаем все данные для TG-уведомления
+  RETURN jsonb_build_object(
+    'ok',             true,
+    'bonus',          v_bonus,
+    'referrer_id',    v_referrer_id,
+    'referrer_name',  v_referrer_name,
+    'referrer_email', v_referrer_email,
+    'referee_name',   v_referee_name,
+    'referee_email',  v_referee_email,
+    'service',        v_service,
+    'tier',           v_tier,
+    'price_rub',      v_price_rub,
+    'order_id',       p_order_id
+  );
+END;
+$$;
+
+
+-- ── RPC: списать баланс при создании заказа ──────────────────
+-- Вызывается из фронтенда при оформлении заказа с использованием бонуса
+CREATE OR REPLACE FUNCTION spend_balance(p_user_id UUID, p_amount INT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_current INT;
+BEGIN
+  SELECT referral_bonus_rub INTO v_current
+    FROM profiles WHERE id = p_user_id;
+  IF NOT FOUND THEN
+    RETURN '{"ok":false,"reason":"user_not_found"}'::JSONB;
+  END IF;
+  IF v_current < p_amount THEN
+    RETURN '{"ok":false,"reason":"insufficient_balance"}'::JSONB;
+  END IF;
+
+  UPDATE profiles
+     SET referral_bonus_rub = referral_bonus_rub - p_amount
+   WHERE id = p_user_id;
+
+  RETURN jsonb_build_object('ok', true, 'spent', p_amount, 'remaining', v_current - p_amount);
+END;
+$$;

@@ -124,6 +124,25 @@ export const storage = {
   },
 };
 
+// ── Referral helpers ─────────────────────────────────────────
+export const referrals = {
+  // Список рефералов пользователя (кого он привёл)
+  getByReferrer: (userId) =>
+    supabase
+      .from("referral_events")
+      .select("*, referred:referred_id(name, created_at)")
+      .eq("referrer_id", userId)
+      .order("created_at", { ascending: false }),
+
+  // Обработать реферала при выполнении заказа (SECURITY DEFINER — только сервер)
+  processReferral: (orderId) =>
+    supabase.rpc("process_referral", { p_order_id: orderId }),
+
+  // Списать бонус с баланса пользователя при оформлении заказа
+  spendBalance: (userId, amount) =>
+    supabase.rpc("spend_balance", { p_user_id: userId, p_amount: amount }),
+};
+
 // ── Promocodes helpers ───────────────────────────────────────
 export const promocodes = {
   validate: async (code) => {
