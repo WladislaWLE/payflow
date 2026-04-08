@@ -5,6 +5,108 @@
 -- ================================================
 
 
+-- ════════════════════════════════════════════════
+-- ФИХ: "Database error saving new user"
+-- Запустите этот блок ПЕРВЫМ если регистрация не работает
+-- ════════════════════════════════════════════════
+
+-- 1. Убедимся что таблица profiles существует со всеми нужными колонками
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id                  uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  name                text,
+  email               text,
+  is_admin            boolean DEFAULT false,
+  created_at          timestamptz DEFAULT now(),
+  referral_code       text UNIQUE,
+  referral_bonus_rub  integer DEFAULT 0,
+  referred_by         uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  referred_by_code    text
+);
+
+-- Добавляем колонки если их нет (идемпотентно)
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS name               text,
+  ADD COLUMN IF NOT EXISTS email              text,
+  ADD COLUMN IF NOT EXISTS is_admin           boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS referral_code      text UNIQUE,
+  ADD COLUMN IF NOT EXISTS referral_bonus_rub integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS referred_by_code   text;
+
+-- 2. RLS: включаем и задаём политики
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
+CREATE POLICY "profiles_select_own" ON public.profiles
+  FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
+CREATE POLICY "profiles_update_own" ON public.profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "profiles_insert_own" ON public.profiles;
+CREATE POLICY "profiles_insert_own" ON public.profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "profiles_admin_all" ON public.profiles;
+CREATE POLICY "profiles_admin_all" ON public.profiles
+  FOR ALL USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)
+  );
+
+-- 3. Функция создания профиля при регистрации
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, name, email, created_at)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+    NEW.email,
+    NOW()
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+-- 4. Триггер: создаём профиль при регистрации через auth.users
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 5. Заполняем реферальный код сразу при создании профиля
+CREATE OR REPLACE FUNCTION public.generate_referral_code_for_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  UPDATE public.profiles
+  SET referral_code = upper(substring(md5(NEW.id::text || clock_timestamp()::text) FROM 1 FOR 6))
+  WHERE id = NEW.id AND referral_code IS NULL;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_generate_referral_code ON public.profiles;
+CREATE TRIGGER trg_generate_referral_code
+  AFTER INSERT ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.generate_referral_code_for_user();
+
+-- 6. Заполнить реф-коды для уже существующих пользователей
+UPDATE public.profiles
+SET referral_code = upper(substring(md5(id::text || clock_timestamp()::text) FROM 1 FOR 6))
+WHERE referral_code IS NULL;
+
+-- ════════════════════════════════════════════════
+-- КОНЕЦ БЛОКА ФИКСА
+-- ════════════════════════════════════════════════
+
+
 -- ── Фаза 1.4: Запросы новых сервисов ─────────────────────────
 CREATE TABLE IF NOT EXISTS service_requests (
   id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -22,12 +124,15 @@ CREATE TABLE IF NOT EXISTS service_requests (
 -- RLS: авторизованные могут добавлять, все могут читать
 ALTER TABLE service_requests ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "service_requests_insert" ON service_requests;
 CREATE POLICY "service_requests_insert" ON service_requests
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "service_requests_select" ON service_requests;
 CREATE POLICY "service_requests_select" ON service_requests
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "service_requests_admin_update" ON service_requests;
 CREATE POLICY "service_requests_admin_update" ON service_requests
   FOR UPDATE USING (
     EXISTS (
@@ -53,12 +158,15 @@ CREATE TABLE IF NOT EXISTS reviews (
 
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "reviews_insert_own" ON reviews;
 CREATE POLICY "reviews_insert_own" ON reviews
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "reviews_select_approved" ON reviews;
 CREATE POLICY "reviews_select_approved" ON reviews
   FOR SELECT USING (is_approved = true);
 
+DROP POLICY IF EXISTS "reviews_admin_all" ON reviews;
 CREATE POLICY "reviews_admin_all" ON reviews
   FOR ALL USING (
     EXISTS (
@@ -86,6 +194,7 @@ CREATE TABLE IF NOT EXISTS referral_events (
 
 ALTER TABLE referral_events ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "referral_events_select_own" ON referral_events;
 CREATE POLICY "referral_events_select_own" ON referral_events
   FOR SELECT USING (auth.uid() = referrer_id OR auth.uid() = referred_id);
 
