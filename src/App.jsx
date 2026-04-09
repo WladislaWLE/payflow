@@ -449,8 +449,8 @@ function useOrders(userId, isAdmin) {
 
   const addOrder = async (order) => {
     const { data, error } = await sbOrders.insert(order);
-    if (!error) setOrders(prev => [data, ...prev]);
-    return { data, error };
+    if (!error && data?.[0]) setOrders(prev => [data[0], ...prev]);
+    return { data: data?.[0], error };
   };
 
   const updateOrder = async (orderId, updates, notifText) => {

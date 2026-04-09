@@ -49,7 +49,7 @@ export const profiles = {
 // ── Orders helpers ───────────────────────────────────────────
 export const orders = {
   insert: (order) =>
-    supabase.from("orders").insert(order).select().single(),
+    supabase.from("orders").insert(order).select(),
 
   getByUser: (userId) =>
     supabase.from("orders")
