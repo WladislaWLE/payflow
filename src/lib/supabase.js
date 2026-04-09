@@ -115,13 +115,9 @@ export const storage = {
     return data.publicUrl;
   },
 
-  // Для admin — signed URL (временная ссылка)
   getSignedUrl: async (path) => {
-    const { data, error } = await supabase.storage
-      .from("receipts")
-      .createSignedUrl(path, 60 * 60); // 1 час
-    if (error) throw error;
-    return data.signedUrl;
+    const { data } = supabase.storage.from("receipts").getPublicUrl(path);
+    return data.publicUrl;
   },
 };
 

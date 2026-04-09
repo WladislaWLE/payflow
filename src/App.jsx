@@ -468,7 +468,7 @@ function useOrders(userId, isAdmin) {
             .eq("user_id", order.user_id)
             .eq("order_id", orderId)
             .eq("text", notifText)
-            .gte("created_at", new Date(Date.now() - 5000).toISOString());
+            .gte("created_at", new Date(Date.now() - 60000).toISOString());
           if (!existing?.length) {
             await sbNotifs.insert({ user_id: order.user_id, order_id: orderId, text: notifText });
           }
@@ -1392,6 +1392,7 @@ function AdminPanel({ userHook, go, t }) {
   const [noteValues, setNoteValues] = useState({});
   const [receiptModal, setReceiptModal] = useState(null);
   const [saving, setSaving] = useState(null);
+  const [saved, setSaved] = useState(null);
   const [adminTab, setAdminTab] = useState("orders");
   const [promos, setPromos] = useState([]);
   const [serviceReqs, setServiceReqs] = useState([]);
@@ -1437,6 +1438,8 @@ function AdminPanel({ userHook, go, t }) {
       setPromoForm({ code:"", type:"percent", value:"", max_uses:-1, description:"", min_amount:0 });
       setPromoFormOpen(false);
       const d = await getPromocodes(); setPromos(d);
+    } else {
+      alert("Ошибка создания промокода: " + error.message);
     }
     setPromoSaving(false);
   };
@@ -1506,6 +1509,8 @@ function AdminPanel({ userHook, go, t }) {
     const notifText = note ? `Заявка ${orderId}: оператор отправил сообщение` : null;
     await updateOrder(orderId, { operator_note: note }, notifText);
     setSaving(null);
+    setSaved(orderId);
+    setTimeout(() => setSaved(null), 3000);
   };
 
   const openReceipt = async (o) => {
@@ -1864,10 +1869,9 @@ function AdminPanel({ userHook, go, t }) {
                             <button
                               onClick={()=>handleNoteSave(o.id, noteValues[o.id] ?? o.operator_note)}
                               disabled={saving===o.id}
-                              style={{ padding:"9px 18px", borderRadius:10, background:"rgba(52,211,153,0.15)", border:"1px solid rgba(52,211,153,0.35)", color:"#6ee7b7", cursor:"pointer", fontSize:13, fontWeight:600, opacity:saving===o.id?.7:1 }}>
-                              {saving===o.id ? "Сохраняем..." : "💾 Сохранить и уведомить клиента"}
+                              style={{ padding:"9px 18px", borderRadius:10, background: saved===o.id ? "rgba(52,211,153,0.25)" : "rgba(52,211,153,0.15)", border:`1px solid ${saved===o.id ? "rgba(52,211,153,0.6)" : "rgba(52,211,153,0.35)"}`, color:"#6ee7b7", cursor:"pointer", fontSize:13, fontWeight:600, opacity:saving===o.id?.7:1, transition:"all .2s" }}>
+                              {saving===o.id ? "Сохраняем..." : saved===o.id ? "✅ Сохранено и отправлено" : "💾 Сохранить и уведомить клиента"}
                             </button>
-                            <span style={{ color:t.muted, fontSize:11 }}>Клиент получит уведомление</span>
                           </div>
                         </div>
                       </div>
