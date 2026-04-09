@@ -1149,7 +1149,7 @@ function Cabinet({ userHook, go, t }) {
   const [tab, setTab] = useState("orders");
   const [expandedId, setExpandedId] = useState(null);
   const [receiptModal, setReceiptModal] = useState(null);
-  const [receiptFile, setReceiptFile] = useState(null);
+  const [receiptFiles, setReceiptFiles] = useState({});
   const [uploadingFor, setUploadingFor] = useState(null);
   const fileRef = useRef();
 
@@ -1165,12 +1165,13 @@ function Cabinet({ userHook, go, t }) {
   };
 
   const uploadReceiptForOrder = async (orderId, userId) => {
-    if (!receiptFile) return;
+    const file = receiptFiles[orderId];
+    if (!file) return;
     setUploadingFor(orderId);
     try {
-      const path = await sbStorage.uploadReceipt(userId, orderId, receiptFile);
-      await sbOrders.update(orderId, { receipt_url: path, receipt_name: receiptFile.name });
-      setReceiptFile(null);
+      const path = await sbStorage.uploadReceipt(userId, orderId, file);
+      await sbOrders.update(orderId, { receipt_url: path, receipt_name: file.name });
+      setReceiptFiles(prev => { const n = {...prev}; delete n[orderId]; return n; });
       await reload();
     } catch (e) { alert("Ошибка загрузки: " + e.message); }
     setUploadingFor(null);
@@ -1294,12 +1295,12 @@ function Cabinet({ userHook, go, t }) {
                         <div style={{ marginBottom:12 }}>
                           <div style={{ color:t.sub, fontSize:12, marginBottom:6 }}>📎 Загрузить чек об оплате:</div>
                           <input type="file" accept="image/*,.pdf" style={{ display:"none" }} id={`file_${o.id}`}
-                            onChange={e=>setReceiptFile(e.target.files[0])}/>
+                            onChange={e=>{ const f=e.target.files[0]; if(f) setReceiptFiles(prev=>({...prev,[o.id]:f})); }}/>
                           <div style={{ display:"flex", gap:8 }}>
                             <label htmlFor={`file_${o.id}`} style={{ flex:1, padding:"9px 14px", borderRadius:10, cursor:"pointer", background:t.inp, border:`1px dashed ${t.border}`, color:t.sub, fontSize:13, textAlign:"center", display:"block" }}>
-                              {receiptFile ? receiptFile.name : "📤 Выбрать файл"}
+                              {receiptFiles[o.id] ? receiptFiles[o.id].name : "📤 Выбрать файл"}
                             </label>
-                            {receiptFile && (
+                            {receiptFiles[o.id] && (
                               <button onClick={()=>uploadReceiptForOrder(o.id, session.user.id)} disabled={!!uploadingFor} style={{ padding:"9px 16px", borderRadius:10, background:"rgba(52,211,153,0.15)", border:"1px solid rgba(52,211,153,0.35)", color:"#6ee7b7", cursor:"pointer", fontSize:13, fontWeight:600 }}>
                                 {uploadingFor===o.id ? "..." : "Загрузить"}
                               </button>
