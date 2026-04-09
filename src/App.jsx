@@ -1430,6 +1430,7 @@ function AdminPanel({ userHook, go, t }) {
       code: promoForm.code.toUpperCase(),
       type: promoForm.type,
       value: parseFloat(promoForm.value),
+      discount: parseFloat(promoForm.value),
       max_uses: parseInt(promoForm.max_uses) || -1,
       min_amount: parseInt(promoForm.min_amount) || 0,
       description: promoForm.description,
