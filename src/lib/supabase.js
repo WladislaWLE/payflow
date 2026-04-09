@@ -101,12 +101,12 @@ export const notifications = {
 // ── Storage helpers ──────────────────────────────────────────
 export const storage = {
   uploadReceipt: async (userId, orderId, file) => {
-    const ext  = file.name.split(".").pop();
+    const ext = file.name.split(".").pop().toLowerCase();
     const safeOrderId = String(orderId).replace(/[^a-zA-Z0-9_-]/g, "");
-    const path = `${userId}/${safeOrderId}.${ext}`;
+    const path = `${userId}/${safeOrderId}_${Date.now()}.${ext}`;
     const { error } = await supabase.storage
       .from("receipts")
-      .upload(path, file, { upsert: true, contentType: file.type });
+      .upload(path, file, { contentType: file.type });
     if (error) throw error;
     return path;
   },
