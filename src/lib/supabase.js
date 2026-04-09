@@ -63,7 +63,7 @@ export const orders = {
       .order("created_at", { ascending: false }),
 
   update: (orderId, data) =>
-    supabase.from("orders").update(data).eq("id", orderId).select().single(),
+    supabase.from("orders").update(data).eq("id", orderId),
 
   // Real-time подписка на изменения заявки
   subscribeToOrder: (orderId, cb) =>
