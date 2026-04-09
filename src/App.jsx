@@ -1153,7 +1153,7 @@ function Cabinet({ userHook, go, t }) {
   const [uploadingFor, setUploadingFor] = useState(null);
   const fileRef = useRef();
 
-  const { orders, loading } = useOrders(session?.user?.id, false);
+  const { orders, loading, reload } = useOrders(session?.user?.id, false);
   const { notifs, unread, markRead } = useNotifications(session?.user?.id);
 
   useEffect(() => { if (tab === "notifs") markRead(); }, [tab]);
@@ -1171,6 +1171,7 @@ function Cabinet({ userHook, go, t }) {
       const path = await sbStorage.uploadReceipt(userId, orderId, receiptFile);
       await sbOrders.update(orderId, { receipt_url: path, receipt_name: receiptFile.name });
       setReceiptFile(null);
+      await reload();
     } catch (e) { alert("Ошибка загрузки: " + e.message); }
     setUploadingFor(null);
   };
