@@ -102,7 +102,8 @@ export const notifications = {
 export const storage = {
   uploadReceipt: async (userId, orderId, file) => {
     const ext  = file.name.split(".").pop();
-    const path = `${userId}/${orderId}.${ext}`;
+    const safeOrderId = String(orderId).replace(/[^a-zA-Z0-9_-]/g, "");
+    const path = `${userId}/${safeOrderId}.${ext}`;
     const { error } = await supabase.storage
       .from("receipts")
       .upload(path, file, { upsert: true, contentType: file.type });
