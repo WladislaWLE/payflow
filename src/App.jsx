@@ -1371,9 +1371,16 @@ function Cabinet({ userHook, go, t }) {
       {/* Receipt modal */}
       {receiptModal && (
         <div style={{ position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.9)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={()=>setReceiptModal(null)}>
-          <div onClick={e=>e.stopPropagation()} style={{ position:"relative", maxWidth:"90vw" }}>
+          <div onClick={e=>e.stopPropagation()} style={{ position:"relative", maxWidth:"90vw", textAlign:"center" }}>
             <button onClick={()=>setReceiptModal(null)} style={{ position:"absolute",top:-14,right:-14,background:"#f87171",border:"none",borderRadius:"50%",width:32,height:32,color:"white",cursor:"pointer",fontSize:16,fontWeight:700 }}>✕</button>
-            <img src={receiptModal.url} alt="чек" style={{ maxWidth:"85vw", maxHeight:"85vh", borderRadius:12 }}/>
+            {receiptModal.name?.toLowerCase().endsWith(".pdf")
+              ? <div style={{ color:"white", padding:40 }}>
+                  <div style={{ fontSize:48, marginBottom:16 }}>📄</div>
+                  <div style={{ marginBottom:16 }}>PDF-файл: {receiptModal.name}</div>
+                  <a href={receiptModal.url} target="_blank" rel="noreferrer" style={{ color:"#fbbf24", fontWeight:700, fontSize:15 }}>Открыть PDF ↗</a>
+                </div>
+              : <img src={receiptModal.url} alt="чек" style={{ maxWidth:"85vw", maxHeight:"85vh", borderRadius:12 }}/>
+            }
           </div>
         </div>
       )}
@@ -1888,11 +1895,18 @@ function AdminPanel({ userHook, go, t }) {
 
       {receiptModal && (
         <div style={{ position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={()=>setReceiptModal(null)}>
-          <div onClick={e=>e.stopPropagation()} style={{ position:"relative", maxWidth:"90vw" }}>
+          <div onClick={e=>e.stopPropagation()} style={{ position:"relative", maxWidth:"90vw", textAlign:"center" }}>
             <button onClick={()=>setReceiptModal(null)} style={{ position:"absolute",top:-14,right:-14,background:"#f87171",border:"none",borderRadius:"50%",width:32,height:32,color:"white",cursor:"pointer",fontSize:16,fontWeight:700 }}>✕</button>
-            <img src={receiptModal.url} alt="чек" style={{ maxWidth:"85vw", maxHeight:"85vh", borderRadius:12 }}/>
-            <div style={{ textAlign:"center", marginTop:10 }}>
-              <a href={receiptModal.url} download={receiptModal.name} style={{ color:"#fbbf24", fontSize:13, textDecoration:"none" }}>↓ Скачать</a>
+            {receiptModal.name?.toLowerCase().endsWith(".pdf")
+              ? <div style={{ color:"white", padding:40 }}>
+                  <div style={{ fontSize:48, marginBottom:16 }}>📄</div>
+                  <div style={{ marginBottom:16 }}>PDF-файл: {receiptModal.name}</div>
+                  <a href={receiptModal.url} target="_blank" rel="noreferrer" style={{ color:"#fbbf24", fontWeight:700, fontSize:15 }}>Открыть PDF ↗</a>
+                </div>
+              : <img src={receiptModal.url} alt="чек" style={{ maxWidth:"85vw", maxHeight:"85vh", borderRadius:12 }}/>
+            }
+            <div style={{ marginTop:10 }}>
+              <a href={receiptModal.url} target="_blank" rel="noreferrer" style={{ color:"#fbbf24", fontSize:13, textDecoration:"none" }}>↓ Открыть / скачать</a>
             </div>
           </div>
         </div>
