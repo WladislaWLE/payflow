@@ -2286,6 +2286,12 @@ export default function App() {
           ) : (
             <button onClick={()=>setShowAuth(true)} style={{ padding:"7px 14px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,whiteSpace:"nowrap" }}>Войти</button>
           )}
+          {/* Telegram */}
+          <a href="https://t.me/payflowru" target="_blank" rel="noopener noreferrer" style={{ width:40,height:40,borderRadius:100,background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.25)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,textDecoration:"none",transition:"all 200ms" }}
+            onMouseEnter={e=>{e.currentTarget.style.background="rgba(34,197,94,0.18)";e.currentTarget.style.borderColor="rgba(34,197,94,0.5)"}}
+            onMouseLeave={e=>{e.currentTarget.style.background="rgba(34,197,94,0.08)";e.currentTarget.style.borderColor="rgba(34,197,94,0.25)"}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.92c-.12.56-.46.7-.92.44l-2.56-1.88-1.23 1.18c-.14.14-.26.26-.52.26l.18-2.6 4.76-4.3c.2-.18-.04-.28-.32-.1L7.96 14.66l-2.5-.78c-.54-.17-.55-.54.12-.8l9.76-3.76c.46-.17.86.11.7.78l.6-.1z" fill="#22c55e"/></svg>
+          </a>
           <button onClick={toggle} style={{ width:40,height:40,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{t.dark ? <IconSun color={t.sub}/> : <IconMoon color={t.sub}/>}</button>
         </div>
       </nav>
@@ -2556,17 +2562,23 @@ export default function App() {
                 {svg:<IconZap size={20} color="#fbbf24"/>,title:"Оплата по СБП",desc:"Мгновенный перевод через систему быстрых платежей"},
                 {svg:<IconLock size={20} color="#fbbf24"/>,title:"Данные в кабинете",desc:"Доступ к сервису — в личном кабинете, не в Telegram"},
                 {svg:<IconShield size={20} color="#fbbf24"/>,title:"Возврат за 24 часа",desc:"Если не активировали — полный возврат средств"},
-              ].map((b,i)=>(
-                <div key={i} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:20,padding:"24px 22px",display:"flex",alignItems:"flex-start",gap:14,transition:"border-color 250ms,transform 250ms cubic-bezier(0.23,1,0.32,1)" }}
-                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor=t.borderH}}
-                  onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=t.border}}>
+                {svg:<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.92c-.12.56-.46.7-.92.44l-2.56-1.88-1.23 1.18c-.14.14-.26.26-.52.26l.18-2.6 4.76-4.3c.2-.18-.04-.28-.32-.1L7.96 14.66l-2.5-.78c-.54-.17-.55-.54.12-.8l9.76-3.76c.46-.17.86.11.7.78l.6-.1z" fill="#fbbf24"/></svg>,title:"Telegram-канал",desc:"Новости, акции и советы по подпискам", link:"https://t.me/payflowru"},
+              ].map((b,i)=>{
+                const inner = <>
                   <div style={{ width:44,height:44,borderRadius:14,background:`linear-gradient(135deg,rgba(251,191,36,0.15),rgba(249,115,22,0.08))`,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>{b.svg}</div>
                   <div>
                     <div style={{ fontWeight:700,fontSize:14,color:t.text,marginBottom:5,letterSpacing:-0.3 }}>{b.title}</div>
                     <div style={{ color:t.sub,fontSize:13,lineHeight:1.6 }}>{b.desc}</div>
                   </div>
-                </div>
-              ))}
+                </>;
+                return b.link
+                  ? <a key={i} href={b.link} target="_blank" rel="noopener noreferrer" style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:20,padding:"24px 22px",display:"flex",alignItems:"flex-start",gap:14,transition:"border-color 250ms,transform 250ms cubic-bezier(0.23,1,0.32,1)",textDecoration:"none" }}
+                      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor=t.borderH}}
+                      onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=t.border}}>{inner}</a>
+                  : <div key={i} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:20,padding:"24px 22px",display:"flex",alignItems:"flex-start",gap:14,transition:"border-color 250ms,transform 250ms cubic-bezier(0.23,1,0.32,1)" }}
+                      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor=t.borderH}}
+                      onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=t.border}}>{inner}</div>;
+              })}
             </div>
           </div>
 
@@ -2667,6 +2679,12 @@ export default function App() {
             <button onClick={()=>go("#catalog")} style={{ background:"none",border:"none",color:t.muted,fontSize:13,cursor:"pointer",transition:"color 200ms" }} onMouseEnter={e=>e.currentTarget.style.color=t.text} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>Каталог</button>
             <button onClick={()=>go("#legal")} style={{ background:"none",border:"none",color:t.muted,fontSize:13,cursor:"pointer",transition:"color 200ms" }} onMouseEnter={e=>e.currentTarget.style.color=t.text} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>Оферта</button>
             <button onClick={()=>go("#cabinet")} style={{ background:"none",border:"none",color:t.muted,fontSize:13,cursor:"pointer",transition:"color 200ms" }} onMouseEnter={e=>e.currentTarget.style.color=t.text} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>Личный кабинет</button>
+            <a href="https://t.me/payflowru" target="_blank" rel="noopener noreferrer" style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:100,background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.25)",textDecoration:"none",transition:"all 200ms" }}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(34,197,94,0.15)"}
+              onMouseLeave={e=>e.currentTarget.style.background="rgba(34,197,94,0.08)"}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.68 7.92c-.12.56-.46.7-.92.44l-2.56-1.88-1.23 1.18c-.14.14-.26.26-.52.26l.18-2.6 4.76-4.3c.2-.18-.04-.28-.32-.1L7.96 14.66l-2.5-.78c-.54-.17-.55-.54.12-.8l9.76-3.76c.46-.17.86.11.7.78l.6-.1z" fill="#22c55e"/></svg>
+              <span style={{ color:"#22c55e",fontSize:11,fontWeight:600 }}>Telegram</span>
+            </a>
             <div style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}` }}>
               <span style={{ width:6,height:6,borderRadius:"50%",background:"#22c55e",display:"inline-block",animation:"pulse 2s infinite" }}/>
               <span style={{ color:t.gold,fontSize:11,fontWeight:600 }}>Работаем 7/24</span>
