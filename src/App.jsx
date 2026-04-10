@@ -3,7 +3,7 @@
 
 import LegalPage from "./pages/LegalPage";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { supabase, auth as sbAuth, profiles, orders as sbOrders, notifications as sbNotifs, storage as sbStorage, referrals as sbReferrals } from "./lib/supabase";
+import { supabase, auth as sbAuth, profiles, orders as sbOrders, notifications as sbNotifs, storage as sbStorage, referrals as sbReferrals, reviews as sbReviews } from "./lib/supabase";
 
 // ══════════════════════════════════════════════════════════════
 //  ПРОМОКОДЫ — helper
@@ -375,6 +375,21 @@ function useUser() {
   const logout = async () => { await sbAuth.signOut(); };
 
   return { session, profile, loading, isAdmin, register, login, logout, reloadProfile };
+}
+
+// ══════════════════════════════════════════════════════════════
+//  HOOK: живые отзывы
+// ══════════════════════════════════════════════════════════════
+function useReviews() {
+  const [reviewsList, setReviewsList] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  useEffect(() => {
+    sbReviews.getApproved().then(({ data }) => {
+      setReviewsList(data || []);
+      setReviewsLoading(false);
+    });
+  }, []);
+  return { reviewsList, reviewsLoading };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1321,6 +1336,14 @@ function Cabinet({ userHook, go, t }) {
 
                       {/* Прогресс заказа */}
                       <OrderProgress status={o.status}/>
+
+                      {/* Кнопка отзыва для выполненных */}
+                      {o.status === "done" && (
+                        <button onClick={()=>{ setReviewTarget({serviceName:o.service,orderId:o.id}); setShowReviewModal(true); }}
+                          style={{ marginTop:10,width:"100%",padding:"9px 0",borderRadius:10,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",color:t.gold,fontSize:13,fontWeight:600,cursor:"pointer" }}>
+                          ★ Оставить отзыв
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1406,6 +1429,8 @@ function AdminPanel({ userHook, go, t }) {
   const [promos, setPromos] = useState([]);
   const [serviceReqs, setServiceReqs] = useState([]);
   const [serviceReqsLoading, setServiceReqsLoading] = useState(false);
+  const [adminReviews, setAdminReviews] = useState([]);
+  const [adminReviewsLoading, setAdminReviewsLoading] = useState(false);
   const [manualRate, setManualRate] = useState("");
   const [manualRateEnabled, setManualRateEnabled] = useState(false);
   const [rateSaving, setRateSaving] = useState(false);
@@ -1424,6 +1449,10 @@ function AdminPanel({ userHook, go, t }) {
       setServiceReqsLoading(true);
       supabase.from("service_requests").select("*").order("created_at", { ascending: false })
         .then(({ data }) => { setServiceReqs(data || []); setServiceReqsLoading(false); });
+    }
+    if (isAdmin && adminTab === "reviews") {
+      setAdminReviewsLoading(true);
+      sbReviews.getAll().then(({ data }) => { setAdminReviews(data || []); setAdminReviewsLoading(false); });
     }
     if (isAdmin && adminTab === "settings" && !rateLoaded) {
       setRateLoaded(true);
@@ -1574,11 +1603,12 @@ function AdminPanel({ userHook, go, t }) {
 
         {/* Admin tabs */}
         <div style={{ display:"flex", gap:8, marginBottom:24, flexWrap:"wrap" }}>
-          {[["orders","Заявки","📋"],["promos","Промокоды","🎁"],["requests","Запросы","💡"],["settings","Настройки","⚙️"]].map(([id,label,icon]) => (
+          {[["orders","Заявки","📋"],["promos","Промокоды","🎁"],["requests","Запросы","💡"],["reviews","Отзывы","⭐"],["settings","Настройки","⚙️"]].map(([id,label,icon]) => (
             <button key={id} onClick={()=>setAdminTab(id)} style={{ padding:"9px 20px", borderRadius:100, fontSize:13, fontWeight:600, cursor:"pointer", background:adminTab===id?t.goldDim:t.card, border:`1px solid ${adminTab===id?t.goldB:t.border}`, color:adminTab===id?t.gold:t.sub }}>
               {icon} {label}
               {id==="orders" && <span style={{ marginLeft:6, opacity:.6, fontSize:11 }}>({orders.length})</span>}
               {id==="requests" && serviceReqs.filter(r=>r.status==="pending").length > 0 && <span style={{ marginLeft:6, background:"#f87171", color:"white", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center" }}>{serviceReqs.filter(r=>r.status==="pending").length}</span>}
+              {id==="reviews" && adminReviews.filter(r=>!r.is_approved).length > 0 && <span style={{ marginLeft:6, background:"#f87171", color:"white", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center" }}>{adminReviews.filter(r=>!r.is_approved).length}</span>}
             </button>
           ))}
         </div>
@@ -1785,6 +1815,50 @@ function AdminPanel({ userHook, go, t }) {
                             <option value="added">Добавлен</option>
                             <option value="declined">Отклонён</option>
                           </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+            }
+          </div>
+        )}
+
+        {/* Reviews moderation tab */}
+        {adminTab === "reviews" && (
+          <div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <div style={{ color:t.text, fontWeight:700, fontSize:16 }}>Модерация отзывов</div>
+              <div style={{ color:t.muted, fontSize:12 }}>{adminReviews.length} всего · {adminReviews.filter(r=>!r.is_approved).length} на проверке</div>
+            </div>
+            {adminReviewsLoading
+              ? <div style={{ textAlign:"center", padding:"40px 0", color:t.muted }}>Загрузка...</div>
+              : adminReviews.length === 0
+                ? <div style={{ textAlign:"center", padding:"60px 0", color:t.muted }}><div style={{ fontSize:40, marginBottom:12 }}>⭐</div>Отзывов пока нет</div>
+                : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {adminReviews.map(r => (
+                      <div key={r.id} style={{ background:t.card2, border:`1px solid ${r.is_approved?t.border:"rgba(251,191,36,0.3)"}`, borderRadius:14, padding:"16px 18px" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
+                          <div style={{ flex:1 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                              <div style={{ display:"flex", gap:2 }}>{[1,2,3,4,5].map(s=><span key={s} style={{ color:s<=r.rating?"#fbbf24":"#334155",fontSize:14 }}>★</span>)}</div>
+                              <span style={{ color:t.gold, fontWeight:700, fontSize:13 }}>{r.service_name}</span>
+                              <span style={{ background:r.is_approved?"rgba(52,211,153,0.15)":"rgba(251,191,36,0.1)", color:r.is_approved?"#34d399":t.gold, padding:"2px 8px", borderRadius:6, fontSize:11, fontWeight:600 }}>{r.is_approved?"Опубликован":"На проверке"}</span>
+                            </div>
+                            <div style={{ color:t.sub, fontSize:13, lineHeight:1.6, marginBottom:6 }}>«{r.comment}»</div>
+                            <div style={{ color:t.muted, fontSize:11 }}>{r.user_name} · {new Date(r.created_at).toLocaleDateString("ru-RU")}</div>
+                          </div>
+                          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+                            {!r.is_approved && (
+                              <button onClick={async()=>{ await sbReviews.approve(r.id); setAdminReviews(prev=>prev.map(x=>x.id===r.id?{...x,is_approved:true}:x)); }}
+                                style={{ padding:"7px 16px", borderRadius:8, background:"rgba(52,211,153,0.15)", border:"1px solid rgba(52,211,153,0.3)", color:"#34d399", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                                Одобрить
+                              </button>
+                            )}
+                            <button onClick={async()=>{ await sbReviews.reject(r.id); setAdminReviews(prev=>prev.filter(x=>x.id!==r.id)); }}
+                              style={{ padding:"7px 16px", borderRadius:8, background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.25)", color:"#f87171", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                              Удалить
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -2022,6 +2096,69 @@ function RequestServiceModal({ onClose, user, t }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  REVIEW MODAL
+// ══════════════════════════════════════════════════════════════
+function ReviewModal({ onClose, user, profile, serviceName, orderId, t }) {
+  const [rating, setRating]   = useState(5);
+  const [hover, setHover]     = useState(null);
+  const [comment, setComment] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone]       = useState(false);
+
+  const submit = async () => {
+    if (!comment.trim()) return;
+    setLoading(true);
+    await sbReviews.insert({
+      user_id:      user.id,
+      user_name:    profile?.name || user.email?.split("@")[0] || "Пользователь",
+      order_id:     orderId || null,
+      service_id:   0,
+      service_name: serviceName,
+      rating,
+      comment:      comment.trim(),
+      is_approved:  false,
+    });
+    setLoading(false);
+    setDone(true);
+  };
+
+  const ov = { position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(6px)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20 };
+  const box = { background:t.card,border:`1px solid ${t.border}`,borderRadius:24,padding:"32px 28px",maxWidth:440,width:"100%",position:"relative" };
+  const inp = { width:"100%",background:t.card2,border:`1px solid ${t.border}`,borderRadius:12,padding:"12px 14px",color:t.text,fontSize:14,outline:"none",resize:"vertical",minHeight:100,boxSizing:"border-box",fontFamily:"inherit" };
+
+  return (
+    <div style={ov} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={box}>
+        <button onClick={onClose} style={{ position:"absolute",top:16,right:16,background:"none",border:"none",color:t.muted,cursor:"pointer",fontSize:20,lineHeight:1 }}>✕</button>
+        {done ? (
+          <div style={{ textAlign:"center",padding:"20px 0" }}>
+            <div style={{ fontSize:48,marginBottom:12 }}>🙏</div>
+            <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:20,color:t.text,marginBottom:8 }}>Спасибо за отзыв!</div>
+            <div style={{ color:t.sub,fontSize:14 }}>Он появится на сайте после проверки.</div>
+            <button onClick={onClose} style={{ marginTop:20,padding:"10px 28px",borderRadius:12,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:14,cursor:"pointer" }}>Закрыть</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:20,color:t.text,marginBottom:4 }}>Оставить отзыв</div>
+            <div style={{ color:t.sub,fontSize:13,marginBottom:24 }}>{serviceName}</div>
+            <div style={{ display:"flex",gap:6,marginBottom:20 }}>
+              {[1,2,3,4,5].map(s=>(
+                <button key={s} onMouseEnter={()=>setHover(s)} onMouseLeave={()=>setHover(null)} onClick={()=>setRating(s)}
+                  style={{ background:"none",border:"none",cursor:"pointer",fontSize:32,color:(hover||rating)>=s?"#fbbf24":"#334155",transition:"color 150ms,transform 150ms",transform:(hover||rating)>=s?"scale(1.15)":"scale(1)",padding:0 }}>★</button>
+              ))}
+            </div>
+            <textarea value={comment} onChange={e=>setComment(e.target.value)} placeholder="Расскажите о вашем опыте..." style={inp}/>
+            <button onClick={submit} disabled={loading||!comment.trim()} style={{ marginTop:14,width:"100%",padding:"13px 0",borderRadius:12,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:15,cursor:loading||!comment.trim()?"not-allowed":"pointer",opacity:loading||!comment.trim()?0.6:1 }}>
+              {loading?"Отправляем...":"Отправить отзыв"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
 //  FAQ SECTION
 // ══════════════════════════════════════════════════════════════
 function FaqSection({ t }) {
@@ -2082,6 +2219,9 @@ export default function App() {
 
   const { notifs, unread } = useNotifications(session?.user?.id);
   const { ordersCount } = usePublicStats();
+  const { reviewsList, reviewsLoading } = useReviews();
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewTarget, setReviewTarget]       = useState({ serviceName:"", orderId:"" });
   const isMobile = useIsMobile();
 
   const page = hash.split("?")[0];
@@ -2583,40 +2723,40 @@ export default function App() {
           </div>
 
           {/* REVIEWS */}
+          {!reviewsLoading && reviewsList.length > 0 && (
           <div style={{ padding:"0 24px 80px",maxWidth:940,margin:"0 auto" }}>
             <div style={{ textAlign:"center",marginBottom:36 }}>
               <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,marginBottom:10,fontWeight:600 }}>Отзывы</div>
               <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:30,color:t.text }}>Что говорят пользователи</h2>
               <div style={{ display:"flex",justifyContent:"center",gap:3,marginTop:12 }}>
                 {"★★★★★".split("").map((s,i)=><span key={i} style={{ color:"#fbbf24",fontSize:20 }}>{s}</span>)}
-                <span style={{ color:t.sub,fontSize:14,marginLeft:8,lineHeight:"26px" }}>5.0 / 50+ отзывов</span>
+                <span style={{ color:t.sub,fontSize:14,marginLeft:8,lineHeight:"26px" }}>
+                  {(reviewsList.reduce((a,r)=>a+r.rating,0)/reviewsList.length).toFixed(1)} / {reviewsList.length} отзывов
+                </span>
               </div>
             </div>
             <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:14 }}>
-              {[
-                {name:"Алексей М.",svc:"ChatGPT Plus",rating:5,text:"Оформил за 20 минут, всё чётко. Уже 3-й раз покупаю — каждый раз быстро и без проблем.",date:"март 2026"},
-                {name:"Дарья К.",svc:"Midjourney",rating:5,text:"Искала где купить Midjourney в России — нашла здесь. Активировали за полчаса, всё работает.",date:"март 2026"},
-                {name:"Игорь В.",svc:"Cursor Pro",rating:5,text:"Удобно, что цена сразу в рублях. Оплатил по СБП, через 40 минут пришли данные в кабинет.",date:"апрель 2026"},
-              ].map((r,i)=>(
-                <div key={i} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:20,padding:"24px 22px",position:"relative",overflow:"hidden",transition:"border-color 250ms,transform 250ms cubic-bezier(0.23,1,0.32,1)" }}
+              {reviewsList.map((r,i)=>(
+                <div key={r.id||i} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:20,padding:"24px 22px",position:"relative",overflow:"hidden",transition:"border-color 250ms,transform 250ms cubic-bezier(0.23,1,0.32,1)" }}
                   onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.borderColor=t.borderH}}
                   onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.borderColor=t.border}}>
                   <div style={{ position:"absolute",top:14,right:18,fontFamily:"Georgia,serif",fontSize:64,color:t.gold,opacity:0.07,lineHeight:1,pointerEvents:"none",fontWeight:900 }}>"</div>
                   <div style={{ display:"flex",gap:3,marginBottom:14 }}>
-                    {"★★★★★".split("").map((s,j)=><span key={j} style={{ color:"#fbbf24",fontSize:15 }}>{s}</span>)}
+                    {[1,2,3,4,5].map(s=><span key={s} style={{ color:s<=r.rating?"#fbbf24":"#334155",fontSize:15 }}>★</span>)}
                   </div>
-                  <p style={{ color:t.sub,fontSize:14,lineHeight:1.7,marginBottom:16,fontStyle:"italic" }}>«{r.text}»</p>
+                  <p style={{ color:t.sub,fontSize:14,lineHeight:1.7,marginBottom:16,fontStyle:"italic" }}>«{r.comment}»</p>
                   <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                    <div style={{ width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,rgba(251,191,36,0.8),rgba(249,115,22,0.8))`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:13,color:"#0a0a14",flexShrink:0 }}>{r.name[0]}</div>
+                    <div style={{ width:34,height:34,borderRadius:"50%",background:`linear-gradient(135deg,rgba(251,191,36,0.8),rgba(249,115,22,0.8))`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:13,color:"#0a0a14",flexShrink:0 }}>{(r.user_name||"?")[0].toUpperCase()}</div>
                     <div>
-                      <div style={{ fontWeight:700,fontSize:13,color:t.text,letterSpacing:-0.3 }}>{r.name}</div>
-                      <div style={{ color:t.muted,fontSize:11 }}>{r.svc} · {r.date}</div>
+                      <div style={{ fontWeight:700,fontSize:13,color:t.text,letterSpacing:-0.3 }}>{r.user_name||"Пользователь"}</div>
+                      <div style={{ color:t.muted,fontSize:11 }}>{r.service_name} · {new Date(r.created_at).toLocaleDateString("ru-RU",{month:"long",year:"numeric"})}</div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+          )}
 
           {/* FAQ */}
           <FaqSection t={t}/>
@@ -2665,6 +2805,7 @@ export default function App() {
       {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const {data,error}=await sbOrders.insert(order); const o=data?.[0]; if(!error&&o){ fetch("/api/tg-notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`🆕 <b>Новая заявка</b> ${o.id}\n📦 ${o.service} · ${o.tier}\n💰 ${o.price_rub?.toLocaleString("ru-RU")} ₽\n👤 ${o.user_email}`})}).then(r=>r.json()).then(d=>{if(!d.ok)console.warn("TG:",d);}).catch(e=>console.error("TG fetch error:",e)); } return {data:o,error}; }} onBalanceUsed={()=>userHook.reloadProfile(session?.user?.id)} go={go} t={t}/>}
       {showAuth && <AuthModal onClose={()=>setShowAuth(false)} userHook={userHook} t={t}/>}
       {showReqSvc && <RequestServiceModal onClose={()=>setShowReqSvc(false)} user={session?.user} t={t}/>}
+      {showReviewModal && <ReviewModal onClose={()=>setShowReviewModal(false)} user={session?.user} profile={profile} serviceName={reviewTarget.serviceName} orderId={reviewTarget.orderId} t={t}/>}
 
       {/* Footer */}
       <div style={{ position:"relative",padding:"40px 32px 32px",background:t.dark?"rgba(0,0,0,0.4)":"rgba(0,0,0,0.02)" }}>

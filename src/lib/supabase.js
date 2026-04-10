@@ -141,6 +141,34 @@ export const referrals = {
     supabase.rpc("spend_balance", { p_user_id: userId, p_amount: amount }),
 };
 
+// ── Reviews helpers ──────────────────────────────────────────
+export const reviews = {
+  getApproved: () =>
+    supabase.from("reviews")
+      .select("*")
+      .eq("is_approved", true)
+      .order("created_at", { ascending: false }),
+
+  getAll: () =>
+    supabase.from("reviews")
+      .select("*")
+      .order("created_at", { ascending: false }),
+
+  insert: (review) =>
+    supabase.from("reviews").insert(review),
+
+  approve: (id) =>
+    supabase.from("reviews").update({ is_approved: true }).eq("id", id),
+
+  reject: (id) =>
+    supabase.from("reviews").delete().eq("id", id),
+
+  getByUser: (userId) =>
+    supabase.from("reviews")
+      .select("service_name")
+      .eq("user_id", userId),
+};
+
 // ── Promocodes helpers ───────────────────────────────────────
 export const promocodes = {
   validate: async (code) => {
