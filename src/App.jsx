@@ -111,7 +111,7 @@ function useHash() {
 // ══════════════════════════════════════════════════════════════
 function toSlug(name){return name.toLowerCase().replace(/[^a-zа-яё0-9]+/gi,"-").replace(/^-|-$/g,"");}
 const SVC = [
-  {id:1,  name:"ChatGPT Plus",          slug:"chatgpt-plus",       cat:"AI",            icon:"🤖", tiers:[{n:"Plus",p:20},{n:"Team",p:25},{n:"Pro",p:200}],        login:true, gift:false,family:true, newAcc:true,  desc:"Флагманский AI-ассистент OpenAI. Plus открывает доступ к GPT-4o, o3, o4-mini, генерации изображений DALL·E 3, расширенному голосовому режиму и веб-поиску. Недоступен к прямой оплате из России — оформляем через семейный план или новый аккаунт."},
+  {id:1,  name:"ChatGPT Plus",          slug:"chatgpt-plus",       cat:"AI",            icon:"🤖", tiers:[{n:"Plus",p:20},{n:"Team",p:25},{n:"Pro",p:200}],        login:true, gift:false,family:true, newAcc:true,  desc:"Флагманский AI-ассистент OpenAI. Plus открывает доступ к Instant 5.3 (быстрые ответы), Thinking 5.4 (сложные задачи), генерации изображений, голосовому режиму и веб-поиску. Недоступен к прямой оплате из России — оформляем через семейный план или новый аккаунт."},
   {id:2,  name:"Claude Pro",            slug:"claude-pro",         cat:"AI",            icon:"🧠", tiers:[{n:"Pro",p:20},{n:"Team",p:30}],                         login:true, gift:false,family:true, newAcc:true,  desc:"Claude Pro от Anthropic с доступом к Claude Opus 4 и Sonnet 4 — одним из сильнейших AI-ассистентов 2026 года. Extended Thinking для сложных задач, контекст 200K токенов, анализ документов и кода. Оплата из России через Payflow."},
   {id:3,  name:"Perplexity Pro",        slug:"perplexity-pro",     cat:"AI",            icon:"🔍", tiers:[{n:"Pro",p:20}],                                         login:true, gift:false,family:false,newAcc:true,  desc:"Perplexity Pro — AI-поисковик с актуальными данными из интернета в реальном времени. Выбор между Claude, GPT-4o и Gemini в одном интерфейсе. Deep Research строит детальный отчёт с источниками за считанные минуты."},
   {id:4,  name:"Grok (xAI)",            slug:"grok-xai",           cat:"AI",            icon:"🐦", tiers:[{n:"SuperGrok Lite",p:10},{n:"SuperGrok",p:30}],          login:true, gift:false,family:false,newAcc:true,  desc:"Grok 3 от xAI — один из сильнейших AI-ассистентов 2025 года. Доступ к постам X (Twitter) в реальном времени, генерация изображений Aurora, веб-поиск и режим DeepSearch. SuperGrok — безлимитные запросы."},
@@ -532,7 +532,7 @@ function SCard({ s, rate, onSelect, t }) {
         ))}
       </div>
       <div style={{ marginTop:10,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-        <a href={`#service/${s.slug||toSlug(s.name)}`} onClick={e=>e.stopPropagation()} style={{ fontSize:11,color:t.muted,textDecoration:"none",transition:"color 150ms" }}
+        <a href={`#service/${s.slug||toSlug(s.name)}`} onClick={e=>{e.stopPropagation();window.scrollTo(0,0);}} style={{ fontSize:11,color:t.muted,textDecoration:"none",transition:"color 150ms" }}
           onMouseEnter={e=>e.currentTarget.style.color=t.gold} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>
           Подробнее →
         </a>
@@ -2777,7 +2777,7 @@ export default function App() {
                       ))}
                     </div>
                     <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:isBig?4:0 }}>
-                      <a href={`#service/${s.slug||toSlug(s.name)}`} onClick={e=>e.stopPropagation()} style={{ color:t.muted,fontSize:11,textDecoration:"none" }}
+                      <a href={`#service/${s.slug||toSlug(s.name)}`} onClick={e=>{e.stopPropagation();window.scrollTo(0,0);}} style={{ color:t.muted,fontSize:11,textDecoration:"none" }}
                         onMouseEnter={e=>e.currentTarget.style.color=t.gold} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>Подробнее →</a>
                       <div style={{ display:"inline-flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,fontSize:12,fontWeight:700 }}>Выбрать →</div>
                     </div>
