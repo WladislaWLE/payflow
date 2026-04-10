@@ -2214,9 +2214,10 @@ function FaqSection({ t }) {
 // ══════════════════════════════════════════════════════════════
 //  SERVICE PAGE
 // ══════════════════════════════════════════════════════════════
-function ServicePage({ svc, rate, rateLoading, onOrder, go, toggle, t, session, isMobile }) {
+function ServicePage({ svc, rate, rateLoading, go, toggle, t, session, profile, isMobile, userHook }) {
   const margin = 1.15;
   const rub = (usd) => rate ? Math.ceil(usd * rate * margin) : null;
+  const [selSvc, setSelSvc] = useState(null);
 
   useEffect(() => {
     document.title = `${svc.name} в России — оплата за рубли | Payflow`;
@@ -2260,7 +2261,7 @@ function ServicePage({ svc, rate, rateLoading, onOrder, go, toggle, t, session, 
       <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:isMobile?"0 12px":"0 28px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:t.nav,backdropFilter:"blur(20px)",borderBottom:`1px solid ${t.border}` }}>
         <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
         <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-          <button onClick={()=>go("#catalog")} style={{ padding:"7px 16px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:"transparent",border:`1px solid ${t.border}`,color:t.sub }}>← Каталог</button>
+          <button onClick={()=>window.history.length>1?window.history.back():go("#catalog")} style={{ padding:"7px 16px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:"transparent",border:`1px solid ${t.border}`,color:t.sub }}>← Назад</button>
           <button onClick={toggle} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark?<IconSun color={t.sub}/>:<IconMoon color={t.sub}/>}</button>
         </div>
       </nav>
@@ -2278,7 +2279,7 @@ function ServicePage({ svc, rate, rateLoading, onOrder, go, toggle, t, session, 
           </div>
           <p style={{ color:t.sub,fontSize:16,lineHeight:1.7,marginBottom:24 }}>{svc.desc}</p>
           <div style={{ display:"flex",gap:10,flexWrap:"wrap" }}>
-            <button onClick={onOrder} style={{ padding:"13px 28px",borderRadius:14,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:15,cursor:"pointer" }}>
+            <button onClick={()=>setSelSvc(svc)} style={{ padding:"13px 28px",borderRadius:14,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:15,cursor:"pointer" }}>
               Оформить за рубли →
             </button>
             <div style={{ display:"flex",alignItems:"center",gap:6,padding:"13px 18px",borderRadius:14,background:t.card2,border:`1px solid ${t.border}`,color:t.sub,fontSize:13 }}>
@@ -2292,7 +2293,7 @@ function ServicePage({ svc, rate, rateLoading, onOrder, go, toggle, t, session, 
           <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:700,fontSize:22,color:t.text,marginBottom:16 }}>Тарифы и цены в рублях</h2>
           <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12 }}>
             {svc.tiers.map((tier,i)=>(
-              <div key={i} onClick={onOrder} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:16,padding:"20px 18px",cursor:"pointer",transition:"border-color 200ms,transform 200ms" }}
+              <div key={i} onClick={()=>setSelSvc(svc)} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:16,padding:"20px 18px",cursor:"pointer",transition:"border-color 200ms,transform 200ms" }}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=t.goldB;e.currentTarget.style.transform="translateY(-2px)"}}
                 onMouseLeave={e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform="none"}}>
                 <div style={{ color:t.sub,fontSize:12,marginBottom:6 }}>{tier.n}</div>
@@ -2334,11 +2335,12 @@ function ServicePage({ svc, rate, rateLoading, onOrder, go, toggle, t, session, 
         <div style={{ background:`linear-gradient(135deg,rgba(249,115,22,0.1),rgba(251,191,36,0.08))`,border:`1px solid ${t.goldB}`,borderRadius:20,padding:"28px 24px",textAlign:"center" }}>
           <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:22,color:t.text,marginBottom:8 }}>Готовы оформить?</div>
           <div style={{ color:t.sub,fontSize:14,marginBottom:20 }}>Оплата в рублях · Активация за 1 час · Гарантия возврата</div>
-          <button onClick={onOrder} style={{ padding:"14px 36px",borderRadius:14,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:16,cursor:"pointer" }}>
+          <button onClick={()=>setSelSvc(svc)} style={{ padding:"14px 36px",borderRadius:14,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:16,cursor:"pointer" }}>
             Оформить {svc.name} →
           </button>
         </div>
       </div>
+      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const {data,error}=await sbOrders.insert(order); const o=data?.[0]; if(!error&&o){ fetch("/api/tg-notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`🆕 <b>Новая заявка</b> ${o.id}\n📦 ${o.service} · ${o.tier}\n💰 ${o.price_rub?.toLocaleString("ru-RU")} ₽\n👤 ${o.user_email}`})}).catch(()=>{}); } return {data:o,error}; }} onBalanceUsed={()=>userHook?.reloadProfile(session?.user?.id)} go={go} t={t}/>}
     </div>
   );
 }
@@ -2451,7 +2453,7 @@ export default function App() {
     const slug = page.replace("#service/","");
     const svc = SVC.find(s => (s.slug||toSlug(s.name)) === slug);
     if (!svc) { go("#catalog"); return null; }
-    return <ServicePage svc={svc} rate={rate} rateLoading={rateLoading} onOrder={()=>setSelSvc(svc)} go={go} toggle={toggle} t={t} session={session} isMobile={isMobile}/>;
+    return <ServicePage svc={svc} rate={rate} rateLoading={rateLoading} go={go} toggle={toggle} t={t} session={session} profile={profile} isMobile={isMobile} userHook={userHook}/>;
   }
   if (page === "#cabinet") {
     if (!session) { go("#home"); return null; }
@@ -2773,7 +2775,8 @@ export default function App() {
                       ))}
                     </div>
                     <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:isBig?4:0 }}>
-                      <span style={{ color:t.muted,fontSize:11 }}>от {rate?Math.round(s.tiers[0].p*rate*(1+CFG.MARGIN)).toLocaleString("ru-RU"):"..."}₽</span>
+                      <a href={`#service/${s.slug||toSlug(s.name)}`} onClick={e=>e.stopPropagation()} style={{ color:t.muted,fontSize:11,textDecoration:"none" }}
+                        onMouseEnter={e=>e.currentTarget.style.color=t.gold} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>Подробнее →</a>
                       <div style={{ display:"inline-flex",alignItems:"center",gap:5,padding:"7px 14px",borderRadius:100,background:t.goldDim,border:`1px solid ${t.goldB}`,color:t.gold,fontSize:12,fontWeight:700 }}>Выбрать →</div>
                     </div>
                   </div>
