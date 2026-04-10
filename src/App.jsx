@@ -1170,8 +1170,16 @@ function Cabinet({ userHook, go, t, onReview }) {
 
   const { orders, loading, reload } = useOrders(session?.user?.id, false);
   const { notifs, unread, markRead } = useNotifications(session?.user?.id);
+  const [reviewedServices, setReviewedServices] = useState(new Set());
 
   useEffect(() => { if (tab === "notifs") markRead(); }, [tab]);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    sbReviews.getByUser(session.user.id).then(({ data }) => {
+      if (data) setReviewedServices(new Set(data.map(r => r.service_name)));
+    });
+  }, [session?.user?.id]);
 
   const openReceipt = async (o) => {
     if (!o.receipt_url) return;
@@ -1339,10 +1347,12 @@ function Cabinet({ userHook, go, t, onReview }) {
 
                       {/* Кнопка отзыва для выполненных */}
                       {o.status === "done" && (
-                        <button type="button" onClick={(e)=>{ e.stopPropagation(); if(onReview) onReview(o.service, o.id); }}
-                          style={{ marginTop:10,width:"100%",padding:"9px 0",borderRadius:10,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",color:t.gold,fontSize:13,fontWeight:600,cursor:"pointer" }}>
-                          ★ Оставить отзыв
-                        </button>
+                        reviewedServices.has(o.service)
+                          ? <div style={{ marginTop:10,width:"100%",padding:"9px 0",textAlign:"center",color:t.muted,fontSize:13 }}>✓ Отзыв оставлен</div>
+                          : <button type="button" onClick={(e)=>{ e.stopPropagation(); if(onReview) onReview(o.service, o.id, ()=>setReviewedServices(prev=>new Set([...prev,o.service]))); }}
+                              style={{ marginTop:10,width:"100%",padding:"9px 0",borderRadius:10,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",color:t.gold,fontSize:13,fontWeight:600,cursor:"pointer" }}>
+                              ★ Оставить отзыв
+                            </button>
                       )}
                     </div>
                   )}
@@ -2098,7 +2108,7 @@ function RequestServiceModal({ onClose, user, t }) {
 // ══════════════════════════════════════════════════════════════
 //  REVIEW MODAL
 // ══════════════════════════════════════════════════════════════
-function ReviewModal({ onClose, user, profile, serviceName, orderId, t }) {
+function ReviewModal({ onClose, user, profile, serviceName, orderId, onDone, t }) {
   const [rating, setRating]   = useState(5);
   const [hover, setHover]     = useState(null);
   const [comment, setComment] = useState("");
@@ -2120,6 +2130,7 @@ function ReviewModal({ onClose, user, profile, serviceName, orderId, t }) {
     });
     setLoading(false);
     setDone(true);
+    if (onDone) onDone();
   };
 
   const ov = { position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(6px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20 };
@@ -2290,8 +2301,8 @@ export default function App() {
             <button onClick={toggle} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark ? <IconSun color={t.sub}/> : <IconMoon color={t.sub}/>}</button>
           </div>
         </nav>
-        <Cabinet userHook={userHook} go={go} t={t} onReview={(serviceName,orderId)=>{ setReviewTarget({serviceName,orderId}); setShowReviewModal(true); }}/>
-        {showReviewModal && <ReviewModal onClose={()=>setShowReviewModal(false)} user={session?.user} profile={profile} serviceName={reviewTarget.serviceName} orderId={reviewTarget.orderId} t={t}/>}
+        <Cabinet userHook={userHook} go={go} t={t} onReview={(serviceName,orderId,onDone)=>{ setReviewTarget({serviceName,orderId,onDone}); setShowReviewModal(true); }}/>
+        {showReviewModal && <ReviewModal onClose={()=>setShowReviewModal(false)} user={session?.user} profile={profile} serviceName={reviewTarget.serviceName} orderId={reviewTarget.orderId} onDone={reviewTarget.onDone} t={t}/>}
       </div>
     );
   }
