@@ -2291,6 +2291,7 @@ export default function App() {
           </div>
         </nav>
         <Cabinet userHook={userHook} go={go} t={t} onReview={(serviceName,orderId)=>{ setReviewTarget({serviceName,orderId}); setShowReviewModal(true); }}/>
+        {showReviewModal && <ReviewModal onClose={()=>setShowReviewModal(false)} user={session?.user} profile={profile} serviceName={reviewTarget.serviceName} orderId={reviewTarget.orderId} t={t}/>}
       </div>
     );
   }
