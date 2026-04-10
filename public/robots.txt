@@ -2,4 +2,32 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
+# AI Search crawlers — allow full indexing for GEO optimization
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# IndexNow
+Host: pay-flow.ru
+
 Sitemap: https://pay-flow.ru/sitemap.xml
