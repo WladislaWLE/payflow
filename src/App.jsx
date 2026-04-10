@@ -109,60 +109,61 @@ function useHash() {
 // ══════════════════════════════════════════════════════════════
 //  СЕРВИСЫ
 // ══════════════════════════════════════════════════════════════
+function toSlug(name){return name.toLowerCase().replace(/[^a-zа-яё0-9]+/gi,"-").replace(/^-|-$/g,"");}
 const SVC = [
-  {id:1,  name:"ChatGPT Plus",          cat:"AI",            icon:"🤖", tiers:[{n:"Plus",p:20},{n:"Team",p:25},{n:"Pro",p:200}],        login:true, gift:false,family:true, newAcc:true},
-  {id:2,  name:"Claude Pro",            cat:"AI",            icon:"🧠", tiers:[{n:"Pro",p:20},{n:"Team",p:30}],                         login:true, gift:false,family:true, newAcc:true},
-  {id:3,  name:"Perplexity Pro",        cat:"AI",            icon:"🔍", tiers:[{n:"Pro",p:20}],                                         login:true, gift:false,family:false,newAcc:true},
-  {id:4,  name:"Grok (xAI)",             cat:"AI",            icon:"🐦", tiers:[{n:"SuperGrok Lite",p:10},{n:"SuperGrok",p:30}],          login:true, gift:false,family:false,newAcc:true},
-  {id:5,  name:"Gemini Advanced",       cat:"AI",            icon:"💎", tiers:[{n:"Google One",p:19.99}],                              login:true, gift:true, family:true, newAcc:false},
-  {id:6,  name:"Midjourney",            cat:"AI",            icon:"🎨", tiers:[{n:"Basic",p:10},{n:"Standard",p:30},{n:"Pro",p:60},{n:"Mega",p:120}],login:true,gift:false,family:false,newAcc:true},
-  {id:7,  name:"Leonardo AI",           cat:"AI",            icon:"🖼️", tiers:[{n:"Apprentice",p:10},{n:"Artisan",p:24},{n:"Maestro",p:48}],login:true,gift:false,family:false,newAcc:true},
-  {id:8,  name:"Runway ML",             cat:"AI",            icon:"🎬", tiers:[{n:"Standard",p:15},{n:"Pro",p:35},{n:"Unlimited",p:95}], login:true,gift:false,family:false,newAcc:true},
-  {id:9,  name:"ElevenLabs",            cat:"AI",            icon:"🎙️", tiers:[{n:"Starter",p:5},{n:"Creator",p:22},{n:"Pro",p:99}],    login:true,gift:false,family:false,newAcc:true},
-  {id:10, name:"Kling AI",              cat:"AI",            icon:"🎥", tiers:[{n:"Starter",p:8},{n:"Pro",p:35},{n:"Premier",p:88}],   login:true,gift:false,family:false,newAcc:true},
-  {id:11, name:"Cursor Pro",            cat:"Разработка",    icon:"💻", tiers:[{n:"Pro",p:20},{n:"Ultra",p:200}],                       login:true,gift:false,family:false,newAcc:true},
-  {id:12, name:"GitHub Copilot",        cat:"Разработка",    icon:"⚡", tiers:[{n:"Pro",p:10},{n:"Pro+",p:39}],                         login:true,gift:false,family:false,newAcc:false},
-  {id:13, name:"Windsurf",              cat:"Разработка",    icon:"🏄", tiers:[{n:"Pro",p:15},{n:"Teams",p:30}],                        login:true,gift:false,family:false,newAcc:true},
-  {id:14, name:"Replit Core",           cat:"Разработка",    icon:"🔧", tiers:[{n:"Core",p:20}],                                        login:true,gift:false,family:false,newAcc:true},
-  {id:15, name:"Vercel Pro",            cat:"Разработка",    icon:"▲",  tiers:[{n:"Pro",p:20}],                                         login:true,gift:false,family:false,newAcc:false},
-  {id:16, name:"Linear",               cat:"Разработка",    icon:"📐", tiers:[{n:"Plus",p:8},{n:"Business",p:14}],                    login:true,gift:false,family:false,newAcc:false},
-  {id:17, name:"Figma",                cat:"Дизайн",         icon:"✏️", tiers:[{n:"Professional",p:15},{n:"Organization",p:45}],        login:true,gift:false,family:false,newAcc:false},
-  {id:18, name:"Canva Pro",            cat:"Дизайн",         icon:"🖌️", tiers:[{n:"Pro",p:14.99},{n:"Teams",p:29.99}],                  login:true,gift:true, family:true, newAcc:false},
-  {id:19, name:"Adobe Creative Cloud", cat:"Дизайн",         icon:"🅰️", tiers:[{n:"Photography",p:19.99},{n:"All Apps",p:54.99}],      login:true,gift:true, family:false,newAcc:false},
-  {id:20, name:"Adobe Firefly",        cat:"Дизайн",         icon:"🔥", tiers:[{n:"Firefly",p:9.99},{n:"All Apps",p:54.99}],           login:true,gift:true, family:false,newAcc:false},
-  {id:21, name:"Notion",              cat:"Продуктивность",  icon:"📝", tiers:[{n:"Plus",p:10},{n:"Business",p:15}],                  login:true,gift:false,family:false,newAcc:false},
-  {id:22, name:"Grammarly",           cat:"Продуктивность",  icon:"📖", tiers:[{n:"Premium",p:30},{n:"Business",p:25}],               login:true,gift:true, family:false,newAcc:false},
-  {id:23, name:"Dropbox Plus",        cat:"Продуктивность",  icon:"📦", tiers:[{n:"Plus",p:11.99},{n:"Professional",p:19.99}],        login:true,gift:false,family:false,newAcc:false},
-  {id:24, name:"Loom",               cat:"Продуктивность",  icon:"📹", tiers:[{n:"Starter",p:12.5},{n:"Business+",p:16}],            login:true,gift:false,family:false,newAcc:false},
-  {id:25, name:"Obsidian Sync",       cat:"Продуктивность",  icon:"🔮", tiers:[{n:"Sync",p:10},{n:"Sync+Publish",p:20}],              login:true,gift:false,family:false,newAcc:false},
-  {id:26, name:"Netflix",            cat:"Стриминг",         icon:"🎬", tiers:[{n:"Standard",p:15.49},{n:"Premium",p:22.99}],          login:true,gift:true, family:true, newAcc:false},
-  {id:27, name:"YouTube Premium",    cat:"Стриминг",         icon:"▶️", tiers:[{n:"Individual",p:13.99},{n:"Family",p:22.99}],         login:true,gift:true, family:true, newAcc:false},
-  {id:28, name:"Disney+",            cat:"Стриминг",         icon:"🏰", tiers:[{n:"Basic",p:7.99},{n:"Premium",p:13.99}],              login:true,gift:true, family:false,newAcc:false},
-  {id:29, name:"Apple TV+",          cat:"Стриминг",         icon:"🍎", tiers:[{n:"Individual",p:9.99}],                               login:true,gift:true, family:true, newAcc:false},
-  {id:30, name:"HBO Max",            cat:"Стриминг",         icon:"📺", tiers:[{n:"With Ads",p:9.99},{n:"Ad-Free",p:15.99},{n:"Ultimate",p:19.99}],login:true,gift:true,family:false,newAcc:false},
-  {id:31, name:"Crunchyroll",        cat:"Стриминг",         icon:"⛩️", tiers:[{n:"Fan",p:7.99},{n:"Mega Fan",p:9.99},{n:"Ultimate Fan",p:14.99}], login:true,gift:true,family:false,newAcc:false},
-  {id:32, name:"Spotify Premium",    cat:"Музыка",           icon:"🎵", tiers:[{n:"Individual",p:11.99},{n:"Duo",p:16.99},{n:"Family",p:19.99}], login:true,gift:true,family:true,newAcc:false},
-  {id:33, name:"Apple Music",        cat:"Музыка",           icon:"🎶", tiers:[{n:"Individual",p:10.99},{n:"Family",p:16.99}],         login:true,gift:true, family:true, newAcc:false},
-  {id:34, name:"Tidal",             cat:"Музыка",            icon:"🌊", tiers:[{n:"Individual",p:10.99},{n:"Family",p:17.99}],         login:true,gift:false,family:true, newAcc:false},
-  {id:35, name:"Duolingo Super",    cat:"Обучение",           icon:"🦉", tiers:[{n:"Super",p:12.99},{n:"Family",p:119.99}],             login:true,gift:true, family:true, newAcc:false},
-  {id:36, name:"Coursera Plus",     cat:"Обучение",           icon:"🎓", tiers:[{n:"Monthly",p:59},{n:"Annual",p:399}],                 login:true,gift:false,family:false,newAcc:false},
-  {id:37, name:"MasterClass",       cat:"Обучение",           icon:"🏆", tiers:[{n:"Individual",p:10},{n:"Duo",p:15},{n:"Family",p:20}],login:true,gift:true, family:true, newAcc:false},
-  {id:38, name:"Skillshare",        cat:"Обучение",           icon:"🎒", tiers:[{n:"Individual",p:32}],                                 login:true,gift:true, family:false,newAcc:false},
-  {id:39, name:"Discord Nitro",     cat:"Инструменты",        icon:"💬", tiers:[{n:"Basic",p:2.99},{n:"Nitro",p:9.99}],                login:true,gift:true, family:false,newAcc:false},
-  {id:40, name:"Telegram Premium",  cat:"Инструменты",        icon:"✈️", tiers:[{n:"Premium",p:4.99}],                                  login:true,gift:true, family:false,newAcc:false},
-  {id:41, name:"NordVPN",           cat:"Инструменты",        icon:"🔒", tiers:[{n:"Basic 1м",p:12.99},{n:"Basic 1г",p:53.88}],         login:true,gift:false,family:false,newAcc:false},
-  {id:42, name:"1Password",         cat:"Инструменты",        icon:"🔑", tiers:[{n:"Individual",p:2.99},{n:"Families",p:4.99}],         login:true,gift:false,family:true, newAcc:false},
-  {id:43, name:"Setapp",            cat:"Инструменты",        icon:"📱", tiers:[{n:"Individual",p:9.99},{n:"Family",p:14.99}],          login:true,gift:false,family:true, newAcc:false},
-  {id:44, name:"Zoom Pro",          cat:"Инструменты",        icon:"📞", tiers:[{n:"Pro",p:15.99},{n:"Business",p:19.99}],              login:true,gift:false,family:false,newAcc:false},
-  {id:45, name:"Xbox Game Pass",    cat:"Игры",               icon:"🎮", tiers:[{n:"Ultimate",p:19.99}],                                login:true,gift:true, family:false,newAcc:false},
-  {id:46, name:"PlayStation Plus",  cat:"Игры",               icon:"🕹️", tiers:[{n:"Essential",p:9.99},{n:"Extra",p:14.99},{n:"Premium",p:17.99}],login:true,gift:true,family:false,newAcc:false},
-  {id:47, name:"Steam (пополнение)",cat:"Игры",               icon:"🚂", tiers:[{n:"$20",p:20},{n:"$50",p:50},{n:"$100",p:100}],       login:false,gift:true,family:false,newAcc:false},
-  {id:48, name:"Murf AI",           cat:"AI",                 icon:"🔊", tiers:[{n:"Creator",p:29},{n:"Business",p:99}],                login:true,gift:false,family:false,newAcc:true},
-  {id:49, name:"Otter.ai",          cat:"Продуктивность",     icon:"🦦", tiers:[{n:"Pro",p:16.99},{n:"Business",p:30}],                login:true,gift:false,family:false,newAcc:true},
-  {id:50, name:"Lovable",           cat:"Разработка",         icon:"💡", tiers:[{n:"Starter",p:25},{n:"Launch",p:50},{n:"Scale",p:100}],login:true,gift:false,family:false,newAcc:true},
-  {id:51, name:"Hailuo AI",         cat:"AI",                 icon:"🎞️", tiers:[{n:"Basic",p:9},{n:"Standard",p:29},{n:"Pro",p:79}],    login:true,gift:false,family:false,newAcc:true},
-  {id:52, name:"Notion AI",         cat:"Продуктивность",     icon:"🧩", tiers:[{n:"AI Add-on",p:10},{n:"Plus+AI",p:16}],              login:true,gift:false,family:false,newAcc:false},
-  {id:53, name:"Make",              cat:"Инструменты",        icon:"⚙️", tiers:[{n:"Core",p:9},{n:"Pro",p:16},{n:"Teams",p:29}],       login:true,gift:false,family:false,newAcc:true},
+  {id:1,  name:"ChatGPT Plus",          slug:"chatgpt-plus",       cat:"AI",            icon:"🤖", tiers:[{n:"Plus",p:20},{n:"Team",p:25},{n:"Pro",p:200}],        login:true, gift:false,family:true, newAcc:true,  desc:"Самый популярный AI-ассистент в мире. ChatGPT Plus даёт доступ к GPT-4o, генерации изображений DALL·E и скорости без ограничений. Недоступен к прямой оплате из России — оформляем за вас через семейный план или новый аккаунт."},
+  {id:2,  name:"Claude Pro",            slug:"claude-pro",         cat:"AI",            icon:"🧠", tiers:[{n:"Pro",p:20},{n:"Team",p:30}],                         login:true, gift:false,family:true, newAcc:true,  desc:"Claude Pro от Anthropic — мощный AI для анализа документов, написания кода и длинных диалогов. Поддерживает контекст до 200K токенов. Оплата из России через Payflow."},
+  {id:3,  name:"Perplexity Pro",        slug:"perplexity-pro",     cat:"AI",            icon:"🔍", tiers:[{n:"Pro",p:20}],                                         login:true, gift:false,family:false,newAcc:true,  desc:"Perplexity Pro — AI-поисковик с доступом к интернету в реальном времени. Включает Claude, GPT-4 и Gemini в одном интерфейсе. Оплата за рубли через Payflow."},
+  {id:4,  name:"Grok (xAI)",            slug:"grok-xai",           cat:"AI",            icon:"🐦", tiers:[{n:"SuperGrok Lite",p:10},{n:"SuperGrok",p:30}],          login:true, gift:false,family:false,newAcc:true,  desc:"Grok от xAI — AI-ассистент Илона Маска с доступом к X (Twitter) и интернету. SuperGrok открывает безлимитные запросы и генерацию изображений."},
+  {id:5,  name:"Gemini Advanced",       slug:"gemini-advanced",    cat:"AI",            icon:"💎", tiers:[{n:"Google One",p:19.99}],                              login:true, gift:true, family:true, newAcc:false, desc:"Gemini Advanced от Google — мультимодальный AI с доступом к Google Workspace. Входит в подписку Google One AI Premium с 2TB облака."},
+  {id:6,  name:"Midjourney",            slug:"midjourney",         cat:"AI",            icon:"🎨", tiers:[{n:"Basic",p:10},{n:"Standard",p:30},{n:"Pro",p:60},{n:"Mega",p:120}],login:true,gift:false,family:false,newAcc:true, desc:"Midjourney — лучший AI для генерации изображений. Используется дизайнерами, маркетологами и художниками по всему миру. Оплата подписки Midjourney в России через Payflow."},
+  {id:7,  name:"Leonardo AI",           slug:"leonardo-ai",        cat:"AI",            icon:"🖼️", tiers:[{n:"Apprentice",p:10},{n:"Artisan",p:24},{n:"Maestro",p:48}],login:true,gift:false,family:false,newAcc:true, desc:"Leonardo AI — платформа для генерации изображений и видео с тонкой настройкой стилей. Популярна среди разработчиков игр и иллюстраторов."},
+  {id:8,  name:"Runway ML",             slug:"runway-ml",          cat:"AI",            icon:"🎬", tiers:[{n:"Standard",p:15},{n:"Pro",p:35},{n:"Unlimited",p:95}], login:true,gift:false,family:false,newAcc:true, desc:"Runway ML — профессиональный инструмент для AI-генерации видео. Gen-3 Alpha создаёт реалистичные видеоролики по текстовому описанию."},
+  {id:9,  name:"ElevenLabs",            slug:"elevenlabs",         cat:"AI",            icon:"🎙️", tiers:[{n:"Starter",p:5},{n:"Creator",p:22},{n:"Pro",p:99}],    login:true,gift:false,family:false,newAcc:true, desc:"ElevenLabs — лидер в AI-синтезе речи. Создаёт реалистичные голоса для подкастов, аудиокниг и озвучки видео. Оплата в рублях через Payflow."},
+  {id:10, name:"Kling AI",              slug:"kling-ai",           cat:"AI",            icon:"🎥", tiers:[{n:"Starter",p:8},{n:"Pro",p:35},{n:"Premier",p:88}],   login:true,gift:false,family:false,newAcc:true, desc:"Kling AI — генерация видео нового поколения от Kuaishou. Создаёт видео длиной до 3 минут с реалистичной физикой движений."},
+  {id:11, name:"Cursor Pro",            slug:"cursor-pro",         cat:"Разработка",    icon:"💻", tiers:[{n:"Pro",p:20},{n:"Ultra",p:200}],                       login:true,gift:false,family:false,newAcc:true, desc:"Cursor Pro — AI-редактор кода на базе Claude и GPT-4. Автодополнение, рефакторинг и генерация кода прямо в IDE. Незаменим для разработчиков."},
+  {id:12, name:"GitHub Copilot",        slug:"github-copilot",     cat:"Разработка",    icon:"⚡", tiers:[{n:"Pro",p:10},{n:"Pro+",p:39}],                         login:true,gift:false,family:false,newAcc:false,desc:"GitHub Copilot — AI-помощник для программистов от Microsoft. Работает в VS Code, JetBrains и других IDE. Ускоряет написание кода в 2-3 раза."},
+  {id:13, name:"Windsurf",              slug:"windsurf",           cat:"Разработка",    icon:"🏄", tiers:[{n:"Pro",p:15},{n:"Teams",p:30}],                        login:true,gift:false,family:false,newAcc:true, desc:"Windsurf от Codeium — AI-IDE нового поколения с агентным режимом Cascade. Конкурент Cursor с более доступной ценой."},
+  {id:14, name:"Replit Core",           slug:"replit-core",        cat:"Разработка",    icon:"🔧", tiers:[{n:"Core",p:20}],                                        login:true,gift:false,family:false,newAcc:true, desc:"Replit Core — облачная IDE с AI-ассистентом для быстрого прототипирования. Разворачивает приложения в один клик."},
+  {id:15, name:"Vercel Pro",            slug:"vercel-pro",         cat:"Разработка",    icon:"▲",  tiers:[{n:"Pro",p:20}],                                         login:true,gift:false,family:false,newAcc:false,desc:"Vercel Pro — платформа для деплоя фронтенда с аналитикой, Edge Functions и расширенными лимитами. Идеально для Next.js проектов."},
+  {id:16, name:"Linear",               slug:"linear",             cat:"Разработка",    icon:"📐", tiers:[{n:"Plus",p:8},{n:"Business",p:14}],                    login:true,gift:false,family:false,newAcc:false,desc:"Linear — современный трекер задач для команд разработчиков. Быстрый интерфейс, AI-функции и интеграция с GitHub."},
+  {id:17, name:"Figma",                slug:"figma",              cat:"Дизайн",         icon:"✏️", tiers:[{n:"Professional",p:15},{n:"Organization",p:45}],        login:true,gift:false,family:false,newAcc:false,desc:"Figma Professional — стандарт индустрии для UI/UX дизайна. Неограниченные проекты, версионирование и командная работа в реальном времени."},
+  {id:18, name:"Canva Pro",            slug:"canva-pro",          cat:"Дизайн",         icon:"🖌️", tiers:[{n:"Pro",p:14.99},{n:"Teams",p:29.99}],                  login:true,gift:true, family:true, newAcc:false,desc:"Canva Pro — профессиональный редактор для создания графики, презентаций и видео. 100+ миллионов шаблонов и AI-инструменты."},
+  {id:19, name:"Adobe Creative Cloud", slug:"adobe-creative-cloud",cat:"Дизайн",        icon:"🅰️", tiers:[{n:"Photography",p:19.99},{n:"All Apps",p:54.99}],      login:true,gift:true, family:false,newAcc:false,desc:"Adobe Creative Cloud — Photoshop, Illustrator, Premiere Pro и 20+ приложений. Профессиональный набор для дизайнеров и видеомонтажёров."},
+  {id:20, name:"Adobe Firefly",        slug:"adobe-firefly",      cat:"Дизайн",         icon:"🔥", tiers:[{n:"Firefly",p:9.99},{n:"All Apps",p:54.99}],           login:true,gift:true, family:false,newAcc:false,desc:"Adobe Firefly — AI для генерации изображений, интегрированный в Photoshop и Illustrator. Генерирует контент, защищённый авторским правом."},
+  {id:21, name:"Notion",              slug:"notion",             cat:"Продуктивность",  icon:"📝", tiers:[{n:"Plus",p:10},{n:"Business",p:15}],                  login:true,gift:false,family:false,newAcc:false,desc:"Notion Plus — рабочее пространство для заметок, баз данных и проектов с AI-ассистентом. Заменяет десятки других инструментов."},
+  {id:22, name:"Grammarly",           slug:"grammarly",          cat:"Продуктивность",  icon:"📖", tiers:[{n:"Premium",p:30},{n:"Business",p:25}],               login:true,gift:true, family:false,newAcc:false,desc:"Grammarly Premium — AI-помощник для проверки текста на английском. Исправляет грамматику, стиль и тон письма в любом браузере."},
+  {id:23, name:"Dropbox Plus",        slug:"dropbox-plus",       cat:"Продуктивность",  icon:"📦", tiers:[{n:"Plus",p:11.99},{n:"Professional",p:19.99}],        login:true,gift:false,family:false,newAcc:false,desc:"Dropbox Plus — 2TB облачного хранилища с синхронизацией и историей версий файлов на 180 дней."},
+  {id:24, name:"Loom",               slug:"loom",               cat:"Продуктивность",  icon:"📹", tiers:[{n:"Starter",p:12.5},{n:"Business+",p:16}],            login:true,gift:false,family:false,newAcc:false,desc:"Loom — запись экрана с мгновенным шерингом и AI-транскрипцией. Незаменим для асинхронной коммуникации в командах."},
+  {id:25, name:"Obsidian Sync",       slug:"obsidian-sync",      cat:"Продуктивность",  icon:"🔮", tiers:[{n:"Sync",p:10},{n:"Sync+Publish",p:20}],              login:true,gift:false,family:false,newAcc:false,desc:"Obsidian Sync — синхронизация зашифрованных заметок Obsidian между устройствами. Приватное хранилище знаний без доступа третьих лиц."},
+  {id:26, name:"Netflix",            slug:"netflix",            cat:"Стриминг",         icon:"🎬", tiers:[{n:"Standard",p:15.49},{n:"Premium",p:22.99}],          login:true,gift:true, family:true, newAcc:false,desc:"Netflix — крупнейший стриминговый сервис с тысячами фильмов и сериалов. Оплата Netflix в России за рубли через Payflow без иностранных карт."},
+  {id:27, name:"YouTube Premium",    slug:"youtube-premium",    cat:"Стриминг",         icon:"▶️", tiers:[{n:"Individual",p:13.99},{n:"Family",p:22.99}],         login:true,gift:true, family:true, newAcc:false,desc:"YouTube Premium — YouTube без рекламы с фоновым воспроизведением и доступом к YouTube Music. Оплата в рублях через Payflow."},
+  {id:28, name:"Disney+",            slug:"disney-plus",        cat:"Стриминг",         icon:"🏰", tiers:[{n:"Basic",p:7.99},{n:"Premium",p:13.99}],              login:true,gift:true, family:false,newAcc:false,desc:"Disney+ — стриминг Marvel, Star Wars, Pixar и National Geographic. Оформление подписки Disney+ для России через Payflow."},
+  {id:29, name:"Apple TV+",          slug:"apple-tv-plus",      cat:"Стриминг",         icon:"🍎", tiers:[{n:"Individual",p:9.99}],                               login:true,gift:true, family:true, newAcc:false,desc:"Apple TV+ — оригинальные сериалы и фильмы от Apple. Severance, Ted Lasso, The Morning Show и другие эксклюзивы."},
+  {id:30, name:"HBO Max",            slug:"hbo-max",            cat:"Стриминг",         icon:"📺", tiers:[{n:"With Ads",p:9.99},{n:"Ad-Free",p:15.99},{n:"Ultimate",p:19.99}],login:true,gift:true,family:false,newAcc:false,desc:"Max (HBO) — Game of Thrones, House of the Dragon и сотни хитов HBO. Оплата подписки Max в России за рубли."},
+  {id:31, name:"Crunchyroll",        slug:"crunchyroll",        cat:"Стриминг",         icon:"⛩️", tiers:[{n:"Fan",p:7.99},{n:"Mega Fan",p:9.99},{n:"Ultimate Fan",p:14.99}], login:true,gift:true,family:false,newAcc:false,desc:"Crunchyroll — крупнейшая платформа для просмотра аниме. Тысячи тайтлов с субтитрами и озвучкой. Оплата через Payflow."},
+  {id:32, name:"Spotify Premium",    slug:"spotify-premium",    cat:"Музыка",           icon:"🎵", tiers:[{n:"Individual",p:11.99},{n:"Duo",p:16.99},{n:"Family",p:19.99}], login:true,gift:true,family:true,newAcc:false,desc:"Spotify Premium — 100 миллионов треков без рекламы с оффлайн-режимом. Оплата Spotify в России за рубли через Payflow без иностранных карт."},
+  {id:33, name:"Apple Music",        slug:"apple-music",        cat:"Музыка",           icon:"🎶", tiers:[{n:"Individual",p:10.99},{n:"Family",p:16.99}],         login:true,gift:true, family:true, newAcc:false,desc:"Apple Music — 100 миллионов треков с пространственным звуком Dolby Atmos. Оплата Apple Music в России через Payflow."},
+  {id:34, name:"Tidal",             slug:"tidal",              cat:"Музыка",            icon:"🌊", tiers:[{n:"Individual",p:10.99},{n:"Family",p:17.99}],         login:true,gift:false,family:true, newAcc:false,desc:"Tidal HiFi — музыкальный стриминг с lossless-качеством звука и эксклюзивным контентом. Для истинных аудиофилов."},
+  {id:35, name:"Duolingo Super",    slug:"duolingo-super",     cat:"Обучение",           icon:"🦉", tiers:[{n:"Super",p:12.99},{n:"Family",p:119.99}],             login:true,gift:true, family:true, newAcc:false,desc:"Duolingo Super — изучение языков без рекламы с неограниченными жизнями и подробной статистикой прогресса."},
+  {id:36, name:"Coursera Plus",     slug:"coursera-plus",      cat:"Обучение",           icon:"🎓", tiers:[{n:"Monthly",p:59},{n:"Annual",p:399}],                 login:true,gift:false,family:false,newAcc:false,desc:"Coursera Plus — неограниченный доступ к 7000+ курсам от MIT, Stanford, Google и других топ-университетов и компаний."},
+  {id:37, name:"MasterClass",       slug:"masterclass",        cat:"Обучение",           icon:"🏆", tiers:[{n:"Individual",p:10},{n:"Duo",p:15},{n:"Family",p:20}],login:true,gift:true, family:true, newAcc:false,desc:"MasterClass — онлайн-курсы от мировых экспертов: Gordon Ramsay, Martin Scorsese, Serena Williams. Вдохновляющее обучение."},
+  {id:38, name:"Skillshare",        slug:"skillshare",         cat:"Обучение",           icon:"🎒", tiers:[{n:"Individual",p:32}],                                 login:true,gift:true, family:false,newAcc:false,desc:"Skillshare — тысячи практических курсов по дизайну, бизнесу, технологиям и творчеству. Учитесь у практиков."},
+  {id:39, name:"Discord Nitro",     slug:"discord-nitro",      cat:"Инструменты",        icon:"💬", tiers:[{n:"Basic",p:2.99},{n:"Nitro",p:9.99}],                login:true,gift:true, family:false,newAcc:false,desc:"Discord Nitro — улучшенный Discord с HD-видео, кастомными эмодзи, большими файлами и буст-бонусами для серверов."},
+  {id:40, name:"Telegram Premium",  slug:"telegram-premium",   cat:"Инструменты",        icon:"✈️", tiers:[{n:"Premium",p:4.99}],                                  login:true,gift:true, family:false,newAcc:false,desc:"Telegram Premium — вдвое больше лимитов, эксклюзивные стикеры, ускоренные загрузки и голосовые сообщения в текст."},
+  {id:41, name:"NordVPN",           slug:"nordvpn",            cat:"Инструменты",        icon:"🔒", tiers:[{n:"Basic 1м",p:12.99},{n:"Basic 1г",p:53.88}],         login:true,gift:false,family:false,newAcc:false,desc:"NordVPN — надёжный VPN с 6000+ серверами в 60 странах. Защита данных, обход блокировок и угрозы в интернете."},
+  {id:42, name:"1Password",         slug:"1password",          cat:"Инструменты",        icon:"🔑", tiers:[{n:"Individual",p:2.99},{n:"Families",p:4.99}],         login:true,gift:false,family:true, newAcc:false,desc:"1Password — менеджер паролей с end-to-end шифрованием. Хранит пароли, карты и документы в защищённом хранилище."},
+  {id:43, name:"Setapp",            slug:"setapp",             cat:"Инструменты",        icon:"📱", tiers:[{n:"Individual",p:9.99},{n:"Family",p:14.99}],          login:true,gift:false,family:true, newAcc:false,desc:"Setapp — подписка на 240+ лучших Mac-приложений за фиксированную цену. CleanMyMac, Paste, Ulysses и многое другое."},
+  {id:44, name:"Zoom Pro",          slug:"zoom-pro",           cat:"Инструменты",        icon:"📞", tiers:[{n:"Pro",p:15.99},{n:"Business",p:19.99}],              login:true,gift:false,family:false,newAcc:false,desc:"Zoom Pro — видеоконференции без ограничений по времени, облачные записи и расширенная аналитика встреч."},
+  {id:45, name:"Xbox Game Pass",    slug:"xbox-game-pass",     cat:"Игры",               icon:"🎮", tiers:[{n:"Ultimate",p:19.99}],                                login:true,gift:true, family:false,newAcc:false,desc:"Xbox Game Pass Ultimate — 400+ игр для Xbox и PC, EA Play, облачный гейминг и онлайн-мультиплеер в одной подписке."},
+  {id:46, name:"PlayStation Plus",  slug:"playstation-plus",   cat:"Игры",               icon:"🕹️", tiers:[{n:"Essential",p:9.99},{n:"Extra",p:14.99},{n:"Premium",p:17.99}],login:true,gift:true,family:false,newAcc:false,desc:"PlayStation Plus — онлайн-мультиплеер PS5/PS4, бесплатные игры каждый месяц и каталог из 400+ тайтлов в Extra/Premium."},
+  {id:47, name:"Steam (пополнение)",slug:"steam",              cat:"Игры",               icon:"🚂", tiers:[{n:"$20",p:20},{n:"$50",p:50},{n:"$100",p:100}],       login:false,gift:true,family:false,newAcc:false,desc:"Пополнение кошелька Steam в рублях. Покупайте игры в Steam из России без иностранных карт — просто и быстро через Payflow."},
+  {id:48, name:"Murf AI",           slug:"murf-ai",            cat:"AI",                 icon:"🔊", tiers:[{n:"Creator",p:29},{n:"Business",p:99}],                login:true,gift:false,family:false,newAcc:true, desc:"Murf AI — студийное качество AI-голосов для озвучки видео, презентаций и рекламы. 120+ голосов на 20 языках."},
+  {id:49, name:"Otter.ai",          slug:"otter-ai",           cat:"Продуктивность",     icon:"🦦", tiers:[{n:"Pro",p:16.99},{n:"Business",p:30}],                login:true,gift:false,family:false,newAcc:true, desc:"Otter.ai — AI-транскрипция встреч в реальном времени с автосаммари и поиском по записям. Интеграция с Zoom и Teams."},
+  {id:50, name:"Lovable",           slug:"lovable",            cat:"Разработка",         icon:"💡", tiers:[{n:"Starter",p:25},{n:"Launch",p:50},{n:"Scale",p:100}],login:true,gift:false,family:false,newAcc:true, desc:"Lovable — AI-платформа для создания веб-приложений без кода. Описываете идею — получаете рабочее приложение за минуты."},
+  {id:51, name:"Hailuo AI",         slug:"hailuo-ai",          cat:"AI",                 icon:"🎞️", tiers:[{n:"Basic",p:9},{n:"Standard",p:29},{n:"Pro",p:79}],    login:true,gift:false,family:false,newAcc:true, desc:"Hailuo AI — генерация реалистичных видео от MiniMax. Один из лучших конкурентов Sora с доступной ценой."},
+  {id:52, name:"Notion AI",         slug:"notion-ai",          cat:"Продуктивность",     icon:"🧩", tiers:[{n:"AI Add-on",p:10},{n:"Plus+AI",p:16}],              login:true,gift:false,family:false,newAcc:false,desc:"Notion AI — AI-ассистент прямо в вашем рабочем пространстве Notion. Пишет, резюмирует и отвечает на вопросы по вашим заметкам."},
+  {id:53, name:"Make",              slug:"make",               cat:"Инструменты",        icon:"⚙️", tiers:[{n:"Core",p:9},{n:"Pro",p:16},{n:"Teams",p:29}],       login:true,gift:false,family:false,newAcc:true, desc:"Make (Integromat) — визуальная платформа автоматизации с 1500+ интеграциями. Связывает приложения и автоматизирует рутину без кода."},
 ];
 
 const CATS = ["Все","AI","Разработка","Дизайн","Стриминг","Музыка","Продуктивность","Инструменты","Обучение","Игры"];
@@ -531,9 +532,12 @@ function SCard({ s, rate, onSelect, t }) {
         ))}
       </div>
       <div style={{ marginTop:10,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-        <span style={{ fontSize:10,color:t.muted }}>с комиссией {Math.round(CFG.MARGIN*100)}%</span>
+        <a href={`#service/${s.slug||toSlug(s.name)}`} onClick={e=>e.stopPropagation()} style={{ fontSize:11,color:t.muted,textDecoration:"none",transition:"color 150ms" }}
+          onMouseEnter={e=>e.currentTarget.style.color=t.gold} onMouseLeave={e=>e.currentTarget.style.color=t.muted}>
+          Подробнее →
+        </a>
         <div style={{ display:"inline-flex",alignItems:"center",gap:4,padding:"5px 12px",borderRadius:100,fontSize:12,fontWeight:700,transition:"all .2s",background:hov?t.goldDim:"transparent",color:hov?t.gold:t.muted,border:`1px solid ${hov?t.goldB:"transparent"}` }}>
-          {hov?"Оформить →":"Подробнее"}
+          {hov?"Оформить →":""}
         </div>
       </div>
     </div>
@@ -2208,6 +2212,159 @@ function FaqSection({ t }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  SERVICE PAGE
+// ══════════════════════════════════════════════════════════════
+function ServicePage({ svc, rate, rateLoading, onOrder, go, toggle, t, session, isMobile }) {
+  const margin = 1.15;
+  const rub = (usd) => rate ? Math.ceil(usd * rate * margin) : null;
+
+  useEffect(() => {
+    document.title = `${svc.name} в России — оплата за рубли | Payflow`;
+    const desc = document.querySelector("meta[name='description']");
+    if (desc) desc.setAttribute("content", `Купить ${svc.name} в России за рубли. ${svc.desc?.slice(0,100)}... Комиссия 15%, активация за 1 час.`);
+    return () => {
+      document.title = "Payflow — Оплата ChatGPT, Midjourney, Netflix, Spotify за рубли | pay-flow.ru";
+      if (desc) desc.setAttribute("content", "Платёжный посредник для оплаты зарубежных подписок в рублях. ChatGPT Plus, Midjourney, Claude Pro, Netflix, Spotify, Adobe и 50+ сервисов. Комиссия 15%, курс ЦБ РФ. Активация за 1 час — гарантия возврата.");
+    };
+  }, [svc]);
+
+  const faq = [
+    {q:`Как оплатить ${svc.name} в России?`, a:`Выберите тариф, оформите заявку на Payflow и оплатите в рублях через СБП или перевод на карту. Активируем в течение 1 часа в рабочее время.`},
+    {q:"Нужно ли передавать пароль от аккаунта?", a:svc.family?"Нет — активируем через семейный план без доступа к вашему аккаунту.":svc.gift?"Нет — используем подарочный код, доступ к аккаунту не нужен.":"Для активации потребуется временный доступ к аккаунту. Все данные хранятся только в вашем личном кабинете."},
+    {q:"Как быстро активируют подписку?", a:"В рабочее время (10:00–22:00 МСК) — до 1 часа. В остальное время — до 24 часов. Статус видите в личном кабинете."},
+    {q:"Что если карты Visa/Mastercard не работают?", a:"Именно для этого существует Payflow. Принимаем оплату через СБП и перевод на карты любых российских банков."},
+  ];
+
+  return (
+    <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Satoshi',sans-serif", color:t.text }}>
+      <style>{`*{box-sizing:border-box;margin:0;padding:0}`}</style>
+
+      {/* JSON-LD */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context":"https://schema.org",
+        "@type":"Product",
+        "name": svc.name,
+        "description": svc.desc,
+        "brand": {"@type":"Brand","name": svc.name},
+        "offers": svc.tiers.map(tier => ({
+          "@type":"Offer",
+          "name": tier.n,
+          "price": rub(tier.p) || tier.p * 90,
+          "priceCurrency":"RUB",
+          "availability":"https://schema.org/InStock",
+          "seller":{"@type":"Organization","name":"Payflow"}
+        }))
+      })}}/>
+
+      {/* Navbar */}
+      <nav style={{ position:"fixed",top:0,left:0,right:0,zIndex:100,padding:isMobile?"0 12px":"0 28px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",background:t.nav,backdropFilter:"blur(20px)",borderBottom:`1px solid ${t.border}` }}>
+        <div onClick={()=>go("#home")} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:20,cursor:"pointer",color:t.text }}>pay<span style={{ color:t.gold }}>flow</span></div>
+        <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+          <button onClick={()=>go("#catalog")} style={{ padding:"7px 16px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:"transparent",border:`1px solid ${t.border}`,color:t.sub }}>← Каталог</button>
+          <button onClick={toggle} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark?<IconSun color={t.sub}/>:<IconMoon color={t.sub}/>}</button>
+        </div>
+      </nav>
+
+      <div style={{ maxWidth:800,margin:"0 auto",padding:isMobile?"80px 16px 60px":"90px 24px 80px" }}>
+
+        {/* Hero */}
+        <div style={{ marginBottom:40 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:14,marginBottom:16 }}>
+            <span style={{ fontSize:48 }}>{svc.icon}</span>
+            <div>
+              <div style={{ color:t.gold,fontSize:11,textTransform:"uppercase",letterSpacing:3,fontWeight:600,marginBottom:4 }}>{svc.cat}</div>
+              <h1 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:isMobile?28:36,color:t.text,lineHeight:1.1 }}>{svc.name} в России</h1>
+            </div>
+          </div>
+          <p style={{ color:t.sub,fontSize:16,lineHeight:1.7,marginBottom:24 }}>{svc.desc}</p>
+          <div style={{ display:"flex",gap:10,flexWrap:"wrap" }}>
+            <button onClick={onOrder} style={{ padding:"13px 28px",borderRadius:14,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:15,cursor:"pointer" }}>
+              Оформить за рубли →
+            </button>
+            <div style={{ display:"flex",alignItems:"center",gap:6,padding:"13px 18px",borderRadius:14,background:t.card2,border:`1px solid ${t.border}`,color:t.sub,fontSize:13 }}>
+              💳 СБП и карты РФ
+            </div>
+          </div>
+        </div>
+
+        {/* Тарифы */}
+        <div style={{ marginBottom:40 }}>
+          <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:700,fontSize:22,color:t.text,marginBottom:16 }}>Тарифы и цены в рублях</h2>
+          <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12 }}>
+            {svc.tiers.map((tier,i)=>(
+              <div key={i} onClick={onOrder} style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:16,padding:"20px 18px",cursor:"pointer",transition:"border-color 200ms,transform 200ms" }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=t.goldB;e.currentTarget.style.transform="translateY(-2px)"}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform="none"}}>
+                <div style={{ color:t.sub,fontSize:12,marginBottom:6 }}>{tier.n}</div>
+                <div style={{ color:t.gold,fontWeight:800,fontSize:22,marginBottom:2 }}>
+                  {rateLoading?"..." : rub(tier.p) ? `${rub(tier.p).toLocaleString("ru-RU")} ₽` : `от ${Math.ceil(tier.p*90).toLocaleString("ru-RU")} ₽`}
+                </div>
+                <div style={{ color:t.muted,fontSize:11 }}>${tier.p} · комиссия 15%</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop:12,color:t.muted,fontSize:12 }}>* Цены в рублях рассчитаны по текущему курсу ЦБ РФ. Обновляются автоматически.</div>
+        </div>
+
+        {/* Преимущества */}
+        <div style={{ background:t.card2,border:`1px solid ${t.border}`,borderRadius:18,padding:"24px",marginBottom:40,display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14 }}>
+          {[
+            {i:"⚡",t:"Активация за 1 час",d:"В рабочее время 10:00–22:00 МСК"},
+            {i:"💳",t:"Оплата СБП и картой",d:"Тинькофф, Сбер, ВТБ и другие банки РФ"},
+            {i:"🔒",t:"Безопасно",d:"Данные в личном кабинете, без передачи третьим лицам"},
+            {i:"↩️",t:"Гарантия возврата",d:"Вернём деньги если активация не прошла"},
+          ].map((item,i)=>(
+            <div key={i} style={{ display:"flex",gap:12,alignItems:"flex-start" }}>
+              <span style={{ fontSize:22,flexShrink:0 }}>{item.i}</span>
+              <div>
+                <div style={{ fontWeight:700,fontSize:14,color:t.text,marginBottom:2 }}>{item.t}</div>
+                <div style={{ color:t.muted,fontSize:12 }}>{item.d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* FAQ */}
+        <div style={{ marginBottom:40 }}>
+          <h2 style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:700,fontSize:22,color:t.text,marginBottom:16 }}>Частые вопросы</h2>
+          <ServiceFaq items={faq} t={t}/>
+        </div>
+
+        {/* CTA */}
+        <div style={{ background:`linear-gradient(135deg,rgba(249,115,22,0.1),rgba(251,191,36,0.08))`,border:`1px solid ${t.goldB}`,borderRadius:20,padding:"28px 24px",textAlign:"center" }}>
+          <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:22,color:t.text,marginBottom:8 }}>Готовы оформить?</div>
+          <div style={{ color:t.sub,fontSize:14,marginBottom:20 }}>Оплата в рублях · Активация за 1 час · Гарантия возврата</div>
+          <button onClick={onOrder} style={{ padding:"14px 36px",borderRadius:14,background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",color:"#0a0a14",fontWeight:700,fontSize:16,cursor:"pointer" }}>
+            Оформить {svc.name} →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ServiceFaq({ items, t }) {
+  const [open, setOpen] = useState(null);
+  return (
+    <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+      {items.map((item,i)=>(
+        <div key={i} style={{ background:t.card2,border:`1px solid ${open===i?t.borderH:t.border}`,borderRadius:14,overflow:"hidden" }}>
+          <button onClick={()=>setOpen(open===i?null:i)} style={{ width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px",background:"none",border:"none",color:t.text,cursor:"pointer",textAlign:"left",gap:12 }}>
+            <span style={{ fontWeight:600,fontSize:14 }}>{item.q}</span>
+            <span style={{ flexShrink:0,color:t.gold,transform:open===i?"rotate(180deg)":"none",transition:"transform 280ms",display:"inline-block" }}>▾</span>
+          </button>
+          <div className={`faq-body${open===i?" open":""}`}>
+            <div className="faq-inner">
+              <div style={{ padding:"0 18px 16px",color:t.sub,fontSize:14,lineHeight:1.7 }}>{item.a}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
 //  MAIN APP
 // ══════════════════════════════════════════════════════════════
 export default function App() {
@@ -2289,6 +2446,13 @@ export default function App() {
   );
 
   if (page === "#legal") return <LegalPage go={go} t={t} />;
+
+  if (page.startsWith("#service/")) {
+    const slug = page.replace("#service/","");
+    const svc = SVC.find(s => (s.slug||toSlug(s.name)) === slug);
+    if (!svc) { go("#catalog"); return null; }
+    return <ServicePage svc={svc} rate={rate} rateLoading={rateLoading} onOrder={()=>setSelSvc(svc)} go={go} toggle={toggle} t={t} session={session} isMobile={isMobile}/>;
+  }
   if (page === "#cabinet") {
     if (!session) { go("#home"); return null; }
     return (
