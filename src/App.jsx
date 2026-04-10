@@ -1339,7 +1339,7 @@ function Cabinet({ userHook, go, t, onReview }) {
 
                       {/* Кнопка отзыва для выполненных */}
                       {o.status === "done" && (
-                        <button onClick={()=>onReview&&onReview(o.service,o.id)}
+                        <button type="button" onClick={(e)=>{ e.stopPropagation(); if(onReview) onReview(o.service, o.id); }}
                           style={{ marginTop:10,width:"100%",padding:"9px 0",borderRadius:10,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",color:t.gold,fontSize:13,fontWeight:600,cursor:"pointer" }}>
                           ★ Оставить отзыв
                         </button>
@@ -2122,7 +2122,7 @@ function ReviewModal({ onClose, user, profile, serviceName, orderId, t }) {
     setDone(true);
   };
 
-  const ov = { position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(6px)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20 };
+  const ov = { position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(6px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20 };
   const box = { background:t.card,border:`1px solid ${t.border}`,borderRadius:24,padding:"32px 28px",maxWidth:440,width:"100%",position:"relative" };
   const inp = { width:"100%",background:t.card2,border:`1px solid ${t.border}`,borderRadius:12,padding:"12px 14px",color:t.text,fontSize:14,outline:"none",resize:"vertical",minHeight:100,boxSizing:"border-box",fontFamily:"inherit" };
 
