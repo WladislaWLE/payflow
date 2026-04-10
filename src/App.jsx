@@ -2423,7 +2423,12 @@ export default function App() {
                   </span>
                 )}
               </button>
-              {/* Имя пользователя — только десктоп */}
+              {/* Иконка профиля — на мобиле только иконка, на десктопе с именем */}
+              {isMobile && (
+                <button onClick={()=>go("#cabinet")} style={{ width:40,height:40,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+                  <IconUser size={17} color={t.sub}/>
+                </button>
+              )}
               {!isMobile && (
                 <button onClick={()=>go("#cabinet")} style={{ padding:"6px 10px",borderRadius:100,fontSize:13,fontWeight:600,cursor:"pointer",background:t.card,border:`1px solid ${t.border}`,color:t.sub,display:"flex",alignItems:"center",gap:4 }}>
                   <IconUser size={16} color={t.sub}/>{profile?.name?.split(" ")[0] || "Кабинет"}
@@ -2819,12 +2824,22 @@ export default function App() {
       {showReqSvc && <RequestServiceModal onClose={()=>setShowReqSvc(false)} user={session?.user} t={t}/>}
       {showReviewModal && <ReviewModal onClose={()=>setShowReviewModal(false)} user={session?.user} profile={profile} serviceName={reviewTarget.serviceName} orderId={reviewTarget.orderId} t={t}/>}
 
+      {/* Scroll to top */}
+      {scrolled && (
+        <button onClick={()=>window.scrollTo({top:0,behavior:"smooth"})}
+          style={{ position:"fixed",bottom:28,right:24,zIndex:200,width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#f59e0b,#fbbf24)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(251,191,36,0.4)",transition:"transform 200ms",color:"#0a0a14",fontSize:20,fontWeight:700,lineHeight:1 }}
+          onMouseEnter={e=>e.currentTarget.style.transform="scale(1.1)"}
+          onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
+          ↑
+        </button>
+      )}
+
       {/* Footer */}
       <div style={{ position:"relative",padding:"40px 32px 32px",background:t.dark?"rgba(0,0,0,0.4)":"rgba(0,0,0,0.02)" }}>
         <div style={{ position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${t.borderH},transparent)` }}/>
         <div style={{ maxWidth:1160,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16 }}>
           <div>
-            <div style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:22,marginBottom:5,letterSpacing:-0.5 }}>pay<span style={{ background:"linear-gradient(135deg,#fbbf24,#f97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text" }}>flow</span></div>
+            <div onClick={()=>{ go("#home"); window.scrollTo({top:0,behavior:"smooth"}); }} style={{ fontFamily:"'Clash Display',sans-serif",fontWeight:900,fontSize:22,marginBottom:5,letterSpacing:-0.5,cursor:"pointer" }}>pay<span style={{ background:"linear-gradient(135deg,#fbbf24,#f97316)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text" }}>flow</span></div>
             <div style={{ color:t.muted,fontSize:12,marginBottom:4 }}>Оплата зарубежных сервисов · 2026</div>
             <button onClick={()=>go("#legal")} style={{ background:"none",border:"none",color:t.muted,fontSize:12,cursor:"pointer",padding:0,textDecoration:"underline",textUnderlineOffset:3 }}>Оферта</button>
           </div>
