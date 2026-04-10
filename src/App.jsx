@@ -1159,7 +1159,7 @@ function ReferralBlock({ userId, profile, t, go }) {
 // ══════════════════════════════════════════════════════════════
 //  PERSONAL CABINET
 // ══════════════════════════════════════════════════════════════
-function Cabinet({ userHook, go, t }) {
+function Cabinet({ userHook, go, t, onReview }) {
   const { session, profile, logout } = userHook;
   const [tab, setTab] = useState("orders");
   const [expandedId, setExpandedId] = useState(null);
@@ -1339,7 +1339,7 @@ function Cabinet({ userHook, go, t }) {
 
                       {/* Кнопка отзыва для выполненных */}
                       {o.status === "done" && (
-                        <button onClick={()=>{ setReviewTarget({serviceName:o.service,orderId:o.id}); setShowReviewModal(true); }}
+                        <button onClick={()=>onReview&&onReview(o.service,o.id)}
                           style={{ marginTop:10,width:"100%",padding:"9px 0",borderRadius:10,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",color:t.gold,fontSize:13,fontWeight:600,cursor:"pointer" }}>
                           ★ Оставить отзыв
                         </button>
@@ -2290,7 +2290,7 @@ export default function App() {
             <button onClick={toggle} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark ? <IconSun color={t.sub}/> : <IconMoon color={t.sub}/>}</button>
           </div>
         </nav>
-        <Cabinet userHook={userHook} go={go} t={t}/>
+        <Cabinet userHook={userHook} go={go} t={t} onReview={(serviceName,orderId)=>{ setReviewTarget({serviceName,orderId}); setShowReviewModal(true); }}/>
       </div>
     );
   }
