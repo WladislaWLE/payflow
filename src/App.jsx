@@ -938,7 +938,7 @@ function FaqSection({ t }) {
 // ══════════════════════════════════════════════════════════════
 //  SERVICE PAGE
 // ══════════════════════════════════════════════════════════════
-function ServicePage({ svc, rate, rateLoading, go, toggle, t, session, profile, isMobile, userHook }) {
+function ServicePage({ svc, rate, rateLoading, go, toggle, t, session, profile, isMobile, userHook, requisites }) {
   const margin = 1.15;
   const rub = (usd) => rate ? Math.ceil(usd * rate * margin) : null;
   const [selSvc, setSelSvc] = useState(null);
@@ -1189,7 +1189,7 @@ export default function App() {
     const slug = page.replace("#service/","");
     const svc = SVC.find(s => (s.slug||toSlug(s.name)) === slug);
     if (!svc) { go("#catalog"); return null; }
-    return <ServicePage svc={svc} rate={rate} rateLoading={rateLoading} go={go} toggle={toggle} t={t} session={session} profile={profile} isMobile={isMobile} userHook={userHook}/>;
+    return <ServicePage svc={svc} rate={rate} rateLoading={rateLoading} go={go} toggle={toggle} t={t} session={session} profile={profile} isMobile={isMobile} userHook={userHook} requisites={requisites}/>;
   }
   if (page === "#cabinet") {
     if (!session) { go("#home"); return null; }
