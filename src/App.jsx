@@ -2,54 +2,16 @@
 
 
 import LegalPage from "./pages/LegalPage";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { supabase, auth as sbAuth, profiles, orders as sbOrders, notifications as sbNotifs, storage as sbStorage, referrals as sbReferrals, reviews as sbReviews } from "./lib/supabase";
+import { useState, useEffect, useRef, useCallback, memo, lazy, Suspense } from "react";
+import { SVC, toSlug } from "./data/services";
+import { supabase, auth as sbAuth, profiles, storage as sbStorage, referrals as sbReferrals, reviews as sbReviews } from "./lib/supabase";
+import { POPULAR_NAMES, SL, SC, SE, calcDiscount, checkPromocode, getSetting } from "./lib/appConstants";
+import { useOrders } from "./hooks/useOrders";
+import { useNotifications } from "./hooks/useNotifications";
+import { StatusBadge, Skeleton, OrderSkeleton, ActivationTimer, OrderProgress, Badge, Alert, FieldLabel, IconDownload } from "./components/shared";
 
-// ══════════════════════════════════════════════════════════════
-//  ПРОМОКОДЫ — helper
-// ══════════════════════════════════════════════════════════════
-async function checkPromocode(code) {
-  const { data, error } = await supabase.rpc("apply_promocode", { promo_code_text: code });
-  if (error) return { ok: false, error: error.message };
-  return data;
-}
-
-// ── Настройки (ручной курс) ──────────────────────────────────
-async function getSetting(key) {
-  const { data } = await supabase.from("settings").select("value").eq("key", key).single();
-  return data?.value ?? null;
-}
-async function setSetting(key, value) {
-  await supabase.from("settings").upsert({ key, value, updated_at: new Date().toISOString() });
-}
-
-async function getPromocodes() {
-  const { data } = await supabase.from("promocodes").select("*").order("created_at", { ascending: false });
-  return data || [];
-}
-
-async function savePromocode(promo) {
-  if (promo.id) {
-    const { error } = await supabase.from("promocodes").update(promo).eq("id", promo.id);
-    return { error };
-  } else {
-    const { error } = await supabase.from("promocodes").insert({ ...promo, code: promo.code.toUpperCase() });
-    return { error };
-  }
-}
-
-async function deletePromocode(id) {
-  const { error } = await supabase.from("promocodes").delete().eq("id", id);
-  return { error };
-}
-
-function calcDiscount(total, promo) {
-  if (!promo) return 0;
-  if (promo.type === "percent") return Math.round(total * promo.value / 100);
-  if (promo.type === "fixed")   return Math.min(promo.value, total);
-  if (promo.type === "free")    return Math.round(total * 0.10); // убираем нашу комиссию
-  return 0;
-}
+const CabinetPage = lazy(() => import("./pages/CabinetPage"));
+const AdminPage   = lazy(() => import("./pages/AdminPage"));
 
 
 // ─── SVG ICONS (no emoji for structural UI per no-emoji-icons rule) ────────
@@ -65,7 +27,7 @@ const IconCheck = ({size=16,color="currentColor"}) => <svg width={size} height={
 const IconX = ({size=16,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 const IconChevronDown = ({size=14,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
 const IconSearch = ({size=16,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
-const IconDownload = ({size=16,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+
 const IconTrendUp  = ({size=20,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>;
 const IconZap      = ({size=20,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
 const IconLock     = ({size=20,color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
@@ -78,13 +40,15 @@ const IconRefund   = ({size=20,color="currentColor"}) => <svg width={size} heigh
 //  КОНФИГ
 // ══════════════════════════════════════════════════════════════
 const CFG = {
-  MARGIN:       0.15,
-  ADMIN_EMAIL:  "felixandterror@gmail.com",
-  REQUISITES: [
-    { label:"ВТБ", sbp:"+7 (904) 116-35-62", card:"2200 2414 2610 8027", holder:"Александр В." },
-    { label:"МТС Деньги",  sbp:"+7 (950) 136-52-14", card:"2203 8303 2362 4420", holder:"Владислав Л." },
-  ],
+  MARGIN: 0.15,
 };
+
+// Реквизиты хранятся в Supabase settings (ключ "requisites"), загружаются в App()
+// Fallback — минимальный набор на случай ошибки загрузки
+const DEFAULT_REQUISITES = [
+  { label:"ВТБ",        sbp:"",  card:"", holder:"" },
+  { label:"МТС Деньги", sbp:"",  card:"", holder:"" },
+];
 
 // ══════════════════════════════════════════════════════════════
 //  УТИЛИТЫ
@@ -92,7 +56,7 @@ const CFG = {
 const calc    = (usd, r) => Math.round(usd * r * (1 + CFG.MARGIN));
 const ruDate  = () => new Date().toLocaleString("ru-RU", { timeZone: "Europe/Moscow" });
 const randId  = () => "#" + Math.floor(10000 + Math.random() * 90000);
-const randReq = () => CFG.REQUISITES[Math.floor(Math.random() * CFG.REQUISITES.length)];
+const randReq = (reqs) => reqs[Math.floor(Math.random() * reqs.length)];
 
 // Hash router
 function useHash() {
@@ -107,71 +71,11 @@ function useHash() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  СЕРВИСЫ
+//  СЕРВИСЫ — данные в src/data/services.js
 // ══════════════════════════════════════════════════════════════
-function toSlug(name){return name.toLowerCase().replace(/[^a-zа-яё0-9]+/gi,"-").replace(/^-|-$/g,"");}
-const SVC = [
-  {id:1,  name:"ChatGPT Plus",          slug:"chatgpt-plus",       cat:"AI",            icon:"🤖", tiers:[{n:"Plus",p:20},{n:"Team",p:25},{n:"Pro",p:200}],        login:true, gift:false,family:true, newAcc:true,  desc:"Флагманский AI-ассистент OpenAI. Plus открывает доступ к Instant 5.3 (быстрые ответы), Thinking 5.4 (сложные задачи), генерации изображений, голосовому режиму и веб-поиску. Недоступен к прямой оплате из России — оформляем через семейный план или новый аккаунт."},
-  {id:2,  name:"Claude Pro",            slug:"claude-pro",         cat:"AI",            icon:"🧠", tiers:[{n:"Pro",p:20},{n:"Team",p:30}],                         login:true, gift:false,family:true, newAcc:true,  desc:"Claude Pro от Anthropic с доступом к Claude Opus 4.6 и Sonnet 4.6 (февраль 2026). Extended Thinking для сложных задач, контекст 1M токенов, Projects для организации работы, анализ документов и кода. Оплата из России через Payflow."},
-  {id:3,  name:"Perplexity Pro",        slug:"perplexity-pro",     cat:"AI",            icon:"🔍", tiers:[{n:"Pro",p:20}],                                         login:true, gift:false,family:false,newAcc:true,  desc:"Perplexity Pro — AI-поисковик с доступом к GPT-5.4, Claude Sonnet 4.6, Gemini 3.1 Pro и o3-pro в одном интерфейсе. Deep Research строит детальный отчёт с источниками. Perplexity Computer автоматизирует многошаговые задачи."},
-  {id:4,  name:"Grok (xAI)",            slug:"grok-xai",           cat:"AI",            icon:"🐦", tiers:[{n:"SuperGrok Lite",p:10},{n:"SuperGrok",p:30}],          login:true, gift:false,family:false,newAcc:true,  desc:"Grok 4 от xAI — флагманская модель Илона Маска. Доступ к постам X (Twitter) в реальном времени, генерация изображений, веб-поиск и DeepSearch. SuperGrok даёт безлимитные запросы к Grok 4."},
-  {id:5,  name:"Gemini Advanced",       slug:"gemini-advanced",    cat:"AI",            icon:"💎", tiers:[{n:"Google One",p:19.99}],                              login:true, gift:true, family:true, newAcc:false, desc:"Gemini Advanced с доступом к Gemini 3.1 Pro (апрель 2026) — 77% на ARC-AGI-2. Deep Research, анализ видео и документов, интеграция с Gmail, Docs и Drive. Входит в Google One AI Premium с 2TB хранилища."},
-  {id:6,  name:"Midjourney",            slug:"midjourney",         cat:"AI",            icon:"🎨", tiers:[{n:"Basic",p:10},{n:"Standard",p:30},{n:"Pro",p:60},{n:"Mega",p:120}],login:true,gift:false,family:false,newAcc:true, desc:"Лидер AI-генерации изображений. V7 — модель по умолчанию: фотореализм, видео до 21 секунды, персонализация и Draft Mode (в 10 раз быстрее). Оплата Midjourney в России через Payflow без иностранных карт."},
-  {id:7,  name:"Leonardo AI",           slug:"leonardo-ai",        cat:"AI",            icon:"🖼️", tiers:[{n:"Apprentice",p:10},{n:"Artisan",p:24},{n:"Maestro",p:48}],login:true,gift:false,family:false,newAcc:true, desc:"Leonardo AI — платформа для генерации изображений и видео с тонкой настройкой стилей через LoRA-модели. Поддерживает Motion (AI-видео) и 3D-текстуры. Популярна среди геймдизайнеров и иллюстраторов."},
-  {id:8,  name:"Runway ML",             slug:"runway-ml",          cat:"AI",            icon:"🎬", tiers:[{n:"Standard",p:15},{n:"Pro",p:35},{n:"Unlimited",p:95}], login:true,gift:false,family:false,newAcc:true, desc:"Runway ML — профессиональный инструмент для AI-генерации видео. Gen-3 Alpha Turbo создаёт реалистичные видеоролики по тексту или изображению. Используется в рекламе, кино и контент-продакшне."},
-  {id:9,  name:"ElevenLabs",            slug:"elevenlabs",         cat:"AI",            icon:"🎙️", tiers:[{n:"Starter",p:5},{n:"Creator",p:22},{n:"Pro",p:99}],    login:true,gift:false,family:false,newAcc:true, desc:"ElevenLabs — лидер AI-синтеза речи. Модели v3 и Flash v2.5 создают неотличимые от живых голоса. Клонирование голоса, 32 языка, дубляж видео. Для подкастов, аудиокниг и озвучки."},
-  {id:10, name:"Kling AI",              slug:"kling-ai",           cat:"AI",            icon:"🎥", tiers:[{n:"Starter",p:8},{n:"Pro",p:35},{n:"Premier",p:88}],   login:true,gift:false,family:false,newAcc:true, desc:"Kling AI v1.6 от Kuaishou — генерация реалистичных видео длиной до 3 минут с точной физикой движений и lip-sync. Один из лучших конкурентов Sora по качеству."},
-  {id:11, name:"Cursor Pro",            slug:"cursor-pro",         cat:"Разработка",    icon:"💻", tiers:[{n:"Pro",p:20},{n:"Ultra",p:200}],                       login:true,gift:false,family:false,newAcc:true, desc:"Cursor Pro — ведущий AI-редактор кода 2026 года. Composer 2 (собственная модель Cursor), Claude Sonnet 4.6, GPT-5.1 Codex и Grok Code. Агентный режим сам пишет, тестирует и фиксит код. Ultra — без лимитов."},
-  {id:12, name:"GitHub Copilot",        slug:"github-copilot",     cat:"Разработка",    icon:"⚡", tiers:[{n:"Pro",p:10},{n:"Pro+",p:39}],                         login:true,gift:false,family:false,newAcc:false,desc:"GitHub Copilot — AI-ассистент Microsoft прямо в IDE. Claude Sonnet 4.6, GPT-5.4 и другие модели на выбор. Агентный режим, code review и Rubber Duck (второй AI проверяет работу первого). Поддержка BYOK."},
-  {id:13, name:"Windsurf",              slug:"windsurf",           cat:"Разработка",    icon:"🏄", tiers:[{n:"Pro",p:15},{n:"Teams",p:30}],                        login:true,gift:false,family:false,newAcc:true, desc:"Windsurf от Codeium — AI-IDE с агентным режимом Cascade, который самостоятельно решает задачи разработки. Показывает топовые результаты в SWE-bench. Альтернатива Cursor с гибкими тарифами."},
-  {id:14, name:"Replit Core",           slug:"replit-core",        cat:"Разработка",    icon:"🔧", tiers:[{n:"Core",p:20}],                                        login:true,gift:false,family:false,newAcc:true, desc:"Replit Core — облачная IDE с Replit Agent: описываете задачу, AI пишет и деплоит приложение сам. Поддерживает Python, Node.js, React, базы данных и хостинг в одном месте."},
-  {id:15, name:"Vercel Pro",            slug:"vercel-pro",         cat:"Разработка",    icon:"▲",  tiers:[{n:"Pro",p:20}],                                         login:true,gift:false,family:false,newAcc:false,desc:"Vercel Pro — платформа деплоя от создателей Next.js: Edge Network, Analytics, Web Application Firewall и 1TB трафика. Деплой из Git за секунды, preview-ссылки для каждого PR."},
-  {id:16, name:"Linear",               slug:"linear",             cat:"Разработка",    icon:"📐", tiers:[{n:"Plus",p:8},{n:"Business",p:14}],                    login:true,gift:false,family:false,newAcc:false,desc:"Linear — самый быстрый трекер задач для команд разработки. Клавиатурные шорткаты, GitHub-интеграция, циклы и AI-функции для автоматического описания issues."},
-  {id:17, name:"Figma",                slug:"figma",              cat:"Дизайн",         icon:"✏️", tiers:[{n:"Professional",p:15},{n:"Organization",p:45}],        login:true,gift:false,family:false,newAcc:false,desc:"Figma Professional — отраслевой стандарт UI/UX дизайна с Figma AI: генерация макетов, автозаполнение компонентов и Dev Mode для разработчиков. Неограниченные проекты."},
-  {id:18, name:"Canva Pro",            slug:"canva-pro",          cat:"Дизайн",         icon:"🖌️", tiers:[{n:"Pro",p:14.99},{n:"Teams",p:29.99}],                  login:true,gift:true, family:true, newAcc:false,desc:"Canva Pro — редактор для графики, презентаций и видео с AI Magic Studio: генерация изображений, удаление фона, Magic Resize. 100+ млн шаблонов и 1TB хранилища."},
-  {id:19, name:"Adobe Creative Cloud", slug:"adobe-creative-cloud",cat:"Дизайн",        icon:"🅰️", tiers:[{n:"Photography",p:19.99},{n:"All Apps",p:54.99}],      login:true,gift:true, family:false,newAcc:false,desc:"Adobe Creative Cloud All Apps — Photoshop, Illustrator, Premiere Pro, After Effects и 20+ приложений с генеративным AI Firefly. Стандарт индустрии для дизайна и видеопроизводства."},
-  {id:20, name:"Adobe Firefly",        slug:"adobe-firefly",      cat:"Дизайн",         icon:"🔥", tiers:[{n:"Firefly",p:9.99},{n:"All Apps",p:54.99}],           login:true,gift:true, family:false,newAcc:false,desc:"Adobe Firefly — генеративный AI для изображений, векторов и видео. Firefly 3 создаёт фотореалистичные изображения, Firefly Video генерирует ролики. Весь контент коммерчески безопасен."},
-  {id:21, name:"Notion",              slug:"notion",             cat:"Продуктивность",  icon:"📝", tiers:[{n:"Plus",p:10},{n:"Business",p:15}],                  login:true,gift:false,family:false,newAcc:false,desc:"Notion Plus — универсальное рабочее пространство: заметки, вики, базы данных и проекты. С Notion AI пишет тексты, суммирует страницы и отвечает на вопросы по вашим данным."},
-  {id:22, name:"Grammarly",           slug:"grammarly",          cat:"Продуктивность",  icon:"📖", tiers:[{n:"Premium",p:30},{n:"Business",p:25}],               login:true,gift:true, family:false,newAcc:false,desc:"Grammarly Premium — AI-помощник для написания текстов на английском. Исправляет грамматику, улучшает стиль, генерирует черновики и адаптирует тон под аудиторию в любом браузере."},
-  {id:23, name:"Dropbox Plus",        slug:"dropbox-plus",       cat:"Продуктивность",  icon:"📦", tiers:[{n:"Plus",p:11.99},{n:"Professional",p:19.99}],        login:true,gift:false,family:false,newAcc:false,desc:"Dropbox Plus — 2TB облачного хранилища с умной синхронизацией, историей версий на 180 дней и офлайн-доступом. Интеграция с Google Docs, Microsoft Office и Slack."},
-  {id:24, name:"Loom",               slug:"loom",               cat:"Продуктивность",  icon:"📹", tiers:[{n:"Starter",p:12.5},{n:"Business+",p:16}],            login:true,gift:false,family:false,newAcc:false,desc:"Loom — запись экрана с автоматической AI-транскрипцией, главами и резюме. Часть экосистемы Atlassian. Идеален для асинхронного общения в распределённых командах."},
-  {id:25, name:"Obsidian Sync",       slug:"obsidian-sync",      cat:"Продуктивность",  icon:"🔮", tiers:[{n:"Sync",p:10},{n:"Sync+Publish",p:20}],              login:true,gift:false,family:false,newAcc:false,desc:"Obsidian Sync — сквозное шифрование и синхронизация вашего Obsidian-хранилища между всеми устройствами. История версий на 12 месяцев. Данные не читают даже серверы Obsidian."},
-  {id:26, name:"Netflix",            slug:"netflix",            cat:"Стриминг",         icon:"🎬", tiers:[{n:"Standard",p:15.49},{n:"Premium",p:22.99}],          login:true,gift:true, family:true, newAcc:false,desc:"Netflix — крупнейший стриминговый сервис: тысячи сериалов, фильмов и документалок в 4K. Новые хиты выходят каждую неделю. Оплата Netflix в России за рубли через Payflow без иностранных карт."},
-  {id:27, name:"YouTube Premium",    slug:"youtube-premium",    cat:"Стриминг",         icon:"▶️", tiers:[{n:"Individual",p:13.99},{n:"Family",p:22.99}],         login:true,gift:true, family:true, newAcc:false,desc:"YouTube Premium — YouTube без рекламы с фоновым воспроизведением, скачиванием видео и доступом к YouTube Music. В семейном плане до 5 аккаунтов. Оплата в рублях через Payflow."},
-  {id:28, name:"Disney+",            slug:"disney-plus",        cat:"Стриминг",         icon:"🏰", tiers:[{n:"Basic",p:7.99},{n:"Premium",p:13.99}],              login:true,gift:true, family:false,newAcc:false,desc:"Disney+ — Marvel, Star Wars, Pixar, National Geographic и оригинальные шоу Disney. Весь контент во вселенной Disney в одной подписке. Оформление для России через Payflow."},
-  {id:29, name:"Apple TV+",          slug:"apple-tv-plus",      cat:"Стриминг",         icon:"🍎", tiers:[{n:"Individual",p:9.99}],                               login:true,gift:true, family:true, newAcc:false,desc:"Apple TV+ — оригинальные сериалы и фильмы от Apple. Severance 2, Shrinking, Bad Monkey и другие эксклюзивы, многие из которых номинированы на Emmy и Golden Globe."},
-  {id:30, name:"HBO Max",            slug:"hbo-max",            cat:"Стриминг",         icon:"📺", tiers:[{n:"With Ads",p:9.99},{n:"Ad-Free",p:15.99},{n:"Ultimate",p:19.99}],login:true,gift:true,family:false,newAcc:false,desc:"Max (HBO) — House of the Dragon, The Last of Us, White Lotus и весь каталог HBO. Ultimate план включает 4K и до 4 одновременных просмотров. Оплата в рублях через Payflow."},
-  {id:31, name:"Crunchyroll",        slug:"crunchyroll",        cat:"Стриминг",         icon:"⛩️", tiers:[{n:"Fan",p:7.99},{n:"Mega Fan",p:9.99},{n:"Ultimate Fan",p:14.99}], login:true,gift:true,family:false,newAcc:false,desc:"Crunchyroll — крупнейший легальный стриминг аниме: 1000+ тайтлов с японской озвучкой и субтитрами. Новые серии выходят одновременно с Японией. Оплата через Payflow."},
-  {id:32, name:"Spotify Premium",    slug:"spotify-premium",    cat:"Музыка",           icon:"🎵", tiers:[{n:"Individual",p:11.99},{n:"Duo",p:16.99},{n:"Family",p:19.99}], login:true,gift:true,family:true,newAcc:false,desc:"Spotify Premium — 100+ миллионов треков без рекламы, офлайн-режим и умные персональные плейлисты. Семейный план — до 6 аккаунтов. Оплата Spotify в России за рубли через Payflow."},
-  {id:33, name:"Apple Music",        slug:"apple-music",        cat:"Музыка",           icon:"🎶", tiers:[{n:"Individual",p:10.99},{n:"Family",p:16.99}],         login:true,gift:true, family:true, newAcc:false,desc:"Apple Music — 100 миллионов треков с пространственным звуком Dolby Atmos, синхронизацией с iTunes-библиотекой и радио Apple Music 1. Семейный план до 6 человек. Оплата через Payflow."},
-  {id:34, name:"Tidal",             slug:"tidal",              cat:"Музыка",            icon:"🌊", tiers:[{n:"Individual",p:10.99},{n:"Family",p:17.99}],         login:true,gift:false,family:true, newAcc:false,desc:"Tidal — музыкальный стриминг под управлением Block (Jack Dorsey). Lossless и Dolby Atmos, 100+ млн треков, прямые выплаты артистам. Лучший выбор для аудиофилов."},
-  {id:35, name:"Duolingo Super",    slug:"duolingo-super",     cat:"Обучение",           icon:"🦉", tiers:[{n:"Super",p:12.99},{n:"Family",p:119.99}],             login:true,gift:true, family:true, newAcc:false,desc:"Duolingo Super — изучение языков без рекламы: неограниченные жизни, офлайн-уроки, детальная статистика и доступ к AI-персонажу Lily. Более 40 языков, включая английский."},
-  {id:36, name:"Coursera Plus",     slug:"coursera-plus",      cat:"Обучение",           icon:"🎓", tiers:[{n:"Monthly",p:59},{n:"Annual",p:399}],                 login:true,gift:false,family:false,newAcc:false,desc:"Coursera Plus — неограниченный доступ к 7000+ курсам и специализациям от MIT, Stanford, Google, IBM. Сертификаты, признаваемые работодателями по всему миру."},
-  {id:37, name:"MasterClass",       slug:"masterclass",        cat:"Обучение",           icon:"🏆", tiers:[{n:"Individual",p:10},{n:"Duo",p:15},{n:"Family",p:20}],login:true,gift:true, family:true, newAcc:false,desc:"MasterClass — мастер-классы от мировых звёзд: Джордон Рэмзи о кулинарии, Карлос Сантана о гитаре, Neil deGrasse Tyson об астрофизике. 200+ курсов в студийном качестве."},
-  {id:38, name:"Skillshare",        slug:"skillshare",         cat:"Обучение",           icon:"🎒", tiers:[{n:"Individual",p:32}],                                 login:true,gift:true, family:false,newAcc:false,desc:"Skillshare — 35 000+ практических курсов по дизайну, иллюстрации, видеомонтажу, маркетингу и бизнесу. Учитесь у практиков-профессионалов в своём темпе."},
-  {id:39, name:"Discord Nitro",     slug:"discord-nitro",      cat:"Инструменты",        icon:"💬", tiers:[{n:"Basic",p:2.99},{n:"Nitro",p:9.99}],                login:true,gift:true, family:false,newAcc:false,desc:"Discord Nitro — прокачанный Discord: HD-стриминг до 4K, файлы до 500MB, кастомные эмодзи и стикеры, 2 буста сервера и кастомное имя профиля. Basic — только большие файлы и бейджик."},
-  {id:40, name:"Telegram Premium",  slug:"telegram-premium",   cat:"Инструменты",        icon:"✈️", tiers:[{n:"Premium",p:4.99}],                                  login:true,gift:true, family:false,newAcc:false,desc:"Telegram Premium — файлы до 4GB, 4 аккаунта на одном устройстве, транскрипция голосовых, скрытый номер, эксклюзивные стикеры и реакции. Без рекламы в публичных каналах."},
-  {id:41, name:"NordVPN",           slug:"nordvpn",            cat:"Инструменты",        icon:"🔒", tiers:[{n:"Basic 1м",p:12.99},{n:"Basic 1г",p:53.88}],         login:true,gift:false,family:false,newAcc:false,desc:"NordVPN — надёжный VPN с 6800+ серверами в 111 странах, Threat Protection от малвари и NordLynx-протоколом для максимальной скорости. До 10 устройств одновременно."},
-  {id:42, name:"1Password",         slug:"1password",          cat:"Инструменты",        icon:"🔑", tiers:[{n:"Individual",p:2.99},{n:"Families",p:4.99}],         login:true,gift:false,family:true, newAcc:false,desc:"1Password — менеджер паролей с end-to-end шифрованием и Watchtower (мониторинг утечек). Хранит пароли, пассключи, карты и документы. Семейный план до 5 человек."},
-  {id:43, name:"Setapp",            slug:"setapp",             cat:"Инструменты",        icon:"📱", tiers:[{n:"Individual",p:9.99},{n:"Family",p:14.99}],          login:true,gift:false,family:true, newAcc:false,desc:"Setapp — подписка на 250+ лучших приложений для Mac и iOS за единую цену. CleanMyMac X, Bartender, Paste, Ulysses, BetterZip и другие платные утилиты без отдельных покупок."},
-  {id:44, name:"Zoom Pro",          slug:"zoom-pro",           cat:"Инструменты",        icon:"📞", tiers:[{n:"Pro",p:15.99},{n:"Business",p:19.99}],              login:true,gift:false,family:false,newAcc:false,desc:"Zoom Pro — встречи без ограничений по времени до 100 участников, облачные записи на 5GB, AI Companion для саммари и транскрипции. Интеграция с Google Calendar и Outlook."},
-  {id:45, name:"Xbox Game Pass",    slug:"xbox-game-pass",     cat:"Игры",               icon:"🎮", tiers:[{n:"Ultimate",p:19.99}],                                login:true,gift:true, family:false,newAcc:false,desc:"Xbox Game Pass Ultimate — 500+ игр для Xbox и PC включая EA Play, Day 1 релизы Microsoft Studios, облачный гейминг на телефоне и онлайн-мультиплеер. Игры добавляются каждый месяц."},
-  {id:46, name:"PlayStation Plus",  slug:"playstation-plus",   cat:"Игры",               icon:"🕹️", tiers:[{n:"Essential",p:9.99},{n:"Extra",p:14.99},{n:"Premium",p:17.99}],login:true,gift:true,family:false,newAcc:false,desc:"PlayStation Plus — онлайн-мультиплеер PS5/PS4, 2–4 бесплатные игры ежемесячно в Essential. Extra/Premium добавляет каталог 400+ тайтлов и классику PlayStation. Оплата через Payflow."},
-  {id:47, name:"Steam (пополнение)",slug:"steam",              cat:"Игры",               icon:"🚂", tiers:[{n:"$20",p:20},{n:"$50",p:50},{n:"$100",p:100}],       login:false,gift:true,family:false,newAcc:false,desc:"Пополнение кошелька Steam в рублях. Покупайте игры, DLC и предметы в Steam из России без иностранных карт — просто оплатите нужную сумму через Payflow."},
-  {id:48, name:"Murf AI",           slug:"murf-ai",            cat:"AI",                 icon:"🔊", tiers:[{n:"Creator",p:29},{n:"Business",p:99}],                login:true,gift:false,family:false,newAcc:true, desc:"Murf AI — генерация реалистичных AI-голосов для озвучки видео, рекламы и подкастов. 200+ голосов на 20+ языках, студийное качество без микрофона и актёра."},
-  {id:49, name:"Otter.ai",          slug:"otter-ai",           cat:"Продуктивность",     icon:"🦦", tiers:[{n:"Pro",p:16.99},{n:"Business",p:30}],                login:true,gift:false,family:false,newAcc:true, desc:"Otter.ai — AI-транскрипция встреч в реальном времени с автосаммари, выделением ключевых моментов и поиском по записям. Автоматически подключается к Zoom, Google Meet и Teams."},
-  {id:50, name:"Lovable",           slug:"lovable",            cat:"Разработка",         icon:"💡", tiers:[{n:"Starter",p:25},{n:"Launch",p:50},{n:"Scale",p:100}],login:true,gift:false,family:false,newAcc:true, desc:"Lovable — один из лидеров vibe coding 2025: пишете задачу, AI строит полноценное веб-приложение с фронтендом, бэкендом и базой данных. Деплой в один клик."},
-  {id:51, name:"Hailuo AI",         slug:"hailuo-ai",          cat:"AI",                 icon:"🎞️", tiers:[{n:"Basic",p:9},{n:"Standard",p:29},{n:"Pro",p:79}],    login:true,gift:false,family:false,newAcc:true, desc:"Hailuo AI (MiniMax) — генерация реалистичных видео до 6 секунд по тексту или изображению. Один из лучших конкурентов Sora по качеству физики и движения персонажей."},
-  {id:52, name:"Notion AI",         slug:"notion-ai",          cat:"Продуктивность",     icon:"🧩", tiers:[{n:"AI Add-on",p:10},{n:"Plus+AI",p:16}],              login:true,gift:false,family:false,newAcc:false,desc:"Notion AI — генеративный AI прямо в Notion: пишет тексты, суммирует длинные документы, отвечает на вопросы по вашей базе знаний и помогает с проектным планированием."},
-  {id:53, name:"Make",              slug:"make",               cat:"Инструменты",        icon:"⚙️", tiers:[{n:"Core",p:9},{n:"Pro",p:16},{n:"Teams",p:29}],       login:true,gift:false,family:false,newAcc:true, desc:"Make — визуальная платформа автоматизации с 2000+ интеграциями. Соединяет любые приложения через drag-and-drop сценарии без кода. Мощная альтернатива Zapier с более гибкой логикой."},
-  {id:54, name:"Suno",              slug:"suno",               cat:"AI",                 icon:"🎼", tiers:[{n:"Pro",p:10},{n:"Premier",p:30}],                     login:true,gift:false,family:false,newAcc:true, desc:"Suno — генерация полноценных музыкальных треков с вокалом по текстовому описанию за секунды. Pro даёт 2500 кредитов (~500 песен) и коммерческие права. Premier включает Suno Studio: MIDI-экспорт, многодорожечное редактирование и batch-генерацию."},
-];
+// SVC и toSlug импортированы из ./data/services
 
 const CATS = ["Все","AI","Разработка","Дизайн","Стриминг","Музыка","Продуктивность","Инструменты","Обучение","Игры"];
-const SL = {new:"Новая",paid:"Оплачена",processing:"В обработке",done:"Выполнена",cancelled:"Отменена"};
-const SC = {new:"#fbbf24",paid:"#60a5fa",processing:"#a78bfa",done:"#34d399",cancelled:"#f87171"};
-const SE = {new:"⏳",paid:"💳",processing:"🔧",done:"✅",cancelled:"❌"};
-const POPULAR_NAMES = ["ChatGPT Plus","Midjourney","Netflix","Spotify Premium","Cursor Pro","Claude Pro"];
 
 // ══════════════════════════════════════════════════════════════
 //  THEME
@@ -219,56 +123,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-// ══════════════════════════════════════════════════════════════
-//  UI PRIMITIVES
-// ══════════════════════════════════════════════════════════════
-// ─── SKELETON LOADER (progressive loading per UX skill) ─────────
-function Skeleton({ width="100%", height=16, radius=8, style={} }) {
-  return <div style={{ width, height, borderRadius:radius, background:"linear-gradient(90deg,rgba(255,255,255,0.05) 25%,rgba(255,255,255,0.1) 50%,rgba(255,255,255,0.05) 75%)", backgroundSize:"200% 100%", animation:"shimmer 1.5s infinite", ...style }}/>;
-}
-
-function OrderSkeleton({ t }) {
-  return (
-    <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, padding:18 }}>
-      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
-        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-          <Skeleton width={60} height={20} radius={100}/>
-          <Skeleton width={80} height={20} radius={100}/>
-        </div>
-        <Skeleton width={80} height={24} radius={8}/>
-      </div>
-      <Skeleton width="60%" height={16} radius={6} style={{ marginBottom:8 }}/>
-      <Skeleton width="40%" height={12} radius={6}/>
-    </div>
-  );
-}
-
-function StatusBadge({ status, size=12 }) {
-  return <span style={{ background:SC[status]+"22", border:`1px solid ${SC[status]}55`, color:SC[status], fontSize:size, padding:"4px 12px", borderRadius:100, fontWeight:700, whiteSpace:"nowrap" }}>{SE[status]} {SL[status]}</span>;
-}
-
-function FieldLabel({ children, t }) {
-  return <div style={{ color:t.muted, fontSize:11, marginBottom:8, textTransform:"uppercase", letterSpacing:1, fontWeight:600 }}>{children}</div>;
-}
-
-function Alert({ type="info", children, t }) {
-  const cfg = {
-    error:   ["rgba(248,113,113,0.1)","rgba(248,113,113,0.3)","#f87171"],
-    success: ["rgba(52,211,153,0.1)", "rgba(52,211,153,0.3)", "#6ee7b7"],
-    info:    ["rgba(96,165,250,0.1)", "rgba(96,165,250,0.3)", "#93c5fd"],
-  }[type];
-  return <div style={{ background:cfg[0], border:`1px solid ${cfg[1]}`, color:cfg[2], borderRadius:10, padding:"10px 14px", fontSize:13, marginBottom:12, lineHeight:1.6 }}>{children}</div>;
-}
-
-function Badge({ active, color, children }) {
-  const p = {
-    blue:  ["rgba(96,165,250,0.15)","rgba(96,165,250,0.4)","#93c5fd"],
-    green: ["rgba(52,211,153,0.15)","rgba(52,211,153,0.4)","#6ee7b7"],
-    purple:["rgba(167,139,250,0.15)","rgba(167,139,250,0.4)","#c4b5fd"],
-    yellow:["rgba(251,191,36,0.15)","rgba(251,191,36,0.4)","#fde68a"],
-  }[color];
-  return <span style={{ fontSize:10, padding:"2px 8px", borderRadius:100, fontWeight:600, whiteSpace:"nowrap", background:active?p[0]:"rgba(128,128,128,0.08)", border:`1px solid ${active?p[1]:"rgba(128,128,128,0.15)"}`, color:active?p[2]:"rgba(128,128,128,0.35)" }}>{children}</span>;
-}
+// UI primitives импортированы из ./components/shared
 
 // ══════════════════════════════════════════════════════════════
 //  HOOK: текущий пользователь + профиль
@@ -283,7 +138,7 @@ function useUser() {
     try {
       const params = new URLSearchParams(window.location.search || window.location.hash.split("?")[1] || "");
       const ref = params.get("ref");
-      if (ref && ref.length >= 4) {
+      if (ref && /^[A-Z0-9]{4,12}$/.test(ref.toUpperCase())) {
         localStorage.setItem("pf_ref", ref.toUpperCase());
       }
     } catch {}
@@ -355,7 +210,7 @@ function useUser() {
     setProfile(data);
   };
 
-  const isAdmin = profile?.is_admin || session?.user?.email === CFG.ADMIN_EMAIL;
+  const isAdmin = profile?.is_admin === true;
 
   const register = async (name, email, password) => {
     // Сохраняем имя в localStorage — применим при SIGNED_IN (после подтверждения email)
@@ -409,97 +264,12 @@ function usePublicStats() {
   return { ordersCount };
 }
 
-// ══════════════════════════════════════════════════════════════
-//  HOOK: уведомления
-// ══════════════════════════════════════════════════════════════
-function useNotifications(userId) {
-  const [notifs, setNotifs] = useState([]);
-
-  const load = async () => {
-    if (!userId) return;
-    const { data } = await sbNotifs.getByUser(userId);
-    setNotifs(data || []);
-  };
-
-  useEffect(() => {
-    load();
-    if (!userId) return;
-    // Polling вместо WebSocket — работает без VPN из России
-    const interval = setInterval(load, 15000);
-    return () => clearInterval(interval);
-  }, [userId]);
-
-  const markRead = async () => {
-    await sbNotifs.markRead(userId);
-    setNotifs(prev => prev.map(n => ({ ...n, is_read: true })));
-  };
-
-  const unread = notifs.filter(n => !n.is_read).length;
-  return { notifs, unread, markRead, reload: load };
-}
-
-// ══════════════════════════════════════════════════════════════
-//  HOOK: заявки (для admin и cabinet)
-// ══════════════════════════════════════════════════════════════
-function useOrders(userId, isAdmin) {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = async () => {
-    setLoading(true);
-    const { data } = isAdmin
-      ? await sbOrders.getAll()
-      : await sbOrders.getByUser(userId);
-    setOrders(data || []);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (!userId && !isAdmin) return;
-    load();
-    // Polling вместо WebSocket Realtime — работает без VPN из России
-    const interval = setInterval(load, isAdmin ? 10000 : 30000);
-    return () => clearInterval(interval);
-  }, [userId, isAdmin]);
-
-  const addOrder = async (order) => {
-    const { data, error } = await sbOrders.insert(order);
-    if (!error && data?.[0]) setOrders(prev => [data[0], ...prev]);
-    return { data: data?.[0], error };
-  };
-
-  const updateOrder = async (orderId, updates, notifText) => {
-    const { data, error } = await sbOrders.update(orderId, updates);
-    if (!error) {
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
-      // Уведомление клиенту — только если явно передан текст
-      if (notifText) {
-        const order = orders.find(o => o.id === orderId);
-        if (order?.user_id) {
-          // Проверяем что такого уведомления ещё нет (защита от дублей)
-          const { data: existing } = await supabase
-            .from("notifications")
-            .select("id")
-            .eq("user_id", order.user_id)
-            .eq("order_id", orderId)
-            .eq("text", notifText)
-            .gte("created_at", new Date(Date.now() - 60000).toISOString());
-          if (!existing?.length) {
-            await sbNotifs.insert({ user_id: order.user_id, order_id: orderId, text: notifText });
-          }
-        }
-      }
-    }
-    return { data, error };
-  };
-
-  return { orders, loading, addOrder, updateOrder, reload: load };
-}
+// useNotifications и useOrders импортированы из ./hooks/
 
 // ══════════════════════════════════════════════════════════════
 //  SERVICE CARD
 // ══════════════════════════════════════════════════════════════
-function SCard({ s, rate, onSelect, t }) {
+const SCard = memo(function SCard({ s, rate, onSelect, t }) {
   const [hov, setHov] = useState(false);
   return (
     <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>onSelect(s)}
@@ -541,12 +311,12 @@ function SCard({ s, rate, onSelect, t }) {
       </div>
     </div>
   );
-}
+});
 
 // ══════════════════════════════════════════════════════════════
 //  ORDER MODAL
 // ══════════════════════════════════════════════════════════════
-function OrderModal({ s, rate, user, profile, onClose, onSave, go, t, onBalanceUsed }) {
+function OrderModal({ s, rate, user, profile, onClose, onSave, go, t, onBalanceUsed, requisites }) {
   const [tier, setTier]     = useState(s.tiers[0]);
   const [method, setMethod] = useState(s.gift?"gift":s.newAcc?"newAcc":"login");
   const [loginV, setLoginV] = useState("");
@@ -567,7 +337,7 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t, onBalanceU
   const userBalance = profile?.referral_bonus_rub || 0;
 
   const fileRef = useRef();
-  const req     = useRef(randReq()).current;
+  const req     = useRef(randReq(requisites?.length ? requisites : DEFAULT_REQUISITES)).current;
   const orderId = useRef(randId()).current;
   const base    = rate ? Math.round(tier.p * rate) : 0;
   const comm    = rate ? Math.round(tier.p * rate * CFG.MARGIN) : 0;
@@ -581,10 +351,12 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t, onBalanceU
 
   const inp = { width:"100%", background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, padding:"12px 14px", color:"white", fontSize:14, outline:"none", marginBottom:8, boxSizing:"border-box" };
 
+  const ALLOWED_MIME = ["image/jpeg","image/png","image/gif","image/webp","application/pdf"];
   const handleFileSelect = (e) => {
     const f = e.target.files[0];
     if (!f) return;
     if (f.size > 5 * 1024 * 1024) { setError("Файл слишком большой. Максимум 5 МБ."); return; }
+    if (!ALLOWED_MIME.includes(f.type)) { setError("Недопустимый тип файла. Разрешены: JPEG, PNG, GIF, WebP, PDF."); return; }
     setReceiptFile(f);
     if (f.type.startsWith("image/")) {
       const reader = new FileReader();
@@ -594,8 +366,12 @@ function OrderModal({ s, rate, user, profile, onClose, onSave, go, t, onBalanceU
     setError("");
   };
 
+  const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+
   const handleCreate = async () => {
     if (!user) { setError("Необходимо войти в аккаунт"); return; }
+    if (method === "login" && !loginV.trim()) { setError("Укажите логин/email аккаунта"); return; }
+    if ((method === "gift" || method === "family") && !isValidEmail(emailV)) { setError("Укажите корректный email аккаунта"); return; }
     setCreating(true); setError("");
     try {
       let receiptUrl = "";
@@ -945,1063 +721,12 @@ function AuthModal({ onClose, userHook, t }) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ACTIVATION TIMER — 60-min countdown for paid/processing orders
-// ══════════════════════════════════════════════════════════════
-function ActivationTimer({ createdAt, status }) {
-  const GUARANTEE_MIN = 60;
-  const [remaining, setRemaining] = useState(null);
+// ActivationTimer, OrderProgress импортированы из ./components/shared
 
-  useEffect(() => {
-    if (!["paid","processing"].includes(status)) return;
-    const created = new Date(createdAt).getTime();
-    const deadline = created + GUARANTEE_MIN * 60 * 1000;
-    const tick = () => {
-      const diff = deadline - Date.now();
-      setRemaining(diff > 0 ? diff : 0);
-    };
-    tick();
-    const iv = setInterval(tick, 1000);
-    return () => clearInterval(iv);
-  }, [createdAt, status]);
+// ReferralBlock перенесён в ./pages/CabinetPage.jsx
 
-  if (!["paid","processing"].includes(status) || remaining === null) return null;
+// ReferralBlock перенесён в ./pages/CabinetPage.jsx
 
-  const mins = Math.floor(remaining / 60000);
-  const secs = Math.floor((remaining % 60000) / 1000);
-  const elapsed = remaining === 0;
-  const pct = Math.max(0, Math.min(100, (remaining / (GUARANTEE_MIN * 60000)) * 100));
-
-  return (
-    <div style={{ background: elapsed ? "rgba(52,211,153,0.08)" : "rgba(251,191,36,0.07)", border: `1px solid ${elapsed ? "rgba(52,211,153,0.3)" : "rgba(251,191,36,0.25)"}`, borderRadius:12, padding:"12px 14px", marginBottom:12 }}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-          <span style={{ fontSize:14 }}>{elapsed ? "🎯" : "⏱"}</span>
-          <span style={{ fontSize:12, fontWeight:700, color: elapsed ? "#34d399" : "#fbbf24" }}>
-            {elapsed ? "Активация задерживается — обрабатываем" : `Гарантия активации`}
-          </span>
-        </div>
-        {!elapsed && (
-          <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:900, fontSize:18, color:"#fbbf24", fontVariantNumeric:"tabular-nums", letterSpacing:-0.5 }}>
-            {String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}
-          </div>
-        )}
-      </div>
-      {!elapsed && (
-        <div style={{ height:4, borderRadius:2, background:"rgba(251,191,36,0.15)", overflow:"hidden" }}>
-          <div style={{ height:"100%", width:`${100-pct}%`, background:"linear-gradient(90deg,#f59e0b,#fbbf24)", borderRadius:2, transition:"width 1s linear" }}/>
-        </div>
-      )}
-      {!elapsed && <div style={{ color:"rgba(251,191,36,0.6)", fontSize:11, marginTop:6 }}>Обязуемся активировать в течение 60 минут или вернём деньги</div>}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
-//  ORDER PROGRESS — visual step tracker
-// ══════════════════════════════════════════════════════════════
-function OrderProgress({ status }) {
-  const steps = [
-    { key:"new",        label:"Оплата",     icon:"💳" },
-    { key:"processing", label:"Обработка",  icon:"⚙️" },
-    { key:"done",       label:"Активирован",icon:"✅" },
-  ];
-  const order = ["new","paid","processing","done","cancelled"];
-  const cur = order.indexOf(status);
-  const cancelled = status === "cancelled";
-
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:0, marginBottom:12 }}>
-      {steps.map((s, i) => {
-        const stepIdx = order.indexOf(s.key);
-        const done_ = !cancelled && cur >= stepIdx;
-        const active = !cancelled && (
-          (s.key === "new" && ["new","paid"].includes(status)) ||
-          (s.key === "processing" && status === "processing") ||
-          (s.key === "done" && status === "done")
-        );
-        return (
-          <div key={s.key} style={{ display:"flex", alignItems:"center", flex: i < steps.length-1 ? 1 : undefined }}>
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-              <div style={{ width:30, height:30, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, background: done_ ? (active ? "linear-gradient(135deg,#f59e0b,#fbbf24)" : "rgba(251,191,36,0.2)") : "rgba(255,255,255,0.06)", border: `1.5px solid ${done_ ? (active?"#fbbf24":"rgba(251,191,36,0.4)") : "rgba(255,255,255,0.12)"}`, transition:"all .3s", flexShrink:0 }}>
-                {done_ ? (active ? <span style={{ fontSize:11 }}>{s.icon}</span> : <span style={{ color:"#fbbf24", fontSize:11 }}>✓</span>) : <span style={{ color:"rgba(255,255,255,0.2)", fontSize:10 }}>{i+1}</span>}
-              </div>
-              <span style={{ fontSize:10, color: done_ ? (active?"#fbbf24":"rgba(251,191,36,0.6)") : "rgba(255,255,255,0.25)", fontWeight: active?700:400, whiteSpace:"nowrap" }}>{s.label}</span>
-            </div>
-            {i < steps.length-1 && (
-              <div style={{ flex:1, height:1.5, background: done_ && cur > stepIdx ? "linear-gradient(90deg,rgba(251,191,36,0.5),rgba(251,191,36,0.2))" : "rgba(255,255,255,0.08)", margin:"0 6px", marginBottom:20, transition:"background .3s" }}/>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
-//  REFERRAL BLOCK — "Приведи друга"
-// ══════════════════════════════════════════════════════════════
-function ReferralBlock({ userId, profile, t, go }) {
-  const [copied, setCopied] = useState(false);
-  const [events, setEvents] = useState([]);
-  const refCode = profile?.referral_code || (userId ? userId.slice(0,8).toUpperCase() : "------");
-  const refLink = `https://pay-flow.ru/#home?ref=${refCode}`;
-  const balance = profile?.referral_bonus_rub || 0;
-
-  useEffect(() => {
-    if (!userId) return;
-    sbReferrals.getByReferrer(userId).then(({ data }) => setEvents(data || []));
-  }, [userId]);
-
-  const copy = () => {
-    navigator.clipboard.writeText(refLink).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  };
-
-  return (
-    <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:24, position:"relative", overflow:"hidden" }}>
-      {/* bg glow */}
-      <div style={{ position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,0.07) 0%,transparent 70%)",pointerEvents:"none" }}/>
-
-      {/* Header */}
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
-        <div style={{ width:44,height:44,borderRadius:14,background:t.goldDim,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0 }}>🎁</div>
-        <div>
-          <div style={{ fontWeight:800, fontSize:16, color:t.text, letterSpacing:-0.3 }}>Реферальная программа</div>
-          <div style={{ color:t.muted, fontSize:12, marginTop:2 }}>Получай 200 ₽ за каждого приглашённого друга</div>
-        </div>
-      </div>
-
-      {/* Bonus card */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:18 }}>
-        {[
-          { icon:"👥", val:"200 ₽", desc:"за каждого реферала" },
-          { icon:"🎯", val:"без лимита", desc:"рефералов у вас" },
-          { icon:"⚡", val:"3 дня", desc:"до начисления бонуса" },
-        ].map(b => (
-          <div key={b.val} style={{ textAlign:"center", padding:"14px 8px", borderRadius:14, background:t.goldDim, border:`1px solid ${t.goldB}` }}>
-            <div style={{ fontSize:18, marginBottom:5 }}>{b.icon}</div>
-            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:13, color:t.gold, marginBottom:3 }}>{b.val}</div>
-            <div style={{ color:t.muted, fontSize:10, lineHeight:1.4 }}>{b.desc}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* How it works */}
-      <div style={{ marginBottom:18 }}>
-        <div style={{ color:t.muted, fontSize:11, textTransform:"uppercase", letterSpacing:1.5, fontWeight:600, marginBottom:12 }}>Как работает</div>
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {[
-            { n:"1", title:"Поделись ссылкой", desc:"Скопируй реферальную ссылку ниже и отправь другу" },
-            { n:"2", title:"Друг делает заказ", desc:"Он регистрируется и оформляет первую оплаченную заявку" },
-            { n:"3", title:"Бонус 200 ₽", desc:"Зачисляем на твой счёт — применяется как скидка на следующий заказ" },
-          ].map(s => (
-            <div key={s.n} style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
-              <div style={{ width:24,height:24,borderRadius:"50%",background:t.goldDim,border:`1px solid ${t.goldB}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:11,color:t.gold }}>{s.n}</div>
-              <div>
-                <div style={{ color:t.text, fontWeight:600, fontSize:13 }}>{s.title}</div>
-                <div style={{ color:t.sub, fontSize:12, marginTop:1, lineHeight:1.5 }}>{s.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Ref link */}
-      <div style={{ background:`rgba(15,23,42,0.6)`, border:`1px solid ${t.border}`, borderRadius:14, padding:"14px 16px", marginBottom:14 }}>
-        <div style={{ color:t.muted, fontSize:11, marginBottom:8, textTransform:"uppercase", letterSpacing:1, fontWeight:600 }}>Твоя ссылка · код {refCode}</div>
-        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          <div style={{ flex:1, color:t.sub, fontSize:12, fontFamily:"monospace", wordBreak:"break-all", lineHeight:1.5 }}>{refLink}</div>
-          <button onClick={copy} style={{ padding:"9px 16px", borderRadius:10, background:copied?"rgba(52,211,153,0.15)":"rgba(251,191,36,0.12)", border:`1px solid ${copied?"rgba(52,211,153,0.4)":t.goldB}`, color:copied?"#34d399":t.gold, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap", flexShrink:0, transition:"all .2s" }}>
-            {copied ? "✓ Скопировано" : "Копировать"}
-          </button>
-        </div>
-      </div>
-
-      {/* Balance current */}
-      {balance > 0 && (
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:t.goldDim, border:`1px solid ${t.goldB}`, borderRadius:14, padding:"14px 16px", marginBottom:14 }}>
-          <div>
-            <div style={{ color:t.muted, fontSize:11, textTransform:"uppercase", letterSpacing:1, fontWeight:600, marginBottom:3 }}>Твой бонусный баланс</div>
-            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:900, fontSize:26, color:t.gold }}>{balance.toLocaleString("ru-RU")} ₽</div>
-          </div>
-          <div style={{ color:t.sub, fontSize:12, maxWidth:140, textAlign:"right", lineHeight:1.5 }}>Автоматически применяется при следующем заказе</div>
-        </div>
-      )}
-
-      {/* Referral history */}
-      {events.length > 0 && (
-        <div style={{ marginBottom:14 }}>
-          <div style={{ color:t.muted, fontSize:11, textTransform:"uppercase", letterSpacing:1.5, fontWeight:600, marginBottom:10 }}>История начислений</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-            {events.map(e => (
-              <div key={e.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"rgba(255,255,255,0.03)", border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 14px" }}>
-                <div>
-                  <div style={{ color:t.text, fontSize:13, fontWeight:600 }}>Реферал {e.referred?.name || "—"}</div>
-                  <div style={{ color:t.muted, fontSize:11, marginTop:1 }}>{new Date(e.created_at).toLocaleDateString("ru-RU")} · заявка {e.order_id}</div>
-                </div>
-                <div style={{ color:"#34d399", fontWeight:800, fontSize:15 }}>+{e.bonus_amount} ₽</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Conditions note */}
-      <div style={{ padding:"10px 14px", borderRadius:10, background:"rgba(96,165,250,0.07)", border:"1px solid rgba(96,165,250,0.18)" }}>
-        <div style={{ color:"#93c5fd", fontSize:12, lineHeight:1.6 }}>
-          <strong>Условия:</strong> бонус начисляется после первой <em>выполненной</em> заявки реферала. Самореферирование не засчитывается. Бонус действует как скидка — на вывод не предназначен. Подробнее в <button onClick={()=>go&&go("#legal")} style={{ background:"none", border:"none", color:"#60a5fa", cursor:"pointer", fontSize:12, padding:0, textDecoration:"underline" }}>Оферте (п. 6)</button>.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
-//  PERSONAL CABINET
-// ══════════════════════════════════════════════════════════════
-function Cabinet({ userHook, go, t, onReview }) {
-  const { session, profile, logout } = userHook;
-  const [tab, setTab] = useState("orders");
-  const [expandedId, setExpandedId] = useState(null);
-  const [receiptModal, setReceiptModal] = useState(null);
-  const [receiptFiles, setReceiptFiles] = useState({});
-  const [uploadingFor, setUploadingFor] = useState(null);
-  const fileRef = useRef();
-
-  const { orders, loading, reload } = useOrders(session?.user?.id, false);
-  const { notifs, unread, markRead } = useNotifications(session?.user?.id);
-  const [reviewedServices, setReviewedServices] = useState(new Set());
-
-  useEffect(() => { if (tab === "notifs") markRead(); }, [tab]);
-
-  useEffect(() => {
-    if (!session?.user?.id) return;
-    sbReviews.getByUser(session.user.id).then(({ data }) => {
-      if (data) setReviewedServices(new Set(data.map(r => r.service_name)));
-    });
-  }, [session?.user?.id]);
-
-  const openReceipt = async (o) => {
-    if (!o.receipt_url) return;
-    const url = await sbStorage.getSignedUrl(o.receipt_url);
-    setReceiptModal({ url, name: o.receipt_name });
-  };
-
-  const uploadReceiptForOrder = async (orderId, userId) => {
-    const file = receiptFiles[orderId];
-    if (!file) return;
-    setUploadingFor(orderId);
-    try {
-      const path = await sbStorage.uploadReceipt(userId, orderId, file);
-      await sbOrders.update(orderId, { receipt_url: path, receipt_name: file.name });
-      setReceiptFiles(prev => { const n = {...prev}; delete n[orderId]; return n; });
-      await reload();
-    } catch (e) { alert("Ошибка загрузки: " + e.message); }
-    setUploadingFor(null);
-  };
-
-  const tabs = [
-    { id:"orders",  label:"Заявки",        icon:"📋", count: orders.length },
-    { id:"notifs",  label:"Уведомления",   icon:"🔔", count: unread },
-    { id:"profile", label:"Профиль",       icon:"👤" },
-  ];
-
-  const stats = {
-    total:   orders.length,
-    done:    orders.filter(o=>o.status==="done").length,
-    spent:   orders.filter(o=>o.status==="done").reduce((s,o)=>s+(o.price_rub||0),0),
-    pending: orders.filter(o=>["new","paid","processing"].includes(o.status)).length,
-    balance: profile?.referral_bonus_rub || 0,
-  };
-
-  return (
-    <div style={{ maxWidth:820, margin:"0 auto", padding:"80px 20px 60px" }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:32, flexWrap:"wrap", gap:12 }}>
-        <div>
-          <div style={{ color:t.muted, fontSize:13, marginBottom:4 }}>Личный кабинет</div>
-          <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:28, color:t.text }}>Привет, {profile?.name || ""}! 👋</div>
-        </div>
-        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-          {stats.balance > 0 && (
-            <div style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:100, background:t.goldDim, border:`1px solid ${t.goldB}`, fontSize:13, fontWeight:700, color:t.gold }}>
-              🎁 Баланс: {stats.balance.toLocaleString("ru-RU")} ₽
-            </div>
-          )}
-          <button onClick={()=>go("#catalog")} style={{ padding:"10px 20px", borderRadius:100, background:t.card, border:`1px solid ${t.border}`, color:t.sub, cursor:"pointer", fontSize:14, fontWeight:600 }}>🛍 Заказать ещё</button>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:10, marginBottom:28 }}>
-        {[
-          {l:"Всего заявок", v:stats.total,  c:t.gold,   i:"📋"},
-          {l:"Выполнено",    v:stats.done,   c:"#34d399",i:"✅"},
-          {l:"Потрачено",    v:stats.spent.toLocaleString("ru-RU")+" ₽", c:"#60a5fa",i:"💰"},
-          {l:"В обработке",  v:stats.pending,c:"#a78bfa",i:"🔧"},
-          {l:"Бонусный баланс", v:stats.balance.toLocaleString("ru-RU")+" ₽", c:t.gold, i:"🎁"},
-        ].map(s => (
-          <div key={s.l} style={{ background:s.l==="Бонусный баланс"?t.goldDim:t.card2, border:`1px solid ${s.l==="Бонусный баланс"?t.goldB:t.border}`, borderRadius:16, padding:"16px 18px", boxShadow:t.shadow }}>
-            <div style={{ fontSize:22, marginBottom:6 }}>{s.i}</div>
-            <div style={{ color:t.muted, fontSize:12, marginBottom:4 }}>{s.l}</div>
-            <div style={{ color:s.c, fontWeight:800, fontSize:22, fontFamily:"'Clash Display',sans-serif" }}>{s.v}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
-        {tabs.map(tab_ => (
-          <button key={tab_.id} onClick={()=>setTab(tab_.id)} style={{ padding:"9px 18px", borderRadius:100, fontSize:13, fontWeight:600, cursor:"pointer", background:tab===tab_.id?t.goldDim:t.card, border:`1px solid ${tab===tab_.id?t.goldB:t.border}`, color:tab===tab_.id?t.gold:t.sub }}>
-            {tab_.icon} {tab_.label}
-            {tab_.count > 0 && <span style={{ marginLeft:6, background:tab_.id==="notifs"?"#f87171":t.gold, color:tab_.id==="notifs"?"white":"#0a0a14", borderRadius:100, padding:"1px 7px", fontSize:11, fontWeight:700 }}>{tab_.count}</span>}
-          </button>
-        ))}
-      </div>
-
-      {/* Orders */}
-      {tab==="orders" && (loading
-        ? <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            {[1,2,3].map(i => <OrderSkeleton key={i} t={t}/>)}
-          </div>
-        : orders.length === 0
-          ? <div style={{ textAlign:"center", padding:"60px 0", color:t.muted }}>
-              <div style={{ fontSize:48, marginBottom:12 }}>📭</div>
-              <div style={{ marginBottom:16 }}>У вас пока нет заявок</div>
-              <button onClick={()=>go("#catalog")} style={{ padding:"12px 24px", borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#fbbf24)", border:"none", color:"#0a0a14", fontWeight:700, cursor:"pointer" }}>Перейти в каталог →</button>
-            </div>
-          : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            {orders.map(o => (
-              <div key={o.id} style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, boxShadow:t.shadow }}>
-                <div style={{ padding:18 }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:10 }}>
-                    <div>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6, flexWrap:"wrap" }}>
-                        <span style={{ fontSize:18 }}>{o.service_icon}</span>
-                        <span style={{ color:t.gold, fontWeight:800, fontSize:15 }}>{o.id}</span>
-                        <StatusBadge status={o.status} />
-                      </div>
-                      <div style={{ color:t.text, fontWeight:600, fontSize:14, marginBottom:2 }}>{o.service} · {o.tier}</div>
-                      <div style={{ color:t.muted, fontSize:12 }}>{new Date(o.created_at).toLocaleString("ru-RU")}</div>
-                    </div>
-                    <div style={{ textAlign:"right" }}>
-                      <div style={{ color:t.gold, fontWeight:800, fontSize:20 }}>{(o.price_rub||0).toLocaleString("ru-RU")} ₽</div>
-                      <div style={{ color:t.muted, fontSize:12 }}>${o.price_usd}</div>
-                      <button onClick={()=>setExpandedId(expandedId===o.id?null:o.id)} style={{ marginTop:6, padding:"4px 12px", borderRadius:100, background:t.inp, border:`1px solid ${t.border}`, color:t.sub, fontSize:11, cursor:"pointer" }}>
-                        {expandedId===o.id?"▲ скрыть":"▼ подробнее"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {expandedId===o.id && (
-                    <div style={{ marginTop:16, paddingTop:14, borderTop:`1px solid ${t.border}` }}>
-
-                      {/* Реквизиты если новая */}
-                      {o.status === "new" && (
-                        <div style={{ background:t.goldDim, border:`1px solid ${t.goldB}`, borderRadius:12, padding:14, marginBottom:12 }}>
-                          <div style={{ color:t.gold, fontWeight:600, fontSize:12, marginBottom:8 }}>💳 Реквизиты · {o.requisite_label}</div>
-                          <div style={{ color:t.text, fontSize:14, marginBottom:4 }}>СБП: <strong>{o.requisite_sbp}</strong></div>
-                          <div style={{ color:t.text, fontSize:14, marginBottom:6 }}>Карта: <strong>{o.requisite_card}</strong></div>
-                          <div style={{ color:t.muted, fontSize:12 }}>Комментарий: <strong style={{ color:t.gold }}>{o.id}</strong></div>
-                        </div>
-                      )}
-
-                      {/* Сообщение от оператора */}
-                      {o.operator_note && (
-                        <div style={{ background:"rgba(52,211,153,0.08)", border:"1px solid rgba(52,211,153,0.3)", borderRadius:12, padding:14, marginBottom:12 }}>
-                          <div style={{ color:"#6ee7b7", fontWeight:700, fontSize:13, marginBottom:8 }}>📩 Сообщение от оператора</div>
-                          <div style={{ color:t.text, fontSize:14, lineHeight:1.7, whiteSpace:"pre-wrap", fontFamily:"monospace", background:"rgba(0,0,0,0.2)", borderRadius:8, padding:"10px 12px" }}>{o.operator_note}</div>
-                        </div>
-                      )}
-
-                      {/* Загрузить чек */}
-                      {!o.receipt_url && (
-                        <div style={{ marginBottom:12 }}>
-                          <div style={{ color:t.sub, fontSize:12, marginBottom:6 }}>📎 Загрузить чек об оплате:</div>
-                          <input type="file" accept="image/*,.pdf" style={{ display:"none" }} id={`file_${o.id}`}
-                            onChange={e=>{ const f=e.target.files[0]; if(f) setReceiptFiles(prev=>({...prev,[o.id]:f})); }}/>
-                          <div style={{ display:"flex", gap:8 }}>
-                            <label htmlFor={`file_${o.id}`} style={{ flex:1, padding:"9px 14px", borderRadius:10, cursor:"pointer", background:t.inp, border:`1px dashed ${t.border}`, color:t.sub, fontSize:13, textAlign:"center", display:"block" }}>
-                              {receiptFiles[o.id] ? receiptFiles[o.id].name : "📤 Выбрать файл"}
-                            </label>
-                            {receiptFiles[o.id] && (
-                              <button onClick={()=>uploadReceiptForOrder(o.id, session.user.id)} disabled={!!uploadingFor} style={{ padding:"9px 16px", borderRadius:10, background:"rgba(52,211,153,0.15)", border:"1px solid rgba(52,211,153,0.35)", color:"#6ee7b7", cursor:"pointer", fontSize:13, fontWeight:600 }}>
-                                {uploadingFor===o.id ? "..." : "Загрузить"}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {o.receipt_url && (
-                        <div style={{ marginBottom:12 }}>
-                          <button onClick={()=>openReceipt(o)} style={{ padding:"8px 14px", borderRadius:10, background:"rgba(52,211,153,0.12)", border:"1px solid rgba(52,211,153,0.3)", color:"#6ee7b7", cursor:"pointer", fontSize:13, fontWeight:600 }}>
-                            📎 Посмотреть чек
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Таймер гарантии активации */}
-                      <ActivationTimer createdAt={o.created_at} status={o.status}/>
-
-                      {/* Прогресс заказа */}
-                      <OrderProgress status={o.status}/>
-
-                      {/* Кнопка отзыва для выполненных */}
-                      {o.status === "done" && (
-                        reviewedServices.has(o.service)
-                          ? <div style={{ marginTop:10,width:"100%",padding:"9px 0",textAlign:"center",color:t.muted,fontSize:13 }}>✓ Отзыв оставлен</div>
-                          : <button type="button" onClick={(e)=>{ e.stopPropagation(); if(onReview) onReview(o.service, o.id, ()=>setReviewedServices(prev=>new Set([...prev,o.service]))); }}
-                              style={{ marginTop:10,width:"100%",padding:"9px 0",borderRadius:10,background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",color:t.gold,fontSize:13,fontWeight:600,cursor:"pointer" }}>
-                              ★ Оставить отзыв
-                            </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-      )}
-
-      {/* Notifications */}
-      {tab==="notifs" && (
-        notifs.length === 0
-          ? <div style={{ textAlign:"center", padding:"60px 0", color:t.muted }}><div style={{ fontSize:48, marginBottom:12 }}>🔔</div>Уведомлений пока нет</div>
-          : <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {notifs.map(n => (
-              <div key={n.id} style={{ background:n.is_read?t.card:t.card2, border:`1px solid ${n.is_read?t.border:"rgba(251,191,36,0.25)"}`, borderRadius:14, padding:16, display:"flex", gap:12, alignItems:"flex-start" }}>
-                <div style={{ fontSize:20 }}>🔔</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ color:t.text, fontSize:14, lineHeight:1.6 }}>{n.text}</div>
-                  <div style={{ color:t.muted, fontSize:12, marginTop:4 }}>{new Date(n.created_at).toLocaleString("ru-RU")}</div>
-                </div>
-                {!n.is_read && <div style={{ width:8, height:8, borderRadius:"50%", background:"#fbbf24", flexShrink:0, marginTop:4 }}/>}
-              </div>
-            ))}
-          </div>
-      )}
-
-      {/* Profile */}
-      {tab==="profile" && (
-        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-          <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:28 }}>
-            <div style={{ textAlign:"center", marginBottom:24 }}>
-              <div style={{ width:80, height:80, borderRadius:"50%", background:t.goldDim, border:`2px solid ${t.goldB}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32, margin:"0 auto 12px" }}>👤</div>
-              <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:700, fontSize:22, color:t.text }}>{profile?.name}</div>
-              <div style={{ color:t.muted, fontSize:14, marginTop:4 }}>{session?.user?.email}</div>
-              <div style={{ color:t.muted, fontSize:12, marginTop:2 }}>Зарегистрирован: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString("ru-RU") : ""}</div>
-            </div>
-            <div style={{ borderTop:`1px solid ${t.border}`, paddingTop:20, textAlign:"center" }}>
-              <button onClick={async()=>{ await logout(); go("#home"); }} style={{ padding:"10px 24px", borderRadius:12, background:"rgba(248,113,113,0.15)", border:"1px solid rgba(248,113,113,0.3)", color:"#f87171", cursor:"pointer", fontSize:14, fontWeight:600 }}>
-                Выйти из аккаунта
-              </button>
-            </div>
-          </div>
-
-          {/* Referral Program */}
-          <ReferralBlock userId={session?.user?.id} profile={profile} t={t} go={go}/>
-        </div>
-      )}
-
-      {/* Receipt modal */}
-      {receiptModal && (
-        <div style={{ position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.9)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={()=>setReceiptModal(null)}>
-          <div onClick={e=>e.stopPropagation()} style={{ position:"relative", maxWidth:"90vw", textAlign:"center" }}>
-            <button onClick={()=>setReceiptModal(null)} style={{ position:"absolute",top:-14,right:-14,background:"#f87171",border:"none",borderRadius:"50%",width:32,height:32,color:"white",cursor:"pointer",fontSize:16,fontWeight:700 }}>✕</button>
-            {receiptModal.name?.toLowerCase().endsWith(".pdf")
-              ? <div style={{ color:"white", padding:40 }}>
-                  <div style={{ fontSize:48, marginBottom:16 }}>📄</div>
-                  <div style={{ marginBottom:16 }}>PDF-файл: {receiptModal.name}</div>
-                  <a href={receiptModal.url} target="_blank" rel="noreferrer" style={{ color:"#fbbf24", fontWeight:700, fontSize:15 }}>Открыть PDF ↗</a>
-                </div>
-              : <img src={receiptModal.url} alt="чек" style={{ maxWidth:"85vw", maxHeight:"85vh", borderRadius:12 }}/>
-            }
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
-//  ADMIN PANEL
-// ══════════════════════════════════════════════════════════════
-function AdminPanel({ userHook, go, t }) {
-  const { session, isAdmin } = userHook;
-  const { orders, loading, updateOrder } = useOrders(session?.user?.id, true);
-  const [filter, setFilter] = useState("all");
-  const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState(null);
-  const [noteValues, setNoteValues] = useState({});
-  const [receiptModal, setReceiptModal] = useState(null);
-  const [saving, setSaving] = useState(null);
-  const [saved, setSaved] = useState(null);
-  const [adminTab, setAdminTab] = useState("orders");
-  const [promos, setPromos] = useState([]);
-  const [serviceReqs, setServiceReqs] = useState([]);
-  const [serviceReqsLoading, setServiceReqsLoading] = useState(false);
-  const [adminReviews, setAdminReviews] = useState([]);
-  const [adminReviewsLoading, setAdminReviewsLoading] = useState(false);
-  const [manualRate, setManualRate] = useState("");
-  const [manualRateEnabled, setManualRateEnabled] = useState(false);
-  const [rateSaving, setRateSaving] = useState(false);
-  const [rateLoaded, setRateLoaded] = useState(false);
-  const [promoLoading, setPromoLoading] = useState(false);
-  const [promoForm, setPromoForm] = useState({ code:"", type:"percent", value:"", max_uses:-1, description:"", min_amount:0 });
-  const [promoFormOpen, setPromoFormOpen] = useState(false);
-  const [promoSaving, setPromoSaving] = useState(false);
-
-  useEffect(() => {
-    if (isAdmin && adminTab === "promos") {
-      setPromoLoading(true);
-      getPromocodes().then(d => { setPromos(d); setPromoLoading(false); });
-    }
-    if (isAdmin && adminTab === "requests") {
-      setServiceReqsLoading(true);
-      supabase.from("service_requests").select("*").order("created_at", { ascending: false })
-        .then(({ data }) => { setServiceReqs(data || []); setServiceReqsLoading(false); });
-    }
-    if (isAdmin && adminTab === "reviews") {
-      setAdminReviewsLoading(true);
-      sbReviews.getAll().then(({ data }) => { setAdminReviews(data || []); setAdminReviewsLoading(false); });
-    }
-    if (isAdmin && adminTab === "settings" && !rateLoaded) {
-      setRateLoaded(true);
-      getSetting("manual_rate").then(v => { if(v) setManualRate(v); });
-      getSetting("manual_rate_enabled").then(v => setManualRateEnabled(v === "true"));
-    }
-  }, [isAdmin, adminTab]);
-
-  const handleSavePromo = async () => {
-    if (!promoForm.code || !promoForm.value) return;
-    setPromoSaving(true);
-    const { error } = await savePromocode({
-      code: promoForm.code.toUpperCase(),
-      type: promoForm.type,
-      value: parseFloat(promoForm.value),
-      discount: parseFloat(promoForm.value),
-      max_uses: parseInt(promoForm.max_uses) || -1,
-      min_amount: parseInt(promoForm.min_amount) || 0,
-      description: promoForm.description,
-    });
-    if (!error) {
-      setPromoForm({ code:"", type:"percent", value:"", max_uses:-1, description:"", min_amount:0 });
-      setPromoFormOpen(false);
-      const d = await getPromocodes(); setPromos(d);
-    } else {
-      alert("Ошибка создания промокода: " + error.message);
-    }
-    setPromoSaving(false);
-  };
-
-  const handleDeletePromo = async (id) => {
-    if (!confirm("Удалить промокод?")) return;
-    await deletePromocode(id);
-    const d = await getPromocodes(); setPromos(d);
-  };
-
-  const PROMO_TYPE_LABELS = { percent:"% скидка", fixed:"Фикс. скидка ₽", free:"Без комиссии" };
-
-  if (!isAdmin) return (
-    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:t.bg }}>
-      <div style={{ textAlign:"center", color:t.muted }}>
-        <div style={{ fontSize:48, marginBottom:12 }}>🚫</div>
-        <div style={{ marginBottom:16, color:t.text, fontSize:16 }}>Нет доступа</div>
-        <button onClick={()=>go("#home")} style={{ padding:"10px 20px", borderRadius:10, background:t.card, border:`1px solid ${t.border}`, color:t.sub, cursor:"pointer" }}>На главную</button>
-      </div>
-    </div>
-  );
-
-  const filtered = orders.filter(o => {
-    const ms = filter==="all" || o.status===filter;
-    const mq = o.id?.includes(search) || o.service?.toLowerCase().includes(search.toLowerCase()) || (o.user_email||"").includes(search);
-    return ms && mq;
-  });
-
-  const stats = {
-    total:  orders.length,
-    new_:   orders.filter(o=>o.status==="new").length,
-    done:   orders.filter(o=>o.status==="done").length,
-    earned: orders.filter(o=>o.status==="done").reduce((s,o)=>s+(o.price_rub||0),0),
-    pending:orders.filter(o=>["new","paid","processing"].includes(o.status)).length,
-  };
-
-  const sendTg = (message) =>
-    fetch("/api/tg-notify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
-    }).catch(() => {});
-
-  const handleStatusChange = async (orderId, status) => {
-    const notifText = `Заявка ${orderId}: статус изменён на "${SL[status]}"`;
-    await updateOrder(orderId, { status }, notifText);
-
-    // При выполнении заказа — начисляем реферальный бонус и уведомляем в TG
-    if (status === "done") {
-      const { data } = await sbReferrals.processReferral(orderId);
-      if (data?.ok) {
-        const msg =
-          `🎁 <b>Реферальный бонус начислен!</b>\n\n` +
-          `👤 <b>Пригласил:</b> ${data.referrer_name || "—"} (${data.referrer_email || "—"})\n` +
-          `👥 <b>Друг:</b> ${data.referee_name || "—"} (${data.referee_email || "—"})\n\n` +
-          `📦 <b>Заказал:</b> ${data.service} · ${data.tier}\n` +
-          `💰 <b>Сумма заказа:</b> ${(data.price_rub || 0).toLocaleString("ru-RU")} ₽\n` +
-          `🏆 <b>Бонус начислен:</b> +${data.bonus} ₽ на счёт пригласившего\n\n` +
-          `🔖 Заявка: <code>${data.order_id}</code>`;
-        sendTg(msg);
-      }
-    }
-  };
-
-  const handleNoteSave = async (orderId, note) => {
-    setSaving(orderId);
-    const notifText = note ? `Заявка ${orderId}: оператор отправил сообщение` : null;
-    await updateOrder(orderId, { operator_note: note }, notifText);
-    setSaving(null);
-    setSaved(orderId);
-    setTimeout(() => setSaved(null), 3000);
-  };
-
-  const openReceipt = async (o) => {
-    if (!o.receipt_url) return;
-    try {
-      const url = await sbStorage.getSignedUrl(o.receipt_url);
-      setReceiptModal({ url, name: o.receipt_name });
-    } catch (e) { alert("Ошибка: " + e.message); }
-  };
-
-  const exportCSV = () => {
-    const h = ["ID","Сервис","Тариф","$","₽","Метод","Статус","Клиент","Email","Сообщение","Дата"];
-    const rows = orders.map(o => [o.id,o.service,o.tier,o.price_usd,o.price_rub,o.method,SL[o.status],o.user_name,o.user_email,o.operator_note||"",new Date(o.created_at).toLocaleString("ru-RU")]);
-    const csv = [h,...rows].map(r=>r.map(v=>'"'+String(v||"").replace(/"/g,'""')+'"').join(",")).join("\n");
-    const a = document.createElement("a"); a.href=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"})); a.download=`payflow_${Date.now()}.csv`; a.click();
-  };
-
-  const inp = { background:t.inp, border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 14px", color:t.text, fontSize:14, outline:"none", boxSizing:"border-box" };
-
-  return (
-    <div style={{ background:t.bg, minHeight:"100vh", padding:"24px 20px" }}>
-      <div style={{ maxWidth:1020, margin:"0 auto" }}>
-
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:28, flexWrap:"wrap", gap:12 }}>
-          <div>
-            <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:800, fontSize:28, color:t.text }}>📋 Панель управления</div>
-            <div style={{ color:t.sub, fontSize:13, marginTop:2 }}>{new Date().toLocaleString("ru-RU")}</div>
-          </div>
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            <button onClick={exportCSV} style={{ padding:"9px 16px", borderRadius:10, background:t.goldDim, border:`1px solid ${t.goldB}`, color:t.gold, cursor:"pointer", fontSize:13, fontWeight:600 }}>↓ CSV</button>
-            <button onClick={()=>go("#home")} style={{ padding:"9px 16px", borderRadius:10, background:t.card, border:`1px solid ${t.border}`, color:t.sub, cursor:"pointer", fontSize:13 }}>← Сайт</button>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:12, marginBottom:24 }}>
-          {[
-            {l:"Всего",      v:stats.total,  c:t.gold,   i:"📋"},
-            {l:"Новых",      v:stats.new_,   c:"#fbbf24",i:"🆕"},
-            {l:"Выполнено",  v:stats.done,   c:"#34d399",i:"✅"},
-            {l:"Заработано", v:stats.earned.toLocaleString("ru-RU")+" ₽",c:"#60a5fa",i:"💰"},
-            {l:"В работе",   v:stats.pending,c:"#a78bfa",i:"🔧"},
-          ].map(s => (
-            <div key={s.l} style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, padding:"16px 18px", boxShadow:t.shadow }}>
-              <div style={{ fontSize:20, marginBottom:6 }}>{s.i}</div>
-              <div style={{ color:t.sub, fontSize:12, marginBottom:4 }}>{s.l}</div>
-              <div style={{ color:s.c, fontWeight:800, fontSize:22, fontFamily:"'Clash Display',sans-serif" }}>{s.v}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Admin tabs */}
-        <div style={{ display:"flex", gap:8, marginBottom:24, flexWrap:"wrap" }}>
-          {[["orders","Заявки","📋"],["promos","Промокоды","🎁"],["requests","Запросы","💡"],["reviews","Отзывы","⭐"],["settings","Настройки","⚙️"]].map(([id,label,icon]) => (
-            <button key={id} onClick={()=>setAdminTab(id)} style={{ padding:"9px 20px", borderRadius:100, fontSize:13, fontWeight:600, cursor:"pointer", background:adminTab===id?t.goldDim:t.card, border:`1px solid ${adminTab===id?t.goldB:t.border}`, color:adminTab===id?t.gold:t.sub }}>
-              {icon} {label}
-              {id==="orders" && <span style={{ marginLeft:6, opacity:.6, fontSize:11 }}>({orders.length})</span>}
-              {id==="requests" && serviceReqs.filter(r=>r.status==="pending").length > 0 && <span style={{ marginLeft:6, background:"#f87171", color:"white", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center" }}>{serviceReqs.filter(r=>r.status==="pending").length}</span>}
-              {id==="reviews" && adminReviews.filter(r=>!r.is_approved).length > 0 && <span style={{ marginLeft:6, background:"#f87171", color:"white", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center" }}>{adminReviews.filter(r=>!r.is_approved).length}</span>}
-            </button>
-          ))}
-        </div>
-
-        {/* PROMOCODES TAB */}
-        {adminTab === "promos" && (
-          <div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-              <div style={{ color:t.sub, fontSize:14 }}>Управление промокодами</div>
-              <button onClick={()=>setPromoFormOpen(o=>!o)} style={{ padding:"9px 18px", borderRadius:10, background:t.goldDim, border:`1px solid ${t.goldB}`, color:t.gold, cursor:"pointer", fontSize:13, fontWeight:600 }}>
-                {promoFormOpen ? "Закрыть" : "+ Создать промокод"}
-              </button>
-            </div>
-
-            {/* Create form */}
-            {promoFormOpen && (
-              <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, padding:22, marginBottom:16 }}>
-                <div style={{ fontWeight:700, color:t.text, fontSize:15, marginBottom:16 }}>Новый промокод</div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12, marginBottom:12 }}>
-                  <div>
-                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>КОД</div>
-                    <input value={promoForm.code} onChange={e=>setPromoForm(f=>({...f,code:e.target.value.toUpperCase()}))} placeholder="SUMMER20" style={{ ...inp, width:"100%", textTransform:"uppercase", letterSpacing:2 }}/>
-                  </div>
-                  <div>
-                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>ТИП</div>
-                    <select value={promoForm.type} onChange={e=>setPromoForm(f=>({...f,type:e.target.value}))} style={{ ...inp, width:"100%", appearance:"none" }}>
-                      <option value="percent">% скидка от суммы</option>
-                      <option value="fixed">Фикс. скидка ₽</option>
-                      <option value="free">Без комиссии</option>
-                    </select>
-                  </div>
-                  {promoForm.type !== "free" && <div>
-                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>{promoForm.type==="percent"?"ПРОЦЕНТ %":"СУММА ₽"}</div>
-                    <input value={promoForm.value} onChange={e=>setPromoForm(f=>({...f,value:e.target.value}))} placeholder={promoForm.type==="percent"?"10":"500"} type="number" style={{ ...inp, width:"100%" }}/>
-                  </div>}
-                  <div>
-                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>МАК. ИСПОЛЬЗОВАНИЙ (-1 = ∞)</div>
-                    <input value={promoForm.max_uses} onChange={e=>setPromoForm(f=>({...f,max_uses:e.target.value}))} type="number" style={{ ...inp, width:"100%" }}/>
-                  </div>
-                  <div>
-                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>МИН. СУММА ЗАКАЗА ₽</div>
-                    <input value={promoForm.min_amount} onChange={e=>setPromoForm(f=>({...f,min_amount:e.target.value}))} type="number" placeholder="0" style={{ ...inp, width:"100%" }}/>
-                  </div>
-                  <div>
-                    <div style={{ color:t.muted, fontSize:11, marginBottom:6 }}>ЗАМЕТКА</div>
-                    <input value={promoForm.description} onChange={e=>setPromoForm(f=>({...f,description:e.target.value}))} placeholder="Для новых пользователей" style={{ ...inp, width:"100%" }}/>
-                  </div>
-                </div>
-                <button onClick={handleSavePromo} disabled={promoSaving} style={{ padding:"10px 24px", borderRadius:10, background:"linear-gradient(135deg,#f59e0b,#fbbf24)", border:"none", color:"#0a0a14", fontWeight:700, cursor:"pointer", fontSize:14 }}>
-                  {promoSaving ? "Сохранение..." : "💾 Создать промокод"}
-                </button>
-              </div>
-            )}
-
-            {/* Promos list */}
-            {promoLoading ? <div style={{ color:t.muted, textAlign:"center", padding:"40px" }}>Загрузка...</div> :
-            promos.length === 0 ? <div style={{ color:t.muted, textAlign:"center", padding:"60px" }}><div style={{ fontSize:40, marginBottom:12 }}>🎁</div>Промокодов пока нет</div> :
-            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              {promos.map(p => (
-                <div key={p.id} style={{ background:t.card2, border:`1px solid ${p.is_active?t.border:"rgba(248,113,113,0.2)"}`, borderRadius:14, padding:16, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>
-                  <div>
-                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-                      <span style={{ color:t.gold, fontWeight:800, fontSize:16, letterSpacing:2 }}>{p.code}</span>
-                      <span style={{ background: p.is_active?"rgba(52,211,153,0.15)":"rgba(248,113,113,0.15)", border:`1px solid ${p.is_active?"rgba(52,211,153,0.3)":"rgba(248,113,113,0.3)"}`, color: p.is_active?"#6ee7b7":"#f87171", fontSize:11, padding:"2px 8px", borderRadius:100, fontWeight:600 }}>
-                        {p.is_active?"Активен":"Отключён"}
-                      </span>
-                    </div>
-                    <div style={{ color:t.text, fontSize:13, marginBottom:2 }}>
-                      {PROMO_TYPE_LABELS[p.type]}{p.type!=="free" && `: ${p.value}${p.type==="percent"?"%":"₽"}`}
-                      {p.min_amount > 0 && ` · мин. ${p.min_amount}₽`}
-                    </div>
-                    <div style={{ color:t.muted, fontSize:12 }}>
-                      Использований: {p.uses_count}{p.max_uses!==-1?`/${p.max_uses}`:""} · {p.description}
-                    </div>
-                  </div>
-                  <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={async()=>{ await supabase.from("promocodes").update({is_active:!p.is_active}).eq("id",p.id); const d=await getPromocodes(); setPromos(d); }} style={{ padding:"7px 14px", borderRadius:8, background:t.inp, border:`1px solid ${t.border}`, color:t.sub, cursor:"pointer", fontSize:12 }}>
-                      {p.is_active?"Отключить":"Включить"}
-                    </button>
-                    <button onClick={()=>handleDeletePromo(p.id)} style={{ padding:"7px 14px", borderRadius:8, background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.3)", color:"#f87171", cursor:"pointer", fontSize:12 }}>
-                      Удалить
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>}
-          </div>
-        )}
-
-        {/* SETTINGS TAB */}
-        {adminTab === "settings" && (
-          <div style={{ maxWidth:520 }}>
-            {/* Ручной курс */}
-            <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:24, marginBottom:16 }}>
-              <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:700, fontSize:18, color:t.text, marginBottom:6 }}>💱 Курс доллара</div>
-              <div style={{ color:t.sub, fontSize:13, marginBottom:20, lineHeight:1.6 }}>
-                По умолчанию курс берётся автоматически с ЦБ РФ. Ты можешь задать свой курс — он будет применяться ко всем расчётам на сайте.
-              </div>
-
-              {/* Toggle */}
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, padding:"12px 16px", background:t.inp, borderRadius:12 }}>
-                <div>
-                  <div style={{ color:t.text, fontWeight:600, fontSize:14 }}>Ручной курс</div>
-                  <div style={{ color:t.muted, fontSize:12 }}>{manualRateEnabled ? "Включён — используется твой курс" : "Выключен — курс берётся с ЦБ РФ"}</div>
-                </div>
-                <button onClick={async () => {
-                  const newVal = !manualRateEnabled;
-                  setManualRateEnabled(newVal);
-                  await setSetting("manual_rate_enabled", String(newVal));
-                }} style={{ width:48, height:26, borderRadius:100, border:"none", cursor:"pointer", background:manualRateEnabled?"#fbbf24":"rgba(128,128,128,0.3)", position:"relative", transition:"all .2s", flexShrink:0 }}>
-                  <span style={{ width:20, height:20, borderRadius:"50%", background:"white", position:"absolute", top:3, transition:"all .2s", left:manualRateEnabled?24:3 }}/>
-                </button>
-              </div>
-
-              {/* Rate input */}
-              <div style={{ marginBottom:16 }}>
-                <div style={{ color:t.muted, fontSize:12, marginBottom:8 }}>Курс 1$ в рублях</div>
-                <div style={{ display:"flex", gap:10 }}>
-                  <div style={{ display:"flex", flex:1, alignItems:"center", background:t.inp, border:`1px solid ${manualRateEnabled?t.goldB:t.border}`, borderRadius:12, padding:"0 16px", gap:8 }}>
-                    <span style={{ color:t.muted, fontSize:14 }}>1$ =</span>
-                    <input
-                      type="number"
-                      value={manualRate}
-                      onChange={e => setManualRate(e.target.value)}
-                      placeholder="84.50"
-                      step="0.01"
-                      style={{ flex:1, background:"none", border:"none", color:t.text, fontSize:20, fontWeight:700, outline:"none", padding:"12px 0" }}
-                    />
-                    <span style={{ color:t.muted, fontSize:14 }}>₽</span>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      if (!manualRate || parseFloat(manualRate) <= 0) return;
-                      setRateSaving(true);
-                      await setSetting("manual_rate", manualRate);
-                      if (!manualRateEnabled) {
-                        setManualRateEnabled(true);
-                        await setSetting("manual_rate_enabled", "true");
-                      }
-                      setRateSaving(false);
-                      alert("✅ Курс сохранён: 1$ = " + manualRate + " ₽");
-                    }}
-                    disabled={rateSaving || !manualRate}
-                    style={{ padding:"12px 20px", borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#fbbf24)", border:"none", color:"#0a0a14", fontWeight:700, cursor:"pointer", fontSize:14, opacity:rateSaving||!manualRate?0.6:1, whiteSpace:"nowrap" }}>
-                    {rateSaving ? "..." : "💾 Сохранить"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Status */}
-              <div style={{ padding:"10px 14px", borderRadius:10, background:manualRateEnabled?t.goldDim:"rgba(52,211,153,0.08)", border:`1px solid ${manualRateEnabled?t.goldB:"rgba(52,211,153,0.25)"}`, fontSize:13, color:manualRateEnabled?t.gold:"#6ee7b7" }}>
-                {manualRateEnabled
-                  ? `⚠️ Сейчас применяется твой курс: 1$ = ${manualRate || "не задан"} ₽`
-                  : "✅ Сейчас применяется автоматический курс ЦБ РФ"}
-              </div>
-            </div>
-
-            {/* Комиссия — информационно */}
-            <div style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:18, padding:24 }}>
-              <div style={{ fontFamily:"'Clash Display',sans-serif", fontWeight:700, fontSize:18, color:t.text, marginBottom:6 }}>💸 Комиссия</div>
-              <div style={{ color:t.sub, fontSize:13, lineHeight:1.6, marginBottom:12 }}>
-                Текущая комиссия задана в коде: <strong style={{ color:t.gold }}>15%</strong>. Чтобы изменить — поправь константу <code style={{ background:t.inp, padding:"2px 6px", borderRadius:4, fontSize:12 }}>CFG.MARGIN</code> в файле <code style={{ background:t.inp, padding:"2px 6px", borderRadius:4, fontSize:12 }}>src/App.jsx</code>.
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* REQUESTS TAB */}
-        {adminTab === "requests" && (
-          <div>
-            <div style={{ marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div style={{ color:t.sub, fontSize:14 }}>Запросы пользователей на добавление новых сервисов</div>
-              <div style={{ color:t.muted, fontSize:12 }}>{serviceReqs.length} запросов</div>
-            </div>
-            {serviceReqsLoading
-              ? <div style={{ textAlign:"center", padding:40, color:t.muted }}>Загрузка...</div>
-              : serviceReqs.length === 0
-                ? <div style={{ textAlign:"center", padding:"60px 0", color:t.muted }}><div style={{ fontSize:40, marginBottom:12 }}>💡</div>Запросов пока нет</div>
-                : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                    {serviceReqs.map(req => (
-                      <div key={req.id} style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:14, padding:18 }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
-                          <div style={{ flex:1 }}>
-                            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                              <span style={{ fontWeight:700, fontSize:15, color:t.text }}>{req.service_name}</span>
-                              <span style={{ fontSize:11, padding:"2px 8px", borderRadius:100, background:req.status==="pending"?"rgba(251,191,36,0.15)":req.status==="added"?"rgba(52,211,153,0.15)":"rgba(128,128,128,0.1)", border:`1px solid ${req.status==="pending"?"rgba(251,191,36,0.4)":req.status==="added"?"rgba(52,211,153,0.4)":"rgba(128,128,128,0.2)"}`, color:req.status==="pending"?t.gold:req.status==="added"?"#6ee7b7":t.muted, fontWeight:600 }}>
-                                {req.status==="pending"?"На рассмотрении":req.status==="added"?"Добавлен":req.status==="reviewing"?"В работе":"Отклонён"}
-                              </span>
-                            </div>
-                            {req.service_url && <div style={{ color:t.muted, fontSize:12, marginBottom:4 }}>🔗 {req.service_url}</div>}
-                            {req.comment && <div style={{ color:t.sub, fontSize:13, marginBottom:4 }}>{req.comment}</div>}
-                            <div style={{ color:t.muted, fontSize:11 }}>{req.user_email} · {new Date(req.created_at).toLocaleDateString("ru-RU")}</div>
-                          </div>
-                          <select
-                            value={req.status}
-                            onChange={async (e) => {
-                              const newStatus = e.target.value;
-                              await supabase.from("service_requests").update({ status: newStatus }).eq("id", req.id);
-                              setServiceReqs(prev => prev.map(r => r.id === req.id ? { ...r, status: newStatus } : r));
-                            }}
-                            style={{ padding:"6px 10px", borderRadius:8, background:t.inp, border:`1px solid ${t.border}`, color:t.text, fontSize:12, cursor:"pointer" }}>
-                            <option value="pending">На рассмотрении</option>
-                            <option value="reviewing">В работе</option>
-                            <option value="added">Добавлен</option>
-                            <option value="declined">Отклонён</option>
-                          </select>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-            }
-          </div>
-        )}
-
-        {/* Reviews moderation tab */}
-        {adminTab === "reviews" && (
-          <div>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-              <div style={{ color:t.text, fontWeight:700, fontSize:16 }}>Модерация отзывов</div>
-              <div style={{ color:t.muted, fontSize:12 }}>{adminReviews.length} всего · {adminReviews.filter(r=>!r.is_approved).length} на проверке</div>
-            </div>
-            {adminReviewsLoading
-              ? <div style={{ textAlign:"center", padding:"40px 0", color:t.muted }}>Загрузка...</div>
-              : adminReviews.length === 0
-                ? <div style={{ textAlign:"center", padding:"60px 0", color:t.muted }}><div style={{ fontSize:40, marginBottom:12 }}>⭐</div>Отзывов пока нет</div>
-                : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                    {adminReviews.map(r => (
-                      <div key={r.id} style={{ background:t.card2, border:`1px solid ${r.is_approved?t.border:"rgba(251,191,36,0.3)"}`, borderRadius:14, padding:"16px 18px" }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
-                          <div style={{ flex:1 }}>
-                            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                              <div style={{ display:"flex", gap:2 }}>{[1,2,3,4,5].map(s=><span key={s} style={{ color:s<=r.rating?"#fbbf24":"#334155",fontSize:14 }}>★</span>)}</div>
-                              <span style={{ color:t.gold, fontWeight:700, fontSize:13 }}>{r.service_name}</span>
-                              <span style={{ background:r.is_approved?"rgba(52,211,153,0.15)":"rgba(251,191,36,0.1)", color:r.is_approved?"#34d399":t.gold, padding:"2px 8px", borderRadius:6, fontSize:11, fontWeight:600 }}>{r.is_approved?"Опубликован":"На проверке"}</span>
-                            </div>
-                            <div style={{ color:t.sub, fontSize:13, lineHeight:1.6, marginBottom:6 }}>«{r.comment}»</div>
-                            <div style={{ color:t.muted, fontSize:11 }}>{r.user_name} · {new Date(r.created_at).toLocaleDateString("ru-RU")}</div>
-                          </div>
-                          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
-                            {!r.is_approved && (
-                              <button onClick={async()=>{ await sbReviews.approve(r.id); setAdminReviews(prev=>prev.map(x=>x.id===r.id?{...x,is_approved:true}:x)); }}
-                                style={{ padding:"7px 16px", borderRadius:8, background:"rgba(52,211,153,0.15)", border:"1px solid rgba(52,211,153,0.3)", color:"#34d399", fontSize:12, fontWeight:600, cursor:"pointer" }}>
-                                Одобрить
-                              </button>
-                            )}
-                            <button onClick={async()=>{ await sbReviews.reject(r.id); setAdminReviews(prev=>prev.filter(x=>x.id!==r.id)); }}
-                              style={{ padding:"7px 16px", borderRadius:8, background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.25)", color:"#f87171", fontSize:12, fontWeight:600, cursor:"pointer" }}>
-                              Удалить
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-            }
-          </div>
-        )}
-
-        {adminTab === "orders" && <>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Поиск по ID, сервису или email" style={{ ...inp, width:"100%", marginBottom:12 }}/>
-        <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:20 }}>
-          {[["all","Все"],...Object.entries(SL)].map(([k,l]) => {
-            const cnt = k==="all" ? orders.length : orders.filter(o=>o.status===k).length;
-            return <button key={k} onClick={()=>setFilter(k)} style={{ padding:"7px 14px", borderRadius:100, fontSize:12, fontWeight:600, cursor:"pointer", background:filter===k?(SC[k]||t.gold)+"22":t.card, border:`1px solid ${filter===k?(SC[k]||t.gold)+"55":t.border}`, color:filter===k?(SC[k]||t.gold):t.sub }}>{l} ({cnt})</button>;
-          })}
-        </div>
-
-        {loading
-          ? <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              {[1,2,3].map(i => <OrderSkeleton key={i} t={t}/>)}
-            </div>
-          : filtered.length === 0
-            ? <div style={{ textAlign:"center", padding:"80px 0", color:t.muted }}><div style={{ fontSize:48, marginBottom:12 }}>📭</div>{orders.length===0?"Заявок пока нет":"Ничего не найдено"}</div>
-            : <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              {filtered.map(o => (
-                <div key={o.id} style={{ background:t.card2, border:`1px solid ${t.border}`, borderRadius:16, boxShadow:t.shadow }}>
-                  <div style={{ padding:20 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:10 }}>
-                      <div>
-                        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6, flexWrap:"wrap" }}>
-                          <span style={{ color:t.gold, fontWeight:800, fontSize:16 }}>{o.id}</span>
-                          <StatusBadge status={o.status} />
-                          {o.receipt_url && <button onClick={()=>openReceipt(o)} style={{ background:"rgba(52,211,153,0.15)", border:"1px solid rgba(52,211,153,0.4)", color:"#6ee7b7", fontSize:11, padding:"2px 8px", borderRadius:100, cursor:"pointer", fontWeight:600 }}>📎 Чек</button>}
-                        </div>
-                        <div style={{ color:t.text, fontWeight:600, fontSize:14, marginBottom:3 }}>{o.service_icon} {o.service} · {o.tier}</div>
-                        <div style={{ color:t.sub, fontSize:12, marginBottom:2 }}>👤 {o.user_name} · {o.user_email}</div>
-                        <div style={{ color:t.sub, fontSize:12, marginBottom:2 }}>
-                          {o.method==="login"  && `🔐 Логин: ${o.login_data}`}
-                          {o.method==="gift"   && `🎁 Gift → ${o.email_data}`}
-                          {o.method==="family" && `👨‍👩‍👧 Family → ${o.email_data}`}
-                          {o.method==="newAcc" && `✨ Новый аккаунт`}
-                        </div>
-                        <div style={{ color:t.muted, fontSize:11 }}>🕒 {new Date(o.created_at).toLocaleString("ru-RU")}</div>
-                      </div>
-                      <div style={{ textAlign:"right" }}>
-                        <div style={{ color:t.gold, fontWeight:800, fontSize:22 }}>{(o.price_rub||0).toLocaleString("ru-RU")} ₽</div>
-                        <div style={{ color:t.muted, fontSize:12, marginBottom:8 }}>${o.price_usd}</div>
-                        <button onClick={()=>setExpanded(expanded===o.id?null:o.id)} style={{ padding:"6px 14px", borderRadius:100, background:t.inp, border:`1px solid ${t.border}`, color:t.sub, fontSize:12, cursor:"pointer" }}>
-                          {expanded===o.id?"▲ скрыть":"▼ действия"}
-                        </button>
-                      </div>
-                    </div>
-
-                    {expanded===o.id && (
-                      <div style={{ marginTop:16, paddingTop:16, borderTop:`1px solid ${t.border}` }}>
-                        {/* Статус */}
-                        <div style={{ marginBottom:16 }}>
-                          <div style={{ color:t.sub, fontSize:12, marginBottom:8, fontWeight:600 }}>Изменить статус:</div>
-                          <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-                            {Object.entries(SL).map(([k,l]) => (
-                              <button key={k} onClick={()=>handleStatusChange(o.id,k)} style={{ padding:"7px 16px", borderRadius:100, fontSize:12, fontWeight:600, cursor:"pointer", background:o.status===k?SC[k]+"22":t.inp, border:`1px solid ${o.status===k?SC[k]+"66":t.border}`, color:o.status===k?SC[k]:t.sub, transition:"all .15s" }}>
-                                {o.status===k?"✓ ":""}{l}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Чек клиента */}
-                        {o.receipt_url ? (
-                          <div style={{ marginBottom:16 }}>
-                            <button onClick={()=>openReceipt(o)} style={{ display:"flex",alignItems:"center",gap:7,padding:"9px 16px",borderRadius:10,background:"rgba(52,211,153,0.12)",border:"1px solid rgba(52,211,153,0.3)",color:"#6ee7b7",cursor:"pointer",fontSize:13,fontWeight:600 }}>
-                              <IconDownload size={14} color="#6ee7b7"/>Посмотреть чек клиента
-                            </button>
-                          </div>
-                        ) : (
-                          <div style={{ marginBottom:16,padding:"10px 14px",borderRadius:10,background:"rgba(248,113,113,0.07)",border:"1px solid rgba(248,113,113,0.2)",color:"#f87171",fontSize:12 }}>
-                            Чек не загружен
-                          </div>
-                        )}
-
-                        {/* Сообщение клиенту */}
-                        <div>
-                          <div style={{ color:t.sub, fontSize:12, marginBottom:6, fontWeight:600 }}>📩 Сообщение клиенту (данные аккаунта, Gift-код и т.д.):</div>
-                          <textarea
-                            value={noteValues[o.id] !== undefined ? noteValues[o.id] : (o.operator_note || "")}
-                            onChange={e => setNoteValues(prev => ({ ...prev, [o.id]: e.target.value }))}
-                            placeholder={"Логин: user@mail.com\nПароль: SecurePass123\n\nили Gift-код: XXXX-XXXX-XXXX"}
-                            rows={4}
-                            style={{ width:"100%", background:t.inp, border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 12px", color:t.text, fontSize:13, outline:"none", resize:"vertical", fontFamily:"monospace", lineHeight:1.6, boxSizing:"border-box", marginBottom:8 }}
-                          />
-                          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                            <button
-                              onClick={()=>handleNoteSave(o.id, noteValues[o.id] ?? o.operator_note)}
-                              disabled={saving===o.id}
-                              style={{ padding:"9px 18px", borderRadius:10, background: saved===o.id ? "rgba(52,211,153,0.25)" : "rgba(52,211,153,0.15)", border:`1px solid ${saved===o.id ? "rgba(52,211,153,0.6)" : "rgba(52,211,153,0.35)"}`, color:"#6ee7b7", cursor:"pointer", fontSize:13, fontWeight:600, opacity:saving===o.id?.7:1, transition:"all .2s" }}>
-                              {saving===o.id ? "Сохраняем..." : saved===o.id ? "✅ Сохранено и отправлено" : "💾 Сохранить и уведомить клиента"}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-        }
-        </>}
-      </div>
-
-      {receiptModal && (
-        <div style={{ position:"fixed",inset:0,zIndex:400,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={()=>setReceiptModal(null)}>
-          <div onClick={e=>e.stopPropagation()} style={{ position:"relative", maxWidth:"90vw", textAlign:"center" }}>
-            <button onClick={()=>setReceiptModal(null)} style={{ position:"absolute",top:-14,right:-14,background:"#f87171",border:"none",borderRadius:"50%",width:32,height:32,color:"white",cursor:"pointer",fontSize:16,fontWeight:700 }}>✕</button>
-            {receiptModal.name?.toLowerCase().endsWith(".pdf")
-              ? <div style={{ color:"white", padding:40 }}>
-                  <div style={{ fontSize:48, marginBottom:16 }}>📄</div>
-                  <div style={{ marginBottom:16 }}>PDF-файл: {receiptModal.name}</div>
-                  <a href={receiptModal.url} target="_blank" rel="noreferrer" style={{ color:"#fbbf24", fontWeight:700, fontSize:15 }}>Открыть PDF ↗</a>
-                </div>
-              : <img src={receiptModal.url} alt="чек" style={{ maxWidth:"85vw", maxHeight:"85vh", borderRadius:12 }}/>
-            }
-            <div style={{ marginTop:10 }}>
-              <a href={receiptModal.url} target="_blank" rel="noreferrer" style={{ color:"#fbbf24", fontSize:13, textDecoration:"none" }}>↓ Открыть / скачать</a>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ══════════════════════════════════════════════════════════════
 //  CALCULATOR
@@ -2341,7 +1066,7 @@ function ServicePage({ svc, rate, rateLoading, go, toggle, t, session, profile, 
           </button>
         </div>
       </div>
-      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const {data,error}=await sbOrders.insert(order); const o=data?.[0]; if(!error&&o){ fetch("/api/tg-notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`🆕 <b>Новая заявка</b> ${o.id}\n📦 ${o.service} · ${o.tier}\n💰 ${o.price_rub?.toLocaleString("ru-RU")} ₽\n👤 ${o.user_email}`})}).catch(()=>{}); } return {data:o,error}; }} onBalanceUsed={()=>userHook?.reloadProfile(session?.user?.id)} go={go} t={t}/>}
+      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const token=session?.access_token; const r=await fetch("/api/create-order",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify(order)}); const d=await r.json(); return {data:d.order,error:d.error?{message:d.error}:null}; }} onBalanceUsed={()=>userHook?.reloadProfile(session?.user?.id)} go={go} t={t} requisites={requisites}/>}
     </div>
   );
 }
@@ -2393,11 +1118,19 @@ export default function App() {
   const { reviewsList, reviewsLoading } = useReviews();
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewTarget, setReviewTarget]       = useState({ serviceName:"", orderId:"" });
+  const [requisites, setRequisites]           = useState(DEFAULT_REQUISITES);
   const isMobile = useIsMobile();
 
   const page = hash.split("?")[0];
 
   useEffect(() => { setTimeout(() => setMounted(true), 80); }, []);
+
+  // Загружаем реквизиты из settings
+  useEffect(() => {
+    getSetting("requisites").then(v => {
+      if (v) try { setRequisites(JSON.parse(v)); } catch {}
+    });
+  }, []);
 
   // Курс ЦБ
   useEffect(() => {
@@ -2444,7 +1177,9 @@ export default function App() {
   if (page === "#admin") return (
     <div style={{ background:t.bg, minHeight:"100vh", fontFamily:"'Satoshi',sans-serif", color:t.text }}>
       <style>{`*{box-sizing:border-box;margin:0;padding:0}input::placeholder,textarea::placeholder{opacity:.4}`}</style>
-      <AdminPanel userHook={userHook} go={go} t={t}/>
+      <Suspense fallback={<div style={{ padding:40, textAlign:"center", color:t.sub }}>Загрузка…</div>}>
+        <AdminPage userHook={userHook} go={go} t={t}/>
+      </Suspense>
     </div>
   );
 
@@ -2468,7 +1203,9 @@ export default function App() {
             <button onClick={toggle} style={{ width:36,height:36,borderRadius:100,background:t.card,border:`1px solid ${t.border}`,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center" }}>{t.dark ? <IconSun color={t.sub}/> : <IconMoon color={t.sub}/>}</button>
           </div>
         </nav>
-        <Cabinet userHook={userHook} go={go} t={t} onReview={(serviceName,orderId,onDone)=>{ setReviewTarget({serviceName,orderId,onDone}); setShowReviewModal(true); }}/>
+        <Suspense fallback={<div style={{ padding:40, textAlign:"center", color:t.sub }}>Загрузка…</div>}>
+          <CabinetPage userHook={userHook} go={go} t={t} onReview={(serviceName,orderId,onDone)=>{ setReviewTarget({serviceName,orderId,onDone}); setShowReviewModal(true); }}/>
+        </Suspense>
         {showReviewModal && <ReviewModal onClose={()=>setShowReviewModal(false)} user={session?.user} profile={profile} serviceName={reviewTarget.serviceName} orderId={reviewTarget.orderId} onDone={reviewTarget.onDone} t={t}/>}
       </div>
     );
@@ -2987,7 +1724,7 @@ export default function App() {
       )}
 
       {/* Modals */}
-      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const {data,error}=await sbOrders.insert(order); const o=data?.[0]; if(!error&&o){ fetch("/api/tg-notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`🆕 <b>Новая заявка</b> ${o.id}\n📦 ${o.service} · ${o.tier}\n💰 ${o.price_rub?.toLocaleString("ru-RU")} ₽\n👤 ${o.user_email}`})}).then(r=>r.json()).then(d=>{if(!d.ok)console.warn("TG:",d);}).catch(e=>console.error("TG fetch error:",e)); } return {data:o,error}; }} onBalanceUsed={()=>userHook.reloadProfile(session?.user?.id)} go={go} t={t}/>}
+      {selSvc && <OrderModal s={selSvc} rate={rate} user={session?.user} profile={profile} onClose={()=>setSelSvc(null)} onSave={async(order)=>{ const token=session?.access_token; const r=await fetch("/api/create-order",{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify(order)}); const d=await r.json(); return {data:d.order,error:d.error?{message:d.error}:null}; }} onBalanceUsed={()=>userHook.reloadProfile(session?.user?.id)} go={go} t={t} requisites={requisites}/>}
       {showAuth && <AuthModal onClose={()=>setShowAuth(false)} userHook={userHook} t={t}/>}
       {showReqSvc && <RequestServiceModal onClose={()=>setShowReqSvc(false)} user={session?.user} t={t}/>}
       {showReviewModal && <ReviewModal onClose={()=>setShowReviewModal(false)} user={session?.user} profile={profile} serviceName={reviewTarget.serviceName} orderId={reviewTarget.orderId} t={t}/>}

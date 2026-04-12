@@ -2,8 +2,12 @@
 // Отправляет уведомление в Telegram когда создаётся новая заявка
 
 export default async function handler(req, res) {
-  // CORS — нужен чтобы браузер не блокировал запрос
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // CORS — только наш домен
+  const origin = req.headers.origin;
+  const allowedOrigins = ["https://pay-flow.ru", "https://www.pay-flow.ru"];
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
